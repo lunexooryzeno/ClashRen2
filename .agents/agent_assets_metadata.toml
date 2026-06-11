@@ -1,0 +1,140 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Xy7ESnUC7zjoc2ldWlimn"
+uri = "file://artifacts/clash-zen/public/modes/solo_a.jpg"
+type = "image"
+title = "Option A — Free Fire 4K phone wallpaper"
+
+[[outputs]]
+id = "XjhLdL6GDjUC00HueNB8z"
+uri = "file://artifacts/clash-zen/public/modes/solo_b.jpg"
+type = "image"
+title = "Option B — Free Fire MAX art"
+
+[[outputs]]
+id = "WSAI54gZWeaTaYe6xlahv"
+uri = "file://artifacts/clash-zen/public/modes/solo_c.webp"
+type = "image"
+title = "Option C — Deep Sea Warrior character"
+
+[[outputs]]
+id = "hVt4GgKuTvNlGG-I7RWWX"
+uri = "file://artifacts/clash-zen/public/modes/solo_d.jpg"
+type = "image"
+title = "Option D — Steffie character desktop"
+
+[[outputs]]
+id = "PpX13wtN0ajbvsDQBPIqY"
+uri = "file://artifacts/clash-zen/public/modes/solo_e.jpg"
+type = "image"
+title = "Option E — Free Fire HD character"
+
+[[outputs]]
+id = "Jjf9-tQP8JLK9I6y6zYZB"
+uri = "file://artifacts/clash-zen/public/modes/solo_f.webp"
+type = "image"
+title = "Option F — Free Fire boy with gun"
+
+[[outputs]]
+id = "hfPjyJyiS-geqj8LPRyEz"
+uri = "file://artifacts/clash-zen/public/modes/solo_g.jpg"
+type = "image"
+title = "Option G — Free Fire 4K character art"
+
+[[outputs]]
+id = "KL78ZAug2KU3J3RNhzX-b"
+uri = "file://artifacts/clash-zen/public/modes/solo_h.jpg"
+type = "image"
+title = "Option H — Free Fire hip hop"
+
+[[outputs]]
+id = "9BtR9u0DGxsV6rOTojIZJ"
+uri = "file://artifacts/clash-zen/public/modes/duo.webp"
+type = "image"
+title = "Duo Option A"
+
+[[outputs]]
+id = "I7jMBeJjf8bNG_BofBZph"
+uri = "file://artifacts/clash-zen/public/modes/squad.jpg"
+type = "image"
+title = "Squad Option A (current)"
+
+[[outputs]]
+id = "Gc_79W5Wl-RQjOEgtl1nw"
+uri = "file://artifacts/clash-zen/public/modes/solo.jpg"
+type = "image"
+title = "Solo — current (updated)"
+
+[[outputs]]
+id = "RUKMOm4ZXxiDC44SPgJtb"
+uri = "file://artifacts/clash-zen/public/modes/duo2.webp"
+type = "image"
+title = "Duo Option B"
+
+[[outputs]]
+id = "-3vuSR9p5bQV4wqEKc5lI"
+uri = "file://artifacts/clash-zen/public/modes/squad2.jpg"
+type = "image"
+title = "Squad Option B — Official FF"
+
+[[outputs]]
+id = "unva4osV8Dxra1qF2qPbo"
+uri = "file://artifacts/clash-zen/public/modes/squad3.jpg"
+type = "image"
+title = "Squad Option C — Battle Royale"
+
+[[outputs]]
+id = "6fxCU-dqaIM3X4BCM-b15"
+uri = "file://artifacts/clash-zen/public/modes/solo_new_1.webp"
+type = "image"
+title = "Solo Option 1"
+
+[[outputs]]
+id = "cnSfAc3QSu-NXogkIju7P"
+uri = "file://artifacts/clash-zen/public/modes/solo_new_2.jpg"
+type = "image"
+title = "Solo Option 2"
+
+[[outputs]]
+id = "nINc-kxjZmqlAPWwa2FZj"
+uri = "file://artifacts/clash-zen/public/modes/solo_new_3.jpg"
+type = "image"
+title = "Solo Option 3"
+
+[[outputs]]
+id = "--y4cRqfvpj-X4XWffwa2"
+uri = "file://artifacts/clash-zen/public/modes/solo_new_4.webp"
+type = "image"
+title = "Solo Option 4"
+
+[[outputs]]
+id = "azqDPXsFtiuXNahKQC7cI"
+uri = "file://artifacts/clash-zen/public/modes/solo_new_5.jpg"
+type = "image"
+title = "Solo Option 5"
+
+[[outputs]]
+id = "XJBu0vwYSMKDjAmngwiWi"
+uri = "file://artifacts/clash-zen/public/modes/solo_s2.jpg"
+type = "image"
+title = "Solo — FF Sniper Art"
+
+[[outputs]]
+id = "yfMXD2kKh8UtwijHfTEFb"
+uri = "file://artifacts/clash-zen/public/modes/solo_s3.jpg"
+type = "image"
+title = "Solo — FF Character 4K"
+
+[[outputs]]
+id = "Tbp9UT28h2K_DOrPGxy4G"
+uri = "file://artifacts/clash-zen/public/modes/solo_s7.jpg"
+type = "image"
+title = "Solo — FF Archer Pose"
+
+[[outputs]]
+id = "DI55NWHSwGun1teu8CpfG"
+uri = "file://artifacts/clash-zen/public/modes/solo_s8.jpg"
+type = "image"
+title = "Solo — FF Mobile Art"

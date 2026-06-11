@@ -1,0 +1,21 @@
+Build a professional esports-style Match History Detail page for the route "/#/history/matches/34/slot_0". This page should feel like a premium battle intelligence dashboard instead of a simple result page. At the top, create a hero section showing the final match outcome with a strong visual state such as Victory, Defeat, Pending Verification, Disputed, or Cancelled. Also display Match ID, Slot ID, Tournament Name, Match Type, Game Mode, Wave Number, Match Status, Verification Status, and Reward Distribution Status.
+
+Below the hero section, create a chronological Match Timeline system that visually displays the full lifecycle of the match including Match Created, Room Released, Players Joined, Match Started, Verification Running, Winner Decided, Reward Distributed, and Match Completed with timestamps for each event.
+
+Add a large Player VS Player section showing both participants with profile avatar, username, partially hidden FF UID, trust score, current rank badge, streak status, verification level, and player statistics. Highlight the winner visually using esports-inspired UI effects.
+
+Create an advanced Match Verification Analysis section that compares Pre-Match Stats Snapshot and Post-Match Stats Snapshot fetched from the Free Fire stats verification system. Show clear stat progression comparisons such as Wins, Kills, Games Played, MVP Count, Damage, Knockdowns, and Assists using before vs after values. Highlight changed values visually and explain why the winner was selected based on the stat differences. Example: "Player gained +1 win and +2 kills while the opponent only showed +1 game played, therefore Player A was selected as the winner."
+
+Add a Match Result Intelligence panel showing verification confidence score, verification method (Auto Verified or Manual Review), duplicate verification protection status, reward distribution state, verification logs, and anti-fraud analysis.
+
+Include a secure Room Details section showing room release time, slot timing, wave assignment, and join deadline while automatically hiding sensitive room credentials after match completion.
+
+Create a Reward & Wallet Transaction panel showing Entry Fee, Reward Amount, Platform Fee, Net Earnings, Reward Transaction ID, Wallet Credit Timestamp, and Reward Distribution Logs. Also clearly show if the reward has already been distributed to prevent duplicate payouts.
+
+Add a professional Match Activity Logs section that records all important events in chronological order such as room unlock time, player joins, verification start, API response received, winner decision, and reward processing.
+
+Implement a Dispute & Support system where players can Report Problems, Request Manual Review, Upload Match Screenshot Evidence, or Contact Support. Add dispute expiration handling so disputes cannot be submitted after a configured time limit.
+
+Include optional advanced sections such as Performance Badges (MVP, Verified Winner, Fast Victory, High Damage), Raw Verification Data Viewer, Rematch Button, Share Result Card, Copy Match Link, and Admin Notes.
+
+The entire page should be mobile-first, highly optimized for PWA behavior, smooth scrolling, fast loading, lazy-loaded sections, esports-inspired dark UI, modern animations, collapsible detail sections, and professional tournament-grade user experience.

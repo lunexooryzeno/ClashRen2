@@ -1,0 +1,14 @@
+{
+  "upiId": "BHARATPE2V0D0M2C0A10930@unitype",
+  "upiName": "BharatPe Merchant",
+  "ratePerDiamond": 0.5,
+  "minTopup": 10,
+  "minWithdrawal": 20,
+  "maxWithdrawal": 0,
+  "isEnabled": true,
+  "withdrawalEnabled": false,
+  "xsrfToken": "eyJpdiI6InlrUm5SWWR2YXpGR0hrK2h1TFp3dnc9PSIsInZhbHVlIjoiMkJmREhobG9WOVwvRmtKQUhKM0hvVUZxZHMzbGNXUGl6cVhNckNxdUdYa0NOMXZYR2orMmNQVlVwUlBmREFtUm9cL1hrcVdlUmFFclNxOTIrNG0wSGVZdlJLeVR2VEExR1U5cWwrNWdSSk5iTDVZM2lDVnplbE5rR0s4c0FTZisxOSIsIm1hYyI6IjgzZGZkNzE5ZTkzN2MwMDJmMjc5OTdmZmE0NTVkNzYyZTI5OTQ5N2Y2ZTg3ODg5Zjk3ZjgzNDAwMWI1MTE1MzMifQ%3D%3D",
+  "bharatpeSession": "eyJpdiI6IjBMaHpuOWNGcjVITml3eFBzSkN2Nnc9PSIsInZhbHVlIjoiZjRtXC9IRXJ0aE5wc1hhOUVWYlhxcUoyc0xaeTcwVXEyUks3XC9IV29wZWN2c1FBS2dDcWI0NTJDNmFCS3MwbjloNTUrQms1TDVRTlFwQVdGQk9hNmk3b09RckhzR1REV2puSDRcL29oNTNxdU9sRUx5aWFkaFBuTXVPNWdnQmRIK2MiLCJtYWMiOiIxZTQ5ZWYyZWMxNzNjZDZlNjQ4YjU0MjU5N2U3NzU5NzAwODdlOTI1NmU0MWJlY2FmNWU5NzQwOTVkOTFmYjZiIn0%3D",
+  "gatewayAlert": null,
+  "webhookUrl": "https://trigger.macrodroid.com/9fa326ec-2426-42fa-9ad1-5aeaa12c27cd/payment.api.payment.verification"
+}

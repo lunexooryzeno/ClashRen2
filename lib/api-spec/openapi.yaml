@@ -1,0 +1,1046 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Clash Ren FF Tournament Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User profile operations
+  - name: tournaments
+    description: Tournament operations
+  - name: leaderboard
+    description: Leaderboard operations
+  - name: history
+    description: Match history operations
+  - name: admin
+    description: Admin operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/send-otp:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpBody"
+      responses:
+        "200":
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid phone number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP and authenticate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpBody"
+      responses:
+        "200":
+          description: OTP verified, returns auth token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/resend-otp:
+    post:
+      operationId: resendOtp
+      tags: [auth]
+      summary: Resend OTP to phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpBody"
+      responses:
+        "200":
+          description: OTP resent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid phone number
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile (UID, in-game name)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/stats:
+    get:
+      operationId: getMyStats
+      tags: [users]
+      summary: Get current user stats summary (kills, wins, tournaments played)
+      responses:
+        "200":
+          description: User stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tournaments:
+    get:
+      operationId: listTournaments
+      tags: [tournaments]
+      summary: List tournaments
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, ongoing, completed]
+      responses:
+        "200":
+          description: List of tournaments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
+
+  /tournaments/featured:
+    get:
+      operationId: getFeaturedTournaments
+      tags: [tournaments]
+      summary: Get featured/highlighted tournaments for the home screen
+      responses:
+        "200":
+          description: Featured tournaments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
+
+  /tournaments/{id}:
+    get:
+      operationId: getTournament
+      tags: [tournaments]
+      summary: Get tournament by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tournament details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tournaments/{id}/join:
+    post:
+      operationId: joinTournament
+      tags: [tournaments]
+      summary: Join a tournament (deducts diamond entry fee)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Successfully joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Cannot join (insufficient diamonds, already joined, full)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned upload URL and object path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get global leaderboard ranked by wins and kills
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /history:
+    get:
+      operationId: getMyHistory
+      tags: [history]
+      summary: Get current user's tournament participation history
+      responses:
+        "200":
+          description: History entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoryEntry"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/tournaments:
+    get:
+      operationId: adminListTournaments
+      tags: [admin]
+      summary: Admin - list all tournaments
+      responses:
+        "200":
+          description: All tournaments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreateTournament
+      tags: [admin]
+      summary: Admin - create a tournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTournamentBody"
+      responses:
+        "201":
+          description: Created tournament
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/tournaments/{id}:
+    put:
+      operationId: adminUpdateTournament
+      tags: [admin]
+      summary: Admin - update a tournament
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTournamentBody"
+      responses:
+        "200":
+          description: Updated tournament
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: adminDeleteTournament
+      tags: [admin]
+      summary: Admin - delete a tournament
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: Admin - list all users
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/diamonds:
+    patch:
+      operationId: adminAdjustDiamonds
+      tags: [admin]
+      summary: Admin - adjust a user's diamond balance
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjustDiamondsBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/tournaments/{id}/participants:
+    get:
+      operationId: adminGetTournamentParticipants
+      tags: [admin]
+      summary: Admin - list all participants for a tournament
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tournament participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TournamentParticipantDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/tournaments/{id}/participants/{userId}:
+    patch:
+      operationId: adminUpdateParticipant
+      tags: [admin]
+      summary: Admin - update kills, placement, and diamondsWon for a participant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateParticipantBody"
+      responses:
+        "200":
+          description: Updated participant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentParticipantDetail"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: adminKickParticipant
+      tags: [admin]
+      summary: Admin - remove a participant and refund their entry fee
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Participant removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/admin:
+    patch:
+      operationId: adminToggleAdminRole
+      tags: [admin]
+      summary: Admin - toggle admin status for a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Admin - get platform stats (total users, active tournaments, etc.)
+      responses:
+        "200":
+          description: Platform stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SendOtpBody:
+      type: object
+      properties:
+        phone:
+          type: string
+          description: 10-digit phone number (without country code)
+      required:
+        - phone
+
+    VerifyOtpBody:
+      type: object
+      properties:
+        phone:
+          type: string
+        otp:
+          type: string
+          description: 6-digit OTP code
+      required:
+        - phone
+        - otp
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        isNewUser:
+          type: boolean
+      required:
+        - token
+        - user
+        - isNewUser
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        phone:
+          type: string
+        inGameName:
+          type: string
+          nullable: true
+        uid:
+          type: string
+          nullable: true
+        profilePicture:
+          type: string
+          nullable: true
+        diamondBalance:
+          type: integer
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - phone
+        - diamondBalance
+        - isAdmin
+        - createdAt
+
+    UpdateUserBody:
+      type: object
+      properties:
+        inGameName:
+          type: string
+        uid:
+          type: string
+        profilePicture:
+          type: string
+          nullable: true
+
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+      required:
+        - name
+        - size
+        - contentType
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            size:
+              type: integer
+            contentType:
+              type: string
+      required:
+        - uploadURL
+        - objectPath
+
+    UserStats:
+      type: object
+      properties:
+        tournamentsPlayed:
+          type: integer
+        totalKills:
+          type: integer
+        totalWins:
+          type: integer
+        diamondsEarned:
+          type: integer
+        diamondsSpent:
+          type: integer
+        rank:
+          type: integer
+          nullable: true
+      required:
+        - tournamentsPlayed
+        - totalKills
+        - totalWins
+        - diamondsEarned
+        - diamondsSpent
+
+    Tournament:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        gameMode:
+          type: string
+        entryFeeDiamonds:
+          type: integer
+        prizePoolDiamonds:
+          type: integer
+        maxSlots:
+          type: integer
+        filledSlots:
+          type: integer
+        startTime:
+          type: string
+        status:
+          type: string
+          enum: [upcoming, ongoing, completed]
+        roomId:
+          type: string
+          nullable: true
+        roomPassword:
+          type: string
+          nullable: true
+        isJoined:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - gameMode
+        - entryFeeDiamonds
+        - prizePoolDiamonds
+        - maxSlots
+        - filledSlots
+        - startTime
+        - status
+        - isJoined
+        - createdAt
+
+    CreateTournamentBody:
+      type: object
+      properties:
+        title:
+          type: string
+        gameMode:
+          type: string
+        entryFeeDiamonds:
+          type: integer
+        prizePoolDiamonds:
+          type: integer
+        maxSlots:
+          type: integer
+        startTime:
+          type: string
+        status:
+          type: string
+          enum: [upcoming, ongoing, completed]
+        roomId:
+          type: string
+        roomPassword:
+          type: string
+      required:
+        - title
+        - gameMode
+        - entryFeeDiamonds
+        - prizePoolDiamonds
+        - maxSlots
+        - startTime
+        - status
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        inGameName:
+          type: string
+        profilePicture:
+          type: string
+          nullable: true
+        totalKills:
+          type: integer
+        totalWins:
+          type: integer
+        tournamentsPlayed:
+          type: integer
+        diamondsEarned:
+          type: integer
+        points:
+          type: integer
+          description: Points scored (kills*1 + wins*10 + tournamentsPlayed*2)
+      required:
+        - rank
+        - userId
+        - inGameName
+        - totalKills
+        - totalWins
+        - tournamentsPlayed
+        - diamondsEarned
+        - points
+
+    HistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        tournamentId:
+          type: integer
+        tournamentTitle:
+          type: string
+        gameMode:
+          type: string
+        kills:
+          type: integer
+        placement:
+          type: integer
+          nullable: true
+        diamondsWon:
+          type: integer
+        entryFeeDiamonds:
+          type: integer
+        joinedAt:
+          type: string
+        tournamentStartTime:
+          type: string
+        status:
+          type: string
+      required:
+        - id
+        - tournamentId
+        - tournamentTitle
+        - gameMode
+        - kills
+        - diamondsWon
+        - entryFeeDiamonds
+        - joinedAt
+        - tournamentStartTime
+        - status
+
+    AdjustDiamondsBody:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: Amount to add (positive) or subtract (negative)
+        reason:
+          type: string
+      required:
+        - amount
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalTournaments:
+          type: integer
+        activeTournaments:
+          type: integer
+        upcomingTournaments:
+          type: integer
+        completedTournaments:
+          type: integer
+        totalDiamondsInCirculation:
+          type: integer
+        totalEntryFeesCollected:
+          type: integer
+        totalPrizesDistributed:
+          type: integer
+      required:
+        - totalUsers
+        - totalTournaments
+        - activeTournaments
+        - upcomingTournaments
+        - completedTournaments
+        - totalDiamondsInCirculation
+        - totalEntryFeesCollected
+        - totalPrizesDistributed
+
+    TournamentParticipantDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        tournamentId:
+          type: integer
+        userId:
+          type: integer
+        inGameName:
+          type: string
+          nullable: true
+        phone:
+          type: string
+        kills:
+          type: integer
+        placement:
+          type: integer
+          nullable: true
+        diamondsWon:
+          type: integer
+        joinedAt:
+          type: string
+      required:
+        - id
+        - tournamentId
+        - userId
+        - phone
+        - kills
+        - diamondsWon
+        - joinedAt
+
+    UpdateParticipantBody:
+      type: object
+      properties:
+        kills:
+          type: integer
+        placement:
+          type: integer
+          nullable: true
+        diamondsWon:
+          type: integer

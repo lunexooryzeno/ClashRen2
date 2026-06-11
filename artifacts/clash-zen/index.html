@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <title>Clash Ren</title>
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- iOS / Safari PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ClashRen" />
+
+    <!-- Apple touch icons — sized for every Apple device -->
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+
+    <!-- Apple splash screens (portrait) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Theme / status bar — pure black so the blurred header blends seamlessly -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#000000" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#000000" />
+
+    <!-- Microsoft / Windows -->
+    <meta name="msapplication-TileColor" content="#080808" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
+    <meta name="msapplication-config" content="none" />
+
+    <!-- Favicons (browser tabs, bookmarks, desktop browser icons) -->
+    <link rel="icon" type="image/png" href="/icons/logo.png" />
+    <link rel="shortcut icon" href="/icons/logo.png" />
+
+    <!-- Open Graph / Social sharing -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Clash Ren — Free Fire Tournaments" />
+    <meta property="og:description" content="Compete in real-money Free Fire tournaments. Join, win, and withdraw your diamonds." />
+    <meta property="og:image"       content="/icons/logo.png" />
+    <meta name="twitter:card"       content="summary_large_image" />
+    <meta name="twitter:title"      content="Clash Ren" />
+    <meta name="twitter:image"      content="/icons/logo.png" />
+
+    <!-- App description for install prompts -->
+    <meta name="description" content="Free Fire tournament platform — Compete. Win. Ascend." />
+    <meta name="application-name"  content="ClashRen" />
+
+    <!-- DNS prefetch for external image hosts -->
+    <link rel="dns-prefetch" href="https://raw.githubusercontent.com" />
+    <link rel="dns-prefetch" href="https://github.com" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&family=Barlow+Condensed:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />
+
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var search = window.location.search;
+        var hash = window.location.hash;
+        if (path && path !== '/' && !hash) {
+          window.location.replace('/' + search + '#' + path);
+        }
+      })();
+
+      // Suppress AbortError / "signal is aborted without reason" from the Replit
+      // dev overlay. React Query cancels in-flight fetches on unmount — harmless.
+      // Uses CAPTURE phase + stopImmediatePropagation so the overlay plugin's own
+      // bubble-phase listener never fires.
+      (function () {
+        function isAbortErr(err) {
+          if (!err) return false;
+          return err.name === 'AbortError' ||
+            err.message === 'signal is aborted without reason' ||
+            err.message === 'The user aborted a request.';
+        }
+        window.addEventListener('unhandledrejection', function (e) {
+          if (isAbortErr(e.reason)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('error', function (e) {
+          if (isAbortErr(e.error)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+
+    <style>
+      html, body { margin: 0; padding: 0; background: #000; min-height: 100dvh; }
+      #root { min-height: 100dvh; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+      // Unregister any stale service worker on each page load so old cached
+      // chunks can never trap users on a broken old build.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) { try { regs[i].unregister(); } catch (e) {} }
+        }).catch(function () {});
+        // Also nuke any caches the old SW left behind
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (keys) {
+            for (var i = 0; i < keys.length; i++) { try { caches.delete(keys[i]); } catch (e) {} }
+          }).catch(function () {});
+        }
+      }
+    </script>
+  </body>
+</html>

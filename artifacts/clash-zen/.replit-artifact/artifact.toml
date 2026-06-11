@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Clash Ren"
+version = "1.0.0"
+id = "artifacts/clash-zen"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24186
+
+[services.development]
+run = "pnpm --filter @workspace/clash-zen run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/clash-zen", "run", "build" ]
+publicDir = "artifacts/clash-zen/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24186"
+BASE_PATH = "/"

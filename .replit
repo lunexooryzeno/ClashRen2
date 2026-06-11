@@ -1,0 +1,97 @@
+modules = ["nodejs-24", "python-3.11", "postgresql-16"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[[ports]]
+localPort = 4567
+externalPort = 8099
+
+[[ports]]
+localPort = 4599
+externalPort = 9000
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 8082
+externalPort = 3000
+
+[[ports]]
+localPort = 8083
+externalPort = 3001
+
+[[ports]]
+localPort = 8084
+externalPort = 3002
+
+[[ports]]
+localPort = 8085
+externalPort = 3003
+
+[[ports]]
+localPort = 8086
+externalPort = 4200
+
+[[ports]]
+localPort = 8087
+externalPort = 5173
+
+[[ports]]
+localPort = 8088
+externalPort = 5000
+
+[[ports]]
+localPort = 8089
+externalPort = 6000
+
+[[ports]]
+localPort = 8090
+externalPort = 6800
+
+[[ports]]
+localPort = 8091
+externalPort = 8000
+
+[[ports]]
+localPort = 8092
+externalPort = 8008
+
+[[ports]]
+localPort = 24186
+externalPort = 80
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+WEBHOOK_SECRET = "baaf0e555918cc699369e77a7d7421a5f04f813e95fea962c36e15d1b41748ee"
+VAPID_PUBLIC_KEY = "BGQ413-RZd5zjkQBy_1c-z0iuqHGA9zxQc4CT97fM0lw6hfWtvDgvCpWmfPPFdu0KnO8katJoy90_l6TcuRXFTs"
+VAPID_PRIVATE_KEY = "ZimUTfSar2RPn0aO5jYJlp0gLDOrF9ONhu2zX1ThAD0"
+VAPID_CONTACT = "mailto:noreply@clashzen.app"
+
+[userenv.development]

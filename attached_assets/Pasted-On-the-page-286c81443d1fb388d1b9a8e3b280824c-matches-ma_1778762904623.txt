@@ -1,0 +1,64 @@
+On the page "/#/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/28/slot-match/5", redesign the player confirmation and automated result verification system into a cleaner and more scalable workflow.
+
+Remove the individual "Confirm Join" button from every player card. Instead, each player card should contain a selectable checkbox that allows the admin to mark whether that player has joined successfully. Above the player list, create a single centralized "Confirm Joined Players" button that processes all selected players together.
+
+Before the admin confirms the joined players, add a required Match Verification Configuration section where the admin must select:
+
+* Game Mode: BR or CS
+* Match Mode: Normal, CAREER, or Ranked
+
+Once the admin selects the mode configuration and clicks the centralized confirm button, the system should automatically fetch the latest stats for all selected players using their Free Fire UID through this API format:
+"https://freefireinfo-zy9l.onrender.com/api/v1/player-stats?uid=PLAYER_UID&server=IND&gamemode=cs&matchmode=RANKED"
+
+The request URL must dynamically change according to the admin-selected Game Mode and Match Mode values.
+
+After fetching the JSON response for each player, store the complete response snapshot in the database as the "Pre-Match Stats Snapshot". Also display the stored stats visually inside the same page for admin review.
+
+After the match ends, when either participant opens the application again or when the system triggers a recheck, fetch fresh player stats again using the same API configuration and store them as the "Post-Match Stats Snapshot". Then automatically compare the old and new stat snapshots to determine match progression and identify the likely winner.
+
+For example, compare values such as:
+
+* wins
+* kills
+* gamesplayed
+* MVP count
+* knockdowns
+* damage
+* assists
+* deaths
+
+The system should intelligently detect whether a new match was played and which player gained progress after the match. Based on the stat difference analysis, automatically determine the winner and loser.
+
+Once the winner is decided:
+
+* Automatically credit the reward/diamonds to the winner’s wallet
+* Mark the match as completed
+* Store the reward transaction permanently
+* Prevent duplicate reward distribution even if the API is checked multiple times later
+* Show the winner status clearly on both admin and player sides
+* Show verification logs and stat comparison history
+
+Add clear match states such as:
+
+* Waiting for Join Confirmation
+* Pre-Match Snapshot Stored
+* Match Running
+* Verifying Results
+* Winner Decided
+* Reward Distributed
+* Verification Failed
+* Disputed
+
+Also add fallback handling for edge cases such as:
+
+* API failure
+* No stat change detected
+* Both players showing progression
+* Invalid player stats
+* Duplicate verification attempts
+* Timeout after long inactivity
+
+Use the provided API response structure properly. Example response:
+{"data":{"csstats":{"accountid":"14105038766","detailedstats":{"assists":3409,"damage":3136323,"deaths":5915,"doubleKills":1208,"fourKills":149,"headShotKills":978,"knockDowns":8151,"mvpCount":552,"revivals":674,"tripleKills":513},"gamesplayed":1822,"kills":7077,"wins":949}},"metadata":{"gamemode":"cs","matchmode":"CAREER","server":"IND","uid":"14105038766"},"success":true}
+
+Build the system in a scalable way so it can later support automatic BR, CS, and other mode-based verification workflows with minimal moderator involvement.
