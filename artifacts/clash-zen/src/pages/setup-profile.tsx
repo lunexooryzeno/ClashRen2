@@ -47,7 +47,7 @@ interface FreefireProfile {
 }
 
 type FetchState = "idle" | "loading" | "success" | "error" | "level_too_low";
-type Step = "uid" | "profile";
+type Step = "uid" | "manual" | "profile";
 
 export default function SetupProfileScreen() {
   const updateMe = useUpdateMe();
@@ -61,6 +61,8 @@ export default function SetupProfileScreen() {
   const [fetchError, setFetchError] = useState<string>("");
   const [profile, setProfile] = useState<FreefireProfile | null>(null);
   const [nickname, setNickname] = useState("");
+  const [manualUid, setManualUid] = useState("");
+  const [manualName, setManualName] = useState("");
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [signature, setSignature] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -112,6 +114,44 @@ export default function SetupProfileScreen() {
       setFetchState("error");
       setFetchError("Network error. Check your connection and try again.");
     }
+  };
+
+  const goManual = () => {
+    const uid = form.getValues("uid");
+    setManualUid(uid || "");
+    setManualName("");
+    setStep("manual");
+  };
+
+  const onManualConfirm = () => {
+    if (!manualUid || !manualName.trim()) return;
+    haptic.mediumTap();
+    setIsSaving(true);
+    updateMe.mutate(
+      { data: { inGameName: manualName.trim(), uid: manualUid } },
+      {
+        onSuccess: () => {
+          queryClient.setQueryData(getGetMeQueryKey(), (old: any) =>
+            old ? { ...old, inGameName: manualName.trim(), uid: manualUid } : old
+          );
+          const raw = sessionStorage.getItem("redirectAfterLogin") || "/";
+          sessionStorage.removeItem("redirectAfterLogin");
+          const INVALID_REDIRECTS = ["/setup-profile", "/landing", "/get-started", "/onboarding"];
+          const redirectTo = INVALID_REDIRECTS.includes(raw) ? "/" : raw;
+          setPendingRedirect(redirectTo);
+          setIsSaving(false);
+          setShowWelcome(true);
+        },
+        onError: (err) => {
+          toast({
+            title: "Error",
+            description: (err as any).data?.error || "Failed to update profile",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+        },
+      }
+    );
   };
 
   const onConfirm = () => {
@@ -222,11 +262,20 @@ export default function SetupProfileScreen() {
                     )}
                   />
 
-                  {/* Generic error banner */}
+                  {/* Generic error banner + manual fallback */}
                   {fetchState === "error" && (
-                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
-                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                      <span>{fetchError}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>{fetchError}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={goManual}
+                        className="w-full py-2.5 rounded-xl border border-white/10 bg-white/[0.03] text-sm text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        Enter details manually instead →
+                      </button>
                     </div>
                   )}
 
@@ -288,6 +337,87 @@ export default function SetupProfileScreen() {
             <p className="text-center text-[11px] text-zinc-700 mt-4">
               Find your UID in Free Fire → Profile → Settings
             </p>
+          </div>
+        )}
+
+        {/* ── STEP 1b: Manual entry ── */}
+        {step === "manual" && (
+          <div className="w-full max-w-sm relative z-10">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-700/20 border border-primary/30 mb-5 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
+                <Flame className="w-8 h-8 text-primary" strokeWidth={1.5} />
+              </div>
+              <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">MANUAL SETUP</h1>
+              <p className="text-sm text-zinc-500">Enter your UID and in-game name directly</p>
+            </div>
+
+            <div className="rounded-2xl p-6 border border-white/10 space-y-5" style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)" }}>
+              {/* UID field */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Free Fire UID</label>
+                <div className="relative">
+                  <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={manualUid}
+                    onChange={e => setManualUid(e.target.value.replace(/\D/g, "").slice(0, 14))}
+                    placeholder="Your Free Fire UID"
+                    maxLength={14}
+                    className="w-full pl-10 pr-4 h-12 bg-black/60 border border-white/10 rounded-xl text-white placeholder:text-zinc-700 text-base outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/60 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Nickname field */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">In-Game Nickname</label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                  <input
+                    type="text"
+                    value={manualName}
+                    onChange={e => setManualName(e.target.value.slice(0, 20))}
+                    placeholder="Your Free Fire nickname"
+                    maxLength={20}
+                    className="w-full pl-10 pr-4 h-12 bg-black/60 border border-white/10 rounded-xl text-white placeholder:text-zinc-700 text-base outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/60 transition-colors"
+                  />
+                </div>
+                <p className="text-[11px] text-zinc-600">Must match your exact in-game name. Admin may verify.</p>
+              </div>
+
+              {/* Permanent UID warning */}
+              <div className="rounded-xl overflow-hidden border border-amber-500/25" style={{ background: "rgba(245,158,11,0.06)" }}>
+                <div className="flex items-start gap-3 px-3.5 py-3">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-0.5">Permanent UID</p>
+                    <p className="text-[12px] text-zinc-300 leading-snug">Your UID <span className="text-white font-semibold">cannot be changed</span> after confirmation. Double-check before continuing.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-12 rounded-xl border-white/10 bg-white/[0.02] text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300"
+                  onClick={() => { setStep("uid"); setFetchState("idle"); }}
+                >
+                  ← Back
+                </Button>
+                <Button
+                  type="button"
+                  disabled={manualUid.length < 8 || !manualName.trim() || isSaving}
+                  onClick={onManualConfirm}
+                  className="flex-[2] h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold shadow-[0_0_24px_rgba(234,88,12,0.4)] transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Confirm & Continue"}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
