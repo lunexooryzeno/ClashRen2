@@ -47,9 +47,6 @@ export const usersTable = pgTable("users", {
   twoFaWithdrawalBypass: boolean("two_fa_withdrawal_bypass").notNull().default(false),
   platformId: text("platform_id").unique(),
   adminRole: text("admin_role"),
-  contactPhone: text("contact_phone"),
-  isVerified: boolean("is_verified").notNull().default(false),
-  verifiedAt: timestamp("verified_at"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true });

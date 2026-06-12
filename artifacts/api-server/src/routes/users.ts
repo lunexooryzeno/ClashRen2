@@ -45,67 +45,50 @@ router.get("/users/me", requireAuth, async (req, res) => {
     twoFaResetAt: user.twoFaResetAt?.toISOString() ?? null,
     twoFaWithdrawalBypass: user.twoFaWithdrawalBypass,
     platformId: user.platformId ?? null,
-    contactPhone: user.contactPhone ?? null,
   });
 });
 
-function generatePlatformId(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let id = "CR";
-  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
-}
-
 router.patch("/users/me", requireAuth, async (req, res) => {
-  const { inGameName, profilePicture, contactPhone } = req.body as {
+  const { uid, inGameName, profilePicture } = req.body as {
+    uid?: string;
     inGameName?: string;
     profilePicture?: string | null;
-    contactPhone?: string;
   };
 
-  const trimmedName = inGameName?.trim() || undefined;
-  const trimmedPhone = contactPhone?.trim() || undefined;
-
-  // Fetch current user to check if platformId needs generating
-  const current = await db.query.usersTable.findFirst({ where: eq(usersTable.id, req.user!.userId) });
-  if (!current) { res.status(404).json({ error: "User not found" }); return; }
-
-  // Auto-generate platformId on first profile setup
-  let newPlatformId: string | undefined;
-  if (!current.platformId && trimmedName) {
-    // Retry until unique (collision extremely unlikely)
-    let candidate = generatePlatformId();
-    let attempts = 0;
-    while (attempts < 10) {
-      const existing = await db.query.usersTable.findFirst({ where: eq(usersTable.platformId, candidate) });
-      if (!existing) { newPlatformId = candidate; break; }
-      candidate = generatePlatformId();
-      attempts++;
+  // Block if this Free Fire UID is already linked to a different account
+  if (uid) {
+    const uidCheck = await checkUIDUniqueness(req.user!.userId, uid);
+    if (uidCheck.blocked) {
+      res.status(409).json({ error: "This Free Fire UID is already linked to another Clash Zen account." });
+      return;
     }
   }
 
+  const trimmedName = inGameName?.trim() || undefined;
+
   const [updated] = await db.update(usersTable)
     .set({
+      uid: uid ?? undefined,
+      // Save inGameName when provided (initial setup or profile update)
       inGameName: trimmedName,
+      // Record timestamp when a name is set so cooldown logic has a reference point
       nameChangedAt: trimmedName ? new Date() : undefined,
       nameChangeAllowed: trimmedName ? false : undefined,
       profilePicture: profilePicture !== undefined ? profilePicture : undefined,
-      contactPhone: trimmedPhone,
-      platformId: newPlatformId ?? undefined,
     })
     .where(eq(usersTable.id, req.user!.userId))
     .returning();
-  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
-
+  if (!updated) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
   const changed: string[] = [];
+  if (uid !== undefined) changed.push(`UID: ${uid}`);
   if (trimmedName !== undefined) changed.push(`In-game name: ${trimmedName}`);
-  if (trimmedPhone !== undefined) changed.push(`Contact phone: ${trimmedPhone}`);
-  if (newPlatformId) changed.push(`Platform ID assigned: ${newPlatformId}`);
   if (profilePicture !== undefined) changed.push("Profile picture updated");
   if (changed.length > 0) {
     await logUserAction(req.user!.userId, "profile_updated", "account", changed.join(" · "));
   }
-
   res.json({
     id: updated.id,
     phone: updated.phone,
@@ -118,8 +101,6 @@ router.patch("/users/me", requireAuth, async (req, res) => {
     allowDepositWithdrawal: updated.allowDepositWithdrawal,
     nameChangedAt: updated.nameChangedAt?.toISOString() ?? null,
     nameChangeAllowed: updated.nameChangeAllowed,
-    platformId: updated.platformId ?? null,
-    contactPhone: updated.contactPhone ?? null,
   });
 });
 

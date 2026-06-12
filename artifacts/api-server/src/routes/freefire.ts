@@ -55,7 +55,6 @@ router.get("/freefire/player", requireAuth, async (req, res) => {
 
     const data = await ffRes.json() as Record<string, unknown>;
 
-    // Return only the fields we actually use — keeps response lean
     const basic = (data.basicInfo ?? {}) as Record<string, unknown>;
     const credit = (data.creditScoreInfo ?? {}) as Record<string, unknown>;
     const pet = (data.petInfo ?? {}) as Record<string, unknown>;
@@ -83,6 +82,65 @@ router.get("/freefire/player", requireAuth, async (req, res) => {
       return res.status(504).json({ error: "Free Fire API timed out. Try again." });
     }
     return res.status(502).json({ error: "Failed to reach Free Fire API." });
+  }
+});
+
+// ── FreeFireHub proxy — no API key required, uses freefirehub.com ──────────
+router.get("/freefire/hub-player", requireAuth, async (req, res) => {
+  const { uid } = req.query as { uid?: string };
+
+  if (!uid || !/^\d{8,14}$/.test(uid)) {
+    return res.status(400).json({ error: "Invalid UID. Must be 8–14 digits." });
+  }
+
+  try {
+    const url = `https://freefirehub.com/api/player/${encodeURIComponent(uid)}?region=ALL&matchType=all`;
+    const ffRes = await fetch(url, {
+      headers: {
+        "accept": "application/json",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!ffRes.ok) {
+      if (ffRes.status === 404) {
+        return res.status(404).json({ error: "Player not found. Check the UID." });
+      }
+      return res.status(502).json({ error: "Could not fetch player data. Try again." });
+    }
+
+    const data = await ffRes.json() as {
+      profile?: {
+        basicinfo?: {
+          accountid?: string;
+          nickname?: string;
+          level?: number;
+          rank?: number;
+          region?: string;
+          liked?: number;
+        };
+      };
+    };
+
+    const info = data?.profile?.basicinfo;
+    if (!info?.nickname) {
+      return res.status(404).json({ error: "Player not found or account is private." });
+    }
+
+    return res.json({
+      accountId: info.accountid ?? uid,
+      nickname: info.nickname,
+      level: info.level ?? null,
+      rank: info.rank ?? null,
+      region: info.region ?? null,
+      liked: info.liked ?? null,
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return res.status(504).json({ error: "Free Fire lookup timed out. Try again." });
+    }
+    return res.status(502).json({ error: "Failed to reach Free Fire servers." });
   }
 });
 

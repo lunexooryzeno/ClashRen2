@@ -618,6 +618,17 @@ export default function GetStartedPage() {
                 testId="input-otp"
               />
 
+              {/* Delay notice */}
+              <div
+                className="w-full rounded-xl px-3.5 py-3 flex items-start gap-2.5 text-left"
+                style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}
+              >
+                <span className="text-amber-400 text-base mt-0.5">⏱</span>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  <span className="text-amber-300 font-semibold">Code not arrived yet?</span> It can sometimes take <span className="text-white">up to 2–3 minutes</span> to reach your phone. Please wait a moment before tapping Resend.
+                </p>
+              </div>
+
               <div className="w-full space-y-3">
                 <Button
                   type="submit"
