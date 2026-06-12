@@ -3,7 +3,10 @@ import { ThemeProvider } from "next-themes";
 import App, { AppErrorBoundary } from "./App";
 import "./index.css";
 import { preloadAllPages } from "@/lib/preload-pages";
-import { ALL_THEMES } from "@/lib/themes";
+
+// Service worker is intentionally NOT registered here. The inline HTML script
+// actively unregisters any old SW + clears caches on every page load so users
+// can never get trapped on a stale cached build.
 
 createRoot(document.getElementById("root")!).render(
   <AppErrorBoundary>
@@ -11,7 +14,7 @@ createRoot(document.getElementById("root")!).render(
       attribute="data-theme"
       defaultTheme="molten"
       enableSystem
-      themes={ALL_THEMES.map(t => t.id)}
+      themes={["molten", "dark", "light", "system", "glass", "neon", "forest", "royal"]}
     >
       <App />
     </ThemeProvider>
