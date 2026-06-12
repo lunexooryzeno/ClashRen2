@@ -12,6 +12,7 @@ import {
   Check, X as XIcon, MessageSquare, ShieldAlert, CheckCircle,
   Smartphone, Monitor, CreditCard, TrendingUp, TrendingDown, Gift, Award,
   Loader2, UserCheck, LogOut, ChevronRight, IndianRupee,
+  CheckCircle2, ShieldOff,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -92,6 +93,9 @@ interface UserDetail {
   twoFaResetAt: string | null;
   twoFaWithdrawalBypass: boolean;
   platformId: string | null;
+  contactPhone: string | null;
+  isVerified: boolean;
+  verifiedAt: string | null;
 }
 interface WalletTx { id: number; type: string; amount: number; label: string; tournamentId: number | null; createdAt: string; }
 interface UserNotif { id: number; type: string; title: string; body: string; read: boolean; createdAt: string; }
@@ -257,6 +261,9 @@ export default function AdminUserDetailPage() {
   const [allowNameChangeLoading, setAllowNameChangeLoading] = useState(false);
   const [allow2faWithdrawLoading, setAllow2faWithdrawLoading] = useState(false);
   const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [localVerified, setLocalVerified] = useState<boolean | null>(null);
+  const [localVerifiedAt, setLocalVerifiedAt] = useState<string | null>(null);
 
   const [minWdInput, setMinWdInput] = useState("");
   const [minWdSaving, setMinWdSaving] = useState(false);
@@ -878,9 +885,18 @@ export default function AdminUserDetailPage() {
             {/* Info grid */}
             <div className="mx-4 mb-4 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
               {[
-                { icon: <Phone className="w-3.5 h-3.5 text-blue-400" />, label: "Phone", value: user.phone },
+                { icon: <Phone className="w-3.5 h-3.5 text-blue-400" />, label: "Login ID", value: user.phone },
                 { icon: <Hash className="w-3.5 h-3.5 text-primary" />, label: "Platform ID", value: user.platformId ?? `#${user.id}` },
-                ...(user.uid ? [{ icon: <Swords className="w-3.5 h-3.5 text-orange-400" />, label: "Free Fire Max UID", value: user.uid }] : []),
+                ...(user.contactPhone ? [{ icon: <Phone className="w-3.5 h-3.5 text-emerald-400" />, label: "Contact Phone", value: user.contactPhone }] : []),
+                {
+                  icon: user.isVerified
+                    ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    : <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />,
+                  label: "Verified",
+                  value: user.isVerified
+                    ? <span className="text-emerald-400 font-semibold">Verified{user.verifiedAt ? ` · ${fmtDate(user.verifiedAt)}` : ""}</span>
+                    : <span className="text-amber-400 font-medium">Unverified</span>,
+                },
                 { icon: <Gem className="w-3.5 h-3.5 text-violet-400" />, label: "Diamond Balance", value: <span className="flex items-center gap-1">{user.diamondBalance.toLocaleString()} <Gem className="w-3 h-3 text-violet-400" /></span> },
                 { icon: <Calendar className="w-3.5 h-3.5 text-emerald-400" />, label: "Registered", value: fmtDateTime(user.createdAt) },
                 {
@@ -924,9 +940,10 @@ export default function AdminUserDetailPage() {
             {/* Identity */}
             {(() => {
               const rows: { label: string; value: string; mono?: boolean; dim?: boolean }[] = [
-                { label: "Phone", value: user.phone, mono: true },
+                { label: "Login ID", value: user.phone, mono: true },
+                { label: "Platform ID", value: user.platformId ?? `#${user.id}`, mono: true },
                 { label: "Nickname", value: user.inGameName ?? "—" },
-                { label: "Free Fire UID", value: user.uid ?? "—", mono: true },
+                { label: "Contact Phone", value: user.contactPhone ?? "—", mono: true },
                 { label: "Account ID", value: `#${user.id}`, mono: true },
               ];
               return (
@@ -938,6 +955,84 @@ export default function AdminUserDetailPage() {
                       <span className={cn("text-xs text-right break-all", r.mono ? "font-mono text-zinc-300" : "font-medium text-white", r.dim && "text-zinc-600")}>{r.value}</span>
                     </div>
                   ))}
+                </div>
+              );
+            })()}
+
+            {/* Verification Card */}
+            {(() => {
+              const isVerified = localVerified !== null ? localVerified : user.isVerified;
+              const verifiedAt = localVerifiedAt !== null ? localVerifiedAt : user.verifiedAt;
+
+              async function handleVerify() {
+                setVerifyLoading(true);
+                try {
+                  await doAction(`/admin/users/${userId}/${isVerified ? "unverify" : "verify"}`, "POST");
+                  setLocalVerified(!isVerified);
+                  setLocalVerifiedAt(isVerified ? null : new Date().toISOString());
+                  toast({ title: isVerified ? "Verification removed" : "Account verified", description: isVerified ? "This account is now unverified." : "Account marked as manually verified." });
+                } catch { toast({ title: "Error", description: "Action failed. Try again.", variant: "destructive" }); }
+                finally { setVerifyLoading(false); }
+              }
+
+              return (
+                <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${isVerified ? "rgba(52,211,153,0.2)" : "rgba(245,158,11,0.2)"}` }}>
+                  <div className={cn("px-4 py-2 border-b text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5", isVerified ? "border-emerald-500/20 text-emerald-500" : "border-amber-500/20 text-amber-500")}>
+                    {isVerified ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ShieldOff className="w-3.5 h-3.5" />}
+                    Account Verification
+                  </div>
+                  <div className="px-4 py-3 flex flex-col gap-3" style={{ background: isVerified ? "rgba(52,211,153,0.03)" : "rgba(245,158,11,0.03)" }}>
+                    <div className="flex items-start gap-3">
+                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", isVerified ? "bg-emerald-500/15 border border-emerald-500/20" : "bg-amber-500/10 border border-amber-500/20")}>
+                        {isVerified ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <ShieldOff className="w-4 h-4 text-amber-400" />}
+                      </div>
+                      <div>
+                        <p className={cn("text-sm font-semibold", isVerified ? "text-emerald-400" : "text-amber-400")}>
+                          {isVerified ? "Verified Account" : "Not Verified"}
+                        </p>
+                        {isVerified && verifiedAt && (
+                          <p className="text-[11px] text-zinc-500 mt-0.5">Verified on {fmtDateTime(verifiedAt)}</p>
+                        )}
+                        {!isVerified && user.contactPhone && (
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            Contact: <span className="font-mono text-white">{user.contactPhone}</span>
+                          </p>
+                        )}
+                        {!isVerified && !user.contactPhone && (
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No contact phone provided</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {user.contactPhone && (
+                      <div className="rounded-xl px-3 py-2 border border-white/8 flex items-center gap-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                        <Phone className="w-3.5 h-3.5 text-zinc-400" />
+                        <div>
+                          <p className="text-[10px] text-zinc-600 uppercase tracking-wider">Contact Phone</p>
+                          <p className="text-sm font-mono text-white">{user.contactPhone}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleVerify}
+                      disabled={verifyLoading}
+                      className={cn(
+                        "w-full h-9 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60",
+                        isVerified
+                          ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-white/10"
+                          : "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/25"
+                      )}
+                    >
+                      {verifyLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : localVerified ? (
+                        <><ShieldOff className="w-3.5 h-3.5" />Remove Verification</>
+                      ) : (
+                        <><CheckCircle2 className="w-3.5 h-3.5" />Mark as Verified</>
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })()}

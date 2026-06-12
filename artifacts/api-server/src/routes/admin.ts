@@ -93,6 +93,9 @@ function formatUser(u: typeof usersTable.$inferSelect) {
     nameChangedAt: u.nameChangedAt?.toISOString() ?? null,
     nameChangeAllowed: u.nameChangeAllowed,
     platformId: u.platformId ?? null,
+    contactPhone: u.contactPhone ?? null,
+    isVerified: u.isVerified,
+    verifiedAt: u.verifiedAt?.toISOString() ?? null,
     twoFaResetAt: u.twoFaResetAt?.toISOString() ?? null,
     twoFaWithdrawalBypass: u.twoFaWithdrawalBypass,
     twoFaEnabled: u.twoFaEnabled,
@@ -1364,6 +1367,32 @@ router.get("/admin/users/:id", requireAdmin, async (req, res) => {
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   res.json(formatUser(user));
+});
+
+router.post("/admin/users/:id/verify", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  const [updated] = await db.update(usersTable)
+    .set({ isVerified: true, verifiedAt: new Date() })
+    .where(eq(usersTable.id, id))
+    .returning();
+  await writeLog(id, "account_verified", "account", "Account manually verified by admin");
+  res.json(formatUser(updated));
+});
+
+router.post("/admin/users/:id/unverify", requireAdmin, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  const [updated] = await db.update(usersTable)
+    .set({ isVerified: false, verifiedAt: null })
+    .where(eq(usersTable.id, id))
+    .returning();
+  await writeLog(id, "account_unverified", "account", "Verification removed by admin");
+  res.json(formatUser(updated));
 });
 
 router.post("/admin/users/:id/2fa/approve", requireAdmin, async (req, res) => {
