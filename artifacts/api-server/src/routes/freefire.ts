@@ -1,11 +1,110 @@
 import { Router, type IRouter } from "express";
 import { requireAuth } from "../middlewares/auth.js";
-import { getSystemSettings } from "../lib/systemSettings.js";
+import { getSystemSettings, type SystemSettings } from "../lib/systemSettings.js";
 
 const router: IRouter = Router();
 
-const FF_API_BASE = "https://developers.freefirecommunity.com/api/v1";
-const VALID_REGIONS = new Set(["ind", "sg", "id", "br", "us", "th", "vn", "my", "pk", "bd"]);
+export interface NormalizedProfile {
+  accountId: string;
+  nickname: string;
+  level: number;
+  rank: number;
+  rankingPoints: number;
+  region: string;
+  liked: number;
+  exp: string;
+  creditScore: number;
+  primeLevel: number;
+  signature: string;
+  pet: { level: number; exp: number } | null;
+  source: "hlgaming" | "gameskinbo";
+}
+
+async function fetchFromHLGaming(uid: string, region: string, settings: SystemSettings): Promise<NormalizedProfile | null> {
+  const useruid = process.env.HL_GAMING_USERUID || settings.hlGamingUseruid;
+  const apiKey = process.env.HL_GAMING_API_KEY || settings.hlGamingApiKey;
+  if (!useruid || !apiKey) return null;
+
+  try {
+    const url = new URL("https://proapis.hlgamingofficial.com/main/games/freefire/account/api");
+    url.searchParams.set("sectionName", "AllData");
+    url.searchParams.set("PlayerUid", uid);
+    url.searchParams.set("region", region);
+    url.searchParams.set("useruid", useruid);
+    url.searchParams.set("api", apiKey);
+
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(9000) });
+    if (!res.ok) return null;
+
+    const data = await res.json() as Record<string, unknown>;
+    const result = (data.result ?? data) as Record<string, unknown>;
+    const ai = (result.AccountInfo ?? {}) as Record<string, unknown>;
+    if (!ai.AccountName) return null;
+
+    const ci = (result.creditScoreInfo ?? {}) as Record<string, unknown>;
+    const si = (result.socialinfo ?? {}) as Record<string, unknown>;
+    const pi = (result.petInfo ?? null) as Record<string, unknown> | null;
+
+    return {
+      accountId: uid,
+      nickname: String(ai.AccountName),
+      level: Number(ai.AccountLevel ?? 0),
+      rank: Number(ai.BrMaxRank ?? 0),
+      rankingPoints: Number(ai.BrRankPoint ?? 0),
+      region: String(ai.AccountRegion ?? region).toUpperCase(),
+      liked: Number(ai.AccountLikes ?? 0),
+      exp: String(ai.AccountEXP ?? 0),
+      creditScore: Number(ci.creditScore ?? 100),
+      primeLevel: 0,
+      signature: String(si.AccountSignature ?? ""),
+      pet: pi && pi.level ? { level: Number(pi.level), exp: Number(pi.exp ?? 0) } : null,
+      source: "hlgaming",
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFromGameskinbo(uid: string, region: string, settings: SystemSettings): Promise<NormalizedProfile | null> {
+  const apiKey = process.env.GAMESKINBO_API_KEY || settings.gameskinboApiKey;
+  if (!apiKey) return null;
+
+  try {
+    const url = new URL("https://api.gameskinbo.com/ff-info/get");
+    url.searchParams.set("uid", uid);
+    url.searchParams.set("region", region.toUpperCase());
+
+    const res = await fetch(url.toString(), {
+      headers: { "x-api-key": apiKey },
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json() as Record<string, unknown>;
+    const ai = (data.AccountInfo ?? {}) as Record<string, unknown>;
+    if (!ai.AccountName) return null;
+
+    const ap = (data.AccountProfileInfo ?? {}) as Record<string, unknown>;
+
+    return {
+      accountId: uid,
+      nickname: String(ai.AccountName),
+      level: Number(ai.AccountLevel ?? 0),
+      rank: Number(ap.BrMaxRank ?? 0),
+      rankingPoints: Number(ap.BrRankPoint ?? 0),
+      region: String(ai.AccountRegion ?? region).toUpperCase(),
+      liked: Number(ai.AccountLikes ?? 0),
+      exp: String(ai.AccountEXP ?? 0),
+      creditScore: 100,
+      primeLevel: 0,
+      signature: "",
+      pet: null,
+      source: "gameskinbo",
+    };
+  } catch {
+    return null;
+  }
+}
 
 router.get("/freefire/player", requireAuth, async (req, res) => {
   const { uid, region = "ind" } = req.query as { uid?: string; region?: string };
@@ -15,75 +114,37 @@ router.get("/freefire/player", requireAuth, async (req, res) => {
   }
 
   const normalizedRegion = String(region).toLowerCase();
-  if (!VALID_REGIONS.has(normalizedRegion)) {
-    return res.status(400).json({ error: "Invalid region." });
+  const settings = getSystemSettings();
+
+  // ── Source 1: HL Gaming (primary) ──────────────────────────────────────────
+  const hlgaming = await fetchFromHLGaming(uid, normalizedRegion, settings);
+  if (hlgaming) {
+    return res.json(hlgaming);
   }
 
-  const apiKey = process.env.FREEFIRE_API_KEY || getSystemSettings().freefireApiKey;
-  if (!apiKey) {
-    return res.status(500).json({ error: "Free Fire API key not configured." });
+  // ── Source 2: Gameskinbo (secondary) ───────────────────────────────────────
+  const gameskinbo = await fetchFromGameskinbo(uid, normalizedRegion, settings);
+  if (gameskinbo) {
+    return res.json(gameskinbo);
   }
 
-  try {
-    const url = new URL(`${FF_API_BASE}/info`);
-    url.searchParams.set("region", normalizedRegion);
-    url.searchParams.set("uid", uid);
+  // ── Source 3: Manual fallback ───────────────────────────────────────────────
+  return res.json({ manual: true, uid });
+});
 
-    const ffRes = await fetch(url.toString(), {
-      headers: {
-        "accept": "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "no-cache",
-        "content-type": "application/json",
-        "pragma": "no-cache",
-        "referer": "https://developers.freefirecommunity.com/en/dashboard/playground",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        "x-api-key": apiKey,
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+// Test endpoint — returns status of each configured source (admin only)
+router.get("/freefire/sources", requireAuth, async (req, res) => {
+  const settings = getSystemSettings();
 
-    if (!ffRes.ok) {
-      if (ffRes.status === 404) {
-        return res.status(404).json({ error: "Player not found. Check the UID and region." });
-      }
-      return res.status(502).json({ error: "Failed to fetch player data. Try again." });
-    }
+  const hlGamingConfigured = !!(process.env.HL_GAMING_USERUID || settings.hlGamingUseruid) &&
+                             !!(process.env.HL_GAMING_API_KEY || settings.hlGamingApiKey);
+  const gameskinboConfigured = !!(process.env.GAMESKINBO_API_KEY || settings.gameskinboApiKey);
 
-    const data = await ffRes.json() as Record<string, unknown>;
-
-    // Return only the fields we actually use — keeps response lean
-    const basic = (data.basicInfo ?? {}) as Record<string, unknown>;
-    const credit = (data.creditScoreInfo ?? {}) as Record<string, unknown>;
-    const pet = (data.petInfo ?? {}) as Record<string, unknown>;
-    const social = (data.socialInfo ?? {}) as Record<string, unknown>;
-    const prime = (basic.primePrivilegeDetail ?? {}) as Record<string, unknown>;
-
-    return res.json({
-      accountId: basic.accountId,
-      nickname: basic.nickname,
-      level: basic.level,
-      rank: basic.rank,
-      rankingPoints: basic.rankingPoints,
-      region: basic.region,
-      liked: basic.liked,
-      exp: basic.exp,
-      creditScore: credit.creditScore ?? 100,
-      primeLevel: (prime.primeLevel as number) ?? 0,
-      signature: social.signature ?? "",
-      pet: pet.id
-        ? { level: pet.level, exp: pet.exp }
-        : null,
-    });
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === "TimeoutError") {
-      return res.status(504).json({ error: "Free Fire API timed out. Try again." });
-    }
-    return res.status(502).json({ error: "Failed to reach Free Fire API." });
-  }
+  return res.json({
+    primary: { name: "HL Gaming", configured: hlGamingConfigured },
+    secondary: { name: "Gameskinbo", configured: gameskinboConfigured },
+    fallback: { name: "Manual Entry", always: true },
+  });
 });
 
 export default router;

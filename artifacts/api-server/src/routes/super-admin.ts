@@ -1595,23 +1595,39 @@ router.get("/super-admin/users/roles", requireSuperAdmin, async (_req, res) => {
 // ── GET /super-admin/system-settings ──────────────────────────────────────────
 router.get("/super-admin/system-settings", requireSuperAdmin, (_req, res) => {
   const s = getSystemSettings();
-  const key = s.freefireApiKey;
+  const mask = (v: string) => v ? `••••••••${v.slice(-4)}` : "";
   res.json({
-    freefireApiKeySet: !!key,
-    freefireApiKeyPreview: key ? `••••••••${key.slice(-4)}` : "",
+    freefireApiKeySet: !!s.freefireApiKey,
+    freefireApiKeyPreview: mask(s.freefireApiKey),
+    hlGamingUseruidSet: !!s.hlGamingUseruid,
+    hlGamingUseruidPreview: mask(s.hlGamingUseruid),
+    hlGamingApiKeySet: !!s.hlGamingApiKey,
+    hlGamingApiKeyPreview: mask(s.hlGamingApiKey),
+    gameskinboApiKeySet: !!s.gameskinboApiKey,
+    gameskinboApiKeyPreview: mask(s.gameskinboApiKey),
   });
 });
 
 // ── PUT /super-admin/system-settings ──────────────────────────────────────────
 router.put("/super-admin/system-settings", requireSuperAdmin, (req, res) => {
-  const { freefireApiKey } = req.body as { freefireApiKey?: string };
+  const { freefireApiKey, hlGamingUseruid, hlGamingApiKey, gameskinboApiKey } =
+    req.body as { freefireApiKey?: string; hlGamingUseruid?: string; hlGamingApiKey?: string; gameskinboApiKey?: string };
   const updated = saveSystemSettings({
     ...(freefireApiKey !== undefined && { freefireApiKey: freefireApiKey.trim() }),
+    ...(hlGamingUseruid !== undefined && { hlGamingUseruid: hlGamingUseruid.trim() }),
+    ...(hlGamingApiKey !== undefined && { hlGamingApiKey: hlGamingApiKey.trim() }),
+    ...(gameskinboApiKey !== undefined && { gameskinboApiKey: gameskinboApiKey.trim() }),
   });
-  const key = updated.freefireApiKey;
+  const mask = (v: string) => v ? `••••••••${v.slice(-4)}` : "";
   res.json({
-    freefireApiKeySet: !!key,
-    freefireApiKeyPreview: key ? `••••••••${key.slice(-4)}` : "",
+    freefireApiKeySet: !!updated.freefireApiKey,
+    freefireApiKeyPreview: mask(updated.freefireApiKey),
+    hlGamingUseruidSet: !!updated.hlGamingUseruid,
+    hlGamingUseruidPreview: mask(updated.hlGamingUseruid),
+    hlGamingApiKeySet: !!updated.hlGamingApiKey,
+    hlGamingApiKeyPreview: mask(updated.hlGamingApiKey),
+    gameskinboApiKeySet: !!updated.gameskinboApiKey,
+    gameskinboApiKeyPreview: mask(updated.gameskinboApiKey),
   });
 });
 
