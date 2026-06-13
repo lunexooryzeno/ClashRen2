@@ -644,7 +644,7 @@ export default function GetStartedPage() {
                 />
 
                 {otpSendState !== "failed" && (
-                  <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.22)" }}>
+                  <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg mx-auto" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.22)" }}>
                     <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <p className="text-[11px] text-amber-200/70 leading-snug">
                       OTP can sometimes take a few minutes — please wait before tapping Resend.
