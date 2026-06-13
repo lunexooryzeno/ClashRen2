@@ -644,10 +644,10 @@ export default function GetStartedPage() {
                 />
 
                 {otpSendState !== "failed" && (
-                  <div className="w-full flex items-start gap-2.5 px-3.5 py-3 rounded-xl" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
-                    <Clock className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-                    <p className="text-xs text-amber-200/80 leading-relaxed">
-                      OTP can take <span className="text-amber-300 font-semibold">up to 3 minutes</span> to arrive. Please wait before tapping Resend.
+                  <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.22)" }}>
+                    <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <p className="text-[11px] text-amber-200/70 leading-snug">
+                      OTP can sometimes take a few minutes — please wait before tapping Resend.
                     </p>
                   </div>
                 )}
