@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, Check, MessageSquare } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -419,15 +419,37 @@ export default function GetStartedPage() {
 
         {/* Step indicator (phone → otp only) */}
         {(step === "phone" || step === "otp") && (
-          <div className="flex items-center gap-2 mb-8">
-            <div className={`flex items-center gap-1.5 ${step === "phone" ? "text-white" : "text-zinc-600"}`}>
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${step === "phone" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-500"}`}>1</div>
-              <span className="text-[11px] font-medium">Number</span>
+          <div className="flex items-center gap-3 mb-8">
+            {/* Step 1 */}
+            <div className={`flex items-center gap-2 ${step === "phone" ? "text-white" : "text-zinc-400"}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                step === "otp"
+                  ? "bg-green-500/20 border border-green-500/50"
+                  : "bg-primary border border-primary/60 shadow-[0_0_10px_rgba(139,92,246,0.4)]"
+              }`}>
+                {step === "otp"
+                  ? <Check className="w-3 h-3 text-green-400" strokeWidth={2.5} />
+                  : <span className="text-[10px] font-bold text-white">1</span>
+                }
+              </div>
+              <span className="text-xs font-semibold">Number</span>
             </div>
-            <div className="w-8 h-px bg-zinc-800" />
-            <div className={`flex items-center gap-1.5 ${step === "otp" ? "text-white" : "text-zinc-600"}`}>
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${step === "otp" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-500"}`}>2</div>
-              <span className="text-[11px] font-medium">Verify</span>
+            {/* Connector */}
+            <div className="flex-1 h-px max-w-[40px]" style={{
+              background: step === "otp"
+                ? "linear-gradient(90deg, rgba(34,197,94,0.5), rgba(139,92,246,0.5))"
+                : "rgba(255,255,255,0.1)"
+            }} />
+            {/* Step 2 */}
+            <div className={`flex items-center gap-2 ${step === "otp" ? "text-white" : "text-zinc-600"}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                step === "otp"
+                  ? "bg-primary border border-primary/60 shadow-[0_0_10px_rgba(139,92,246,0.4)]"
+                  : "bg-zinc-900 border border-zinc-700"
+              }`}>
+                <span className="text-[10px] font-bold">2</span>
+              </div>
+              <span className="text-xs font-semibold">Verify</span>
             </div>
           </div>
         )}
@@ -552,80 +574,86 @@ export default function GetStartedPage() {
                 </p>
               </div>
 
-              <Form {...phoneForm}>
-                <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
-                  <FormField
-                    control={phoneForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <div className="flex rounded-2xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/40 focus-within:ring-offset-0"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                            <div className="px-4 flex items-center gap-2 border-r select-none shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-                              <span className="text-sm font-bold text-zinc-400">+91</span>
+              <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <Form {...phoneForm}>
+                  <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-3">
+                    <FormField
+                      control={phoneForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="flex rounded-xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:ring-offset-0"
+                              style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                              <div className="px-4 flex items-center select-none shrink-0 border-r" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
+                                <span className="text-base font-bold text-zinc-300">+91</span>
+                              </div>
+                              <Input
+                                ref={field.ref}
+                                name={field.name}
+                                onBlur={field.onBlur}
+                                type="tel"
+                                inputMode="numeric"
+                                placeholder="Enter Phone Number"
+                                className="border-0 bg-transparent focus-visible:ring-0 rounded-none h-13 text-lg tracking-wider font-medium placeholder:text-zinc-600"
+                                style={{ height: 52 }}
+                                maxLength={12}
+                                value={displayPhone}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                  const formatted = formatPhoneDisplay(digits);
+                                  setDisplayPhone(formatted);
+                                  field.onChange(digits);
+                                }}
+                                data-testid="input-phone"
+                              />
                             </div>
-                            <Input
-                              ref={field.ref}
-                              name={field.name}
-                              onBlur={field.onBlur}
-                              type="tel"
-                              inputMode="numeric"
-                              placeholder="Enter Phone Number"
-                              className="border-0 bg-transparent focus-visible:ring-0 rounded-none h-14 text-xl tracking-widest font-medium placeholder:text-zinc-700"
-                              maxLength={12}
-                              value={displayPhone}
-                              onChange={(e) => {
-                                const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                const formatted = formatPhoneDisplay(digits);
-                                setDisplayPhone(formatted);
-                                field.onChange(digits);
-                              }}
-                              data-testid="input-phone"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-xs pl-1 mt-1.5" />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition-all active:scale-[0.98] font-heading tracking-wider"
-                    disabled={isSending}
-                    data-testid="btn-send-otp"
-                  >
-                    {isSending ? "Sending…" : "Get OTP"}
-                  </Button>
-                  <input
-                    type="text"
-                    name="website"
-                    autoComplete="off"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    onChange={e => { honeypotRef.current = e.target.value; }}
-                    style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
-                  />
-                </form>
-              </Form>
-
+                          </FormControl>
+                          <FormMessage className="text-xs pl-1 mt-1.5" />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full h-13 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_4px_24px_rgba(139,92,246,0.45)] transition-all active:scale-[0.98] font-heading tracking-wider"
+                      style={{ height: 52 }}
+                      disabled={isSending}
+                      data-testid="btn-send-otp"
+                    >
+                      {isSending ? "Sending…" : "Get OTP"}
+                    </Button>
+                    <input
+                      type="text"
+                      name="website"
+                      autoComplete="off"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      onChange={e => { honeypotRef.current = e.target.value; }}
+                      style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
+                    />
+                  </form>
+                </Form>
+              </div>
             </div>
 
           ) : (
             <div className="flex flex-col items-center gap-6">
-              <div className="text-center space-y-1.5 w-full">
-                <h1 className="font-heading text-3xl font-bold tracking-tight text-white">
+              {/* Header */}
+              <div className="text-center space-y-2 w-full">
+                <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center mb-3" style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", boxShadow: "0 0 24px rgba(139,92,246,0.2)" }}>
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <h1 className="font-heading text-2xl font-bold tracking-tight text-white">
                   Check Your SMS
                 </h1>
                 <p className="text-sm text-zinc-500">
-                  Code sent to{" "}
-                  <span className="text-white font-semibold">+91 {displayPhone}</span>
+                  Code sent to <span className="text-zinc-300 font-semibold">+91 {displayPhone}</span>
                 </p>
                 {otpSendState === "sending" && (
-                  <p className="text-xs text-amber-400/80 animate-pulse pt-1">Sending OTP…</p>
+                  <p className="text-xs text-amber-400/80 animate-pulse">Sending OTP…</p>
                 )}
                 {otpSendState === "failed" && (
-                  <p className="text-xs text-red-400 pt-1">{otpSendError || "Failed to send — tap Resend below"}</p>
+                  <p className="text-xs text-red-400">{otpSendError || "Failed to send — tap Resend below"}</p>
                 )}
               </div>
 
@@ -648,10 +676,11 @@ export default function GetStartedPage() {
                   </div>
                 )}
 
-                <div className="w-full space-y-3">
+                <div className="w-full space-y-2.5">
                   <Button
                     type="submit"
-                    className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition-all active:scale-[0.98] font-heading tracking-wider"
+                    className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_4px_24px_rgba(139,92,246,0.45)] transition-all active:scale-[0.98] font-heading tracking-wider"
+                    style={{ height: 52 }}
                     disabled={isVerifying || otpValue.length !== 6}
                     data-testid="btn-verify-otp"
                   >
@@ -661,7 +690,7 @@ export default function GetStartedPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="w-full h-11 rounded-xl text-zinc-500 hover:text-white text-sm transition-colors"
+                    className="w-full h-10 rounded-xl text-zinc-600 hover:text-zinc-300 text-sm transition-colors"
                     disabled={timer > 0 || isSending}
                     onClick={handleResend}
                     data-testid="btn-resend-otp"
