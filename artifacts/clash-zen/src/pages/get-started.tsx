@@ -609,9 +609,6 @@ export default function GetStartedPage() {
                 </form>
               </Form>
 
-              <p className="text-center text-xs text-zinc-700">
-                Indian mobile numbers only (+91)
-              </p>
             </div>
 
           ) : (
