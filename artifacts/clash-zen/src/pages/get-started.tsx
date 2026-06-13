@@ -349,7 +349,7 @@ export default function GetStartedPage() {
     phoneRef.current = data.phone;
     setDisplayPhone(formatPhoneDisplay(data.phone));
     setStep("otp");
-    setTimer(60);
+    setTimer(30);
     setOtpSendState("sending");
     const ok = await doSendOtp(data.phone);
     setOtpSendState(ok ? "sent" : "failed");
@@ -360,7 +360,7 @@ export default function GetStartedPage() {
 
   const handleResend = async () => {
     haptic.mediumTap();
-    setTimer(60);
+    setTimer(30);
     setOtpSendState("sending");
     const ok = await doSendOtp(phone);
     setOtpSendState(ok ? "sent" : "failed");
