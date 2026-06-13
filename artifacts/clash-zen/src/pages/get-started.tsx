@@ -563,7 +563,6 @@ export default function GetStartedPage() {
                           <div className="flex rounded-2xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/40 focus-within:ring-offset-0"
                             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
                             <div className="px-4 flex items-center gap-2 border-r select-none shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-                              <span className="text-sm font-bold text-zinc-300">🇮🇳</span>
                               <span className="text-sm font-bold text-zinc-400">+91</span>
                             </div>
                             <Input
