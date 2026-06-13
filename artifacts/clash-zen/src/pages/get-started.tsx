@@ -571,7 +571,7 @@ export default function GetStartedPage() {
                               onBlur={field.onBlur}
                               type="tel"
                               inputMode="numeric"
-                              placeholder="98765 43210"
+                              placeholder="Enter Phone Number"
                               className="border-0 bg-transparent focus-visible:ring-0 rounded-none h-14 text-xl tracking-widest font-medium placeholder:text-zinc-700"
                               maxLength={12}
                               value={displayPhone}
