@@ -18,7 +18,7 @@ import {
   Shield, Star, Heart, PawPrint, Pencil, Lock,
   User, Hash, Crown, CheckCircle2, Flame, ChevronRight, Check,
   AlertCircle, AlertTriangle, Loader2, RotateCcw, TrendingUp,
-  Wifi, WifiOff, RefreshCw, ClipboardEdit,
+  ClipboardEdit,
 } from "lucide-react";
 
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
@@ -58,11 +58,6 @@ interface FreefireProfile {
 type FetchState = "idle" | "loading" | "success" | "error" | "level_too_low" | "manual_needed";
 type Step = "uid" | "manual" | "profile";
 
-const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  hlgaming: { label: "HL Gaming", color: "text-green-300", bg: "bg-green-500/10", border: "border-green-500/25" },
-  gameskinbo: { label: "Gameskinbo", color: "text-blue-300", bg: "bg-blue-500/10", border: "border-blue-500/25" },
-  manual: { label: "Manually Entered", color: "text-amber-300", bg: "bg-amber-500/10", border: "border-amber-500/25" },
-};
 
 const REGIONS = [
   { value: "IND", label: "India" },
@@ -240,15 +235,6 @@ export default function SetupProfileScreen() {
               className="rounded-2xl p-6 border border-white/10"
               style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)" }}
             >
-              {/* Data source status */}
-              <div className="flex items-center gap-2 mb-5 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center gap-1.5 flex-1">
-                  <Wifi className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                  <span className="text-[11px] text-zinc-400">Sources: <span className="text-white font-semibold">HL Gaming</span> · <span className="text-white font-semibold">Gameskinbo</span> · Manual</span>
-                </div>
-                <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Auto</span>
-              </div>
-
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onUidSubmit)} className="space-y-5">
                   <FormField
@@ -358,23 +344,15 @@ export default function SetupProfileScreen() {
         {step === "manual" && (
           <div className="w-full max-w-sm relative z-10">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 mb-5 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-                <ClipboardEdit className="w-8 h-8 text-amber-400" strokeWidth={1.5} />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-700/20 border border-primary/30 mb-5 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
+                <ClipboardEdit className="w-8 h-8 text-primary" strokeWidth={1.5} />
               </div>
               <h1 className="font-heading text-2xl font-bold tracking-tight text-white mb-2">
-                Manual Setup
+                Enter Your Details
               </h1>
               <p className="text-sm text-zinc-500 leading-relaxed">
-                We couldn't auto-fetch your profile.<br />
-                Please enter your details below.
-              </p>
-            </div>
-
-            {/* Source status */}
-            <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
-              <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <p className="text-[11px] text-amber-200/70 leading-snug">
-                Both HL Gaming and Gameskinbo returned no data for UID <span className="font-bold text-amber-300">{pendingUid}</span>. Enter details manually — they can be reviewed by admins later.
+                Fill in your Free Fire profile details<br />
+                to complete your account setup.
               </p>
             </div>
 
@@ -525,20 +503,6 @@ export default function SetupProfileScreen() {
                   <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                   <span className="text-xs font-bold text-yellow-300">Level {profile.level}</span>
                 </div>
-                {/* Data source badge */}
-                {profile.source && SOURCE_LABELS[profile.source] && (
-                  <div className={`absolute top-3 left-3 flex items-center gap-1.5 ${SOURCE_LABELS[profile.source].bg} border ${SOURCE_LABELS[profile.source].border} rounded-full px-2.5 py-1`}>
-                    {profile.source === "manual"
-                      ? <ClipboardEdit className={`w-3 h-3 ${SOURCE_LABELS[profile.source].color}`} />
-                      : profile.source === "hlgaming"
-                      ? <Wifi className={`w-3 h-3 ${SOURCE_LABELS[profile.source].color}`} />
-                      : <RefreshCw className={`w-3 h-3 ${SOURCE_LABELS[profile.source].color}`} />
-                    }
-                    <span className={`text-[10px] font-bold ${SOURCE_LABELS[profile.source].color}`}>
-                      {SOURCE_LABELS[profile.source].label}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Avatar — overlapping banner */}
@@ -625,54 +589,52 @@ export default function SetupProfileScreen() {
             </div>
 
             {/* ── Stats row ── */}
-            {profile.source !== "manual" && (
+            {(profile.liked > 0 || profile.creditScore > 0 || profile.primeLevel > 0 || profile.pet) && (
               <div className="grid grid-cols-2 gap-2.5">
-                <GlowStat
-                  icon={<Heart className="w-4 h-4" />}
-                  label="Likes"
-                  value={Number(profile.liked).toLocaleString()}
-                  gradient="from-pink-600/30 to-rose-800/20"
-                  border="border-pink-500/20"
-                  iconColor="text-pink-400"
-                  glow="rgba(236,72,153,0.2)"
-                />
-                <GlowStat
-                  icon={<CheckCircle2 className="w-4 h-4" />}
-                  label="Trust Score"
-                  value={`${profile.creditScore}/100`}
-                  gradient="from-emerald-600/30 to-green-800/20"
-                  border="border-emerald-500/20"
-                  iconColor="text-emerald-400"
-                  glow="rgba(52,211,153,0.2)"
-                />
-                <GlowStat
-                  icon={<Crown className="w-4 h-4" />}
-                  label="Prime Level"
-                  value={profile.primeLevel > 0 ? `Tier ${profile.primeLevel}` : "None"}
-                  gradient="from-yellow-600/30 to-amber-800/20"
-                  border="border-yellow-500/20"
-                  iconColor="text-yellow-400"
-                  glow="rgba(250,204,21,0.2)"
-                />
-                <GlowStat
-                  icon={<PawPrint className="w-4 h-4" />}
-                  label={profile.pet ? `Pet · Lv.${profile.pet.level}` : "Pet"}
-                  value={profile.pet ? `${profile.pet.exp.toLocaleString()} XP` : "None"}
-                  gradient="from-teal-600/30 to-cyan-800/20"
-                  border="border-teal-500/20"
-                  iconColor="text-teal-400"
-                  glow="rgba(20,184,166,0.2)"
-                />
-              </div>
-            )}
-
-            {/* Manual notice */}
-            {profile.source === "manual" && (
-              <div className="rounded-xl p-3.5 border border-amber-500/25 flex items-start gap-3" style={{ background: "rgba(245,158,11,0.06)" }}>
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Stats were entered manually. Your profile will be verified by the Clash Ren team before tournament participation.
-                </p>
+                {profile.liked > 0 && (
+                  <GlowStat
+                    icon={<Heart className="w-4 h-4" />}
+                    label="Likes"
+                    value={Number(profile.liked).toLocaleString()}
+                    gradient="from-pink-600/30 to-rose-800/20"
+                    border="border-pink-500/20"
+                    iconColor="text-pink-400"
+                    glow="rgba(236,72,153,0.2)"
+                  />
+                )}
+                {profile.creditScore > 0 && (
+                  <GlowStat
+                    icon={<CheckCircle2 className="w-4 h-4" />}
+                    label="Trust Score"
+                    value={`${profile.creditScore}/100`}
+                    gradient="from-emerald-600/30 to-green-800/20"
+                    border="border-emerald-500/20"
+                    iconColor="text-emerald-400"
+                    glow="rgba(52,211,153,0.2)"
+                  />
+                )}
+                {profile.primeLevel > 0 && (
+                  <GlowStat
+                    icon={<Crown className="w-4 h-4" />}
+                    label="Prime Level"
+                    value={`Tier ${profile.primeLevel}`}
+                    gradient="from-yellow-600/30 to-amber-800/20"
+                    border="border-yellow-500/20"
+                    iconColor="text-yellow-400"
+                    glow="rgba(250,204,21,0.2)"
+                  />
+                )}
+                {profile.pet && (
+                  <GlowStat
+                    icon={<PawPrint className="w-4 h-4" />}
+                    label={`Pet · Lv.${profile.pet.level}`}
+                    value={`${profile.pet.exp.toLocaleString()} XP`}
+                    gradient="from-teal-600/30 to-cyan-800/20"
+                    border="border-teal-500/20"
+                    iconColor="text-teal-400"
+                    glow="rgba(20,184,166,0.2)"
+                  />
+                )}
               </div>
             )}
 
@@ -704,10 +666,7 @@ export default function SetupProfileScreen() {
             <div className="flex items-start gap-2 px-0.5">
               <Lock className="w-3 h-3 text-zinc-700 mt-0.5 shrink-0" />
               <p className="text-[11px] text-zinc-700 leading-relaxed">
-                {profile.source !== "manual"
-                  ? "UID, rank & stats are pulled live from your Free Fire account. Nickname and bio are yours to customise."
-                  : "Details entered manually. Stats will be verified after profile confirmation."
-                }
+                Your UID and stats are locked after confirmation. Nickname and bio are yours to customise.
               </p>
             </div>
 
