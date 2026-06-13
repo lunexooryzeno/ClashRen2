@@ -595,7 +595,7 @@ export default function GetStartedPage() {
                 Verify Your Number
               </h1>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Enter the 6-digit code sent to
+                A 6-digit code has been sent to
               </p>
               <p className="text-sm font-semibold text-white tracking-wide">
                 +91 {phone}
@@ -605,6 +605,11 @@ export default function GetStartedPage() {
               )}
               {otpSendState === "failed" && (
                 <p className="text-[11px] text-red-400">{otpSendError || "Failed to send — tap Resend below"}</p>
+              )}
+              {otpSendState !== "failed" && (
+                <p className="text-[11px] text-zinc-500 leading-relaxed pt-1">
+                  ⏳ OTP delivery can take <span className="text-zinc-300 font-medium">1–3 minutes</span>. Please wait before tapping Resend.
+                </p>
               )}
             </div>
 
@@ -617,17 +622,6 @@ export default function GetStartedPage() {
                 onChange={setOtpValue}
                 testId="input-otp"
               />
-
-              {/* Delay notice */}
-              <div
-                className="w-full rounded-xl px-3.5 py-3 flex items-start gap-2.5 text-left"
-                style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}
-              >
-                <span className="text-amber-400 text-base mt-0.5">⏱</span>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  <span className="text-amber-300 font-semibold">Code not arrived yet?</span> It can sometimes take <span className="text-white">up to 2–3 minutes</span> to reach your phone. Please wait a moment before tapping Resend.
-                </p>
-              </div>
 
               <div className="w-full space-y-3">
                 <Button
