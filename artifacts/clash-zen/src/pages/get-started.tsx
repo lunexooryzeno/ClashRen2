@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -607,9 +607,12 @@ export default function GetStartedPage() {
                 <p className="text-[11px] text-red-400">{otpSendError || "Failed to send — tap Resend below"}</p>
               )}
               {otpSendState !== "failed" && (
-                <p className="text-[11px] text-zinc-500 leading-relaxed pt-1">
-                  ⏳ OTP delivery can take <span className="text-zinc-300 font-medium">1–3 minutes</span>. Please wait before tapping Resend.
-                </p>
+                <div className="flex items-start gap-1.5 justify-center pt-1">
+                  <Clock className="w-3 h-3 text-zinc-500 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    OTP delivery can take <span className="text-zinc-300 font-medium">1–3 minutes</span>. Please wait before tapping Resend.
+                  </p>
+                </div>
               )}
             </div>
 
