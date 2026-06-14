@@ -412,23 +412,6 @@ export default function GetStartedPage() {
       {/* Main layout */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative z-10">
 
-        {/* Brand header — static */}
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div
-            className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center"
-            style={{ boxShadow: "0 0 40px rgba(139,92,246,0.3), 0 0 0 1px rgba(255,255,255,0.05)" }}
-          >
-            <img src={LOGO_URL} alt="Clash Ren Logo" style={{ width: 52, height: 52 }} className="object-contain" />
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "0.1em", fontSize: "1rem" }}>
-              <span style={{ background: "linear-gradient(180deg,#e8e8e8 0%,#aaa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH </span>
-              <span style={{ color: "#e01010" }}>REN</span>
-            </span>
-            <p className="text-[10px] text-zinc-600 tracking-widest uppercase font-medium">Free Fire Tournament Platform</p>
-          </div>
-        </div>
-
         {/* Step indicator */}
         <AnimatePresence>
           {(step === "phone" || step === "otp") && (
