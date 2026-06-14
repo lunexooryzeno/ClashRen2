@@ -359,7 +359,6 @@ export default function SetupProfileScreen() {
                         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.08)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(252,165,165,0.7)"; }}
                       >
                         <LogOut className="w-4 h-4" />
-                        Logout
                       </button>
                       <Button
                         type="submit"
