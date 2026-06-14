@@ -16,7 +16,7 @@ import {
   Star, Zap, Award, Settings as SettingsIcon, Bookmark,
   QrCode, Image as ImageIcon, Trash2, Palette, Eye, EyeOff,
   Flag, Lightbulb, CheckCircle, Clock, XCircle, AlertTriangle,
-  Loader2, Crosshair, Headset, Smartphone, Info,
+  Loader2, Crosshair, Headset, Smartphone, Info, Copy,
 } from "lucide-react";
 
 interface ProfileAchievement {
@@ -407,55 +407,58 @@ export default function Profile() {
             <div className="grid grid-cols-2 gap-2 w-full mt-3">
               {/* In-Game UID */}
               <div
-                className="rounded-2xl p-3 flex flex-col gap-1.5 relative overflow-hidden"
+                className="rounded-2xl p-3 relative overflow-hidden"
                 style={{
                   background: "hsl(var(--primary) / 0.06)",
                   border: "1px solid hsl(var(--primary) / 0.18)",
                 }}
               >
-                <div className="flex items-center gap-1.5">
+                {/* Request change — icon only, top right */}
+                <button
+                  onClick={() => { setUidChangeDone(false); setUidChangeNew(""); setUidChangeReason(""); setShowUidChangeRequest(true); }}
+                  className="absolute top-2.5 right-2.5 w-6 h-6 rounded-lg flex items-center justify-center transition-colors active:opacity-60"
+                  style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.22)" }}
+                >
+                  <Edit3 className="w-3 h-3 text-primary" strokeWidth={2.5} />
+                </button>
+                {/* Label + value on left */}
+                <div className="flex items-center gap-1.5 mb-1.5 pr-8">
                   <Crosshair className="w-3 h-3 text-primary shrink-0" strokeWidth={2.5} />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70">In-Game UID</span>
                 </div>
-                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide">
+                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide pr-8">
                   {user?.uid ?? "—"}
                 </p>
-                <button
-                  onClick={() => { setUidChangeDone(false); setUidChangeNew(""); setUidChangeReason(""); setShowUidChangeRequest(true); }}
-                  className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors active:opacity-60"
-                >
-                  <Edit3 className="w-2.5 h-2.5" />
-                  Request Change
-                </button>
               </div>
 
               {/* Platform ID */}
               <div
-                className="rounded-2xl p-3 flex flex-col gap-1.5 relative overflow-hidden"
+                className="rounded-2xl p-3 relative overflow-hidden"
                 style={{
                   background: "hsl(var(--primary) / 0.06)",
                   border: "1px solid hsl(var(--primary) / 0.18)",
                 }}
               >
-                <div className="flex items-center gap-1.5">
+                {/* Copy — icon only, top right */}
+                <button
+                  onClick={async () => {
+                    if (!user?.platformId) return;
+                    await navigator.clipboard.writeText(user.platformId);
+                    toast({ title: "Copied!", description: "Platform ID copied to clipboard." });
+                  }}
+                  className="absolute top-2.5 right-2.5 w-6 h-6 rounded-lg flex items-center justify-center transition-colors active:opacity-60"
+                  style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.22)" }}
+                >
+                  <Copy className="w-3 h-3 text-primary" strokeWidth={2.5} />
+                </button>
+                {/* Label + value on left */}
+                <div className="flex items-center gap-1.5 mb-1.5 pr-8">
                   <Smartphone className="w-3 h-3 text-primary shrink-0" strokeWidth={2.5} />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70">Platform ID</span>
                 </div>
-                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide truncate">
+                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide truncate pr-8">
                   {user?.platformId ?? "—"}
                 </p>
-                {user?.platformId && (
-                  <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(user.platformId!);
-                      toast({ title: "Copied!", description: "Platform ID copied to clipboard." });
-                    }}
-                    className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors active:opacity-60"
-                  >
-                    <Share2 className="w-2.5 h-2.5" />
-                    Copy
-                  </button>
-                )}
               </div>
             </div>
 
