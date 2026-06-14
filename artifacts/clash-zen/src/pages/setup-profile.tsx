@@ -171,11 +171,11 @@ export default function SetupProfileScreen() {
             {/* Warning box */}
             <div
               className="rounded-xl p-3 flex items-start gap-3"
-              style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}
+              style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.22)" }}
             >
-              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-amber-300/80 leading-relaxed">
-                <span className="font-bold text-amber-300">Enter carefully.</span> Once your UID is linked, changing it requires admin approval. Double-check before continuing.
+              <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-[12px] text-blue-300/80 leading-relaxed">
+                <span className="font-bold text-blue-300">Enter carefully.</span> Once your UID is linked, changing it requires admin approval. Double-check before continuing.
               </p>
             </div>
 
