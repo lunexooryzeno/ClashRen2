@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { useUpdateMe } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
@@ -14,16 +12,8 @@ const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
 
 type FetchState = "idle" | "loading" | "error";
 
-interface FetchedProfile {
-  nickname: string;
-  level: number;
-  region: string;
-}
-
 export default function SetupProfileScreen() {
-  const updateMe = useUpdateMe();
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -31,6 +21,7 @@ export default function SetupProfileScreen() {
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState("");
   const [showWelcome, setShowWelcome] = useState(false);
+  const [playerName, setPlayerName] = useState("");
   const pendingRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) ?? "/";
 
   const trimmedUid = uid.trim();
@@ -47,7 +38,7 @@ export default function SetupProfileScreen() {
     try {
       const res = await fetch(
         `/api/freefire/player?uid=${encodeURIComponent(trimmedUid)}&region=ind`,
-        { credentials: "include" }
+        { credentials: "include", cache: "no-store" }
       );
       const json = await res.json() as {
         nickname?: string; level?: number; region?: string;
@@ -66,16 +57,30 @@ export default function SetupProfileScreen() {
         return;
       }
 
-      // Save uid + fetched in-game name
-      await updateMe.mutateAsync({ uid: trimmedUid, inGameName: json.nickname } as any);
+      // Save uid + fetched in-game name via direct fetch (bypasses generated client)
+      const patchRes = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ uid: trimmedUid, inGameName: json.nickname }),
+      });
+      if (!patchRes.ok) {
+        const errJson = await patchRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(errJson.error ?? "Failed to save profile.");
+      }
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
-      haptic.success();
+      haptic.successTap();
+      setPlayerName(json.nickname);
       setShowWelcome(true);
-    } catch {
+    } catch (err) {
       haptic.error();
       setFetchState("error");
-      setFetchError("Network error. Check your connection and try again.");
+      setFetchError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Network error. Check your connection and try again."
+      );
     }
   }
 
@@ -215,9 +220,11 @@ export default function SetupProfileScreen() {
         </div>
       </div>
 
-      {showWelcome && (
-        <WelcomeModal onDone={handleWelcomeDone} />
-      )}
+      <WelcomeModal
+        open={showWelcome}
+        playerName={playerName}
+        onContinue={handleWelcomeDone}
+      />
     </>
   );
 }

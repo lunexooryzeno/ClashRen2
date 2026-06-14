@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { freefireApiKeysTable } from "@workspace/db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 
 export interface NormalizedProfile {
   accountId: string;
@@ -28,9 +28,14 @@ async function getActiveKeys() {
 }
 
 async function markUsed(id: number) {
-  await db.execute(
-    `UPDATE freefire_api_keys SET request_count = request_count + 1, last_used_at = NOW() WHERE id = ${id}`
-  ).catch(() => {});
+  await db
+    .update(freefireApiKeysTable)
+    .set({
+      requestCount: sql`${freefireApiKeysTable.requestCount} + 1`,
+      lastUsedAt: new Date(),
+    })
+    .where(eq(freefireApiKeysTable.id, id))
+    .catch(() => {});
 }
 
 export async function fetchFreefireProfile(
