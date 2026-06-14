@@ -1,6 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Check, Search, Shuffle, Lock, Monitor } from "lucide-react";
+import {
+  ArrowLeft, Check, Search, Shuffle, Monitor,
+  Zap, Flame, Sparkles, Layers, Music, Crown, Droplets, Hexagon, LayoutGrid, Star,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { apiPost } from "@/lib/api";
@@ -9,10 +12,26 @@ import {
   type CategoryFilter, type ThemeEntry,
 } from "@/lib/themes";
 
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  all:           LayoutGrid,
+  esports:       Zap,
+  aggressive:    Flame,
+  atmospheric:   Sparkles,
+  clean:         Layers,
+  culture:       Music,
+  classic:       Crown,
+  glassmorphism: Droplets,
+  neumorphism:   Hexagon,
+};
+
 export default function ProfileThemePage() {
   const { theme, setTheme } = useTheme();
   const [search, setSearch]     = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
 
   const filtered = useMemo(() => {
     let list = THEME_CATALOG;
@@ -29,14 +48,13 @@ export default function ProfileThemePage() {
   const activeEntry = THEME_CATALOG.find(t => t.id === theme) ?? THEME_CATALOG[0];
 
   function applyTheme(t: ThemeEntry) {
-    if (t.tier === "premium") return;
     setTheme(t.id);
     apiPost("/users/theme", { theme: t.id }).catch(() => {});
   }
 
   function randomize() {
-    const free = THEME_CATALOG.filter(t => t.tier === "free" && !t.isSystem);
-    const pick  = free[Math.floor(Math.random() * free.length)];
+    const pool = THEME_CATALOG.filter(t => !t.isSystem);
+    const pick  = pool[Math.floor(Math.random() * pool.length)];
     applyTheme(pick);
   }
 
@@ -112,18 +130,20 @@ export default function ProfileThemePage() {
             const isAll  = key === "all";
             const meta   = isAll ? null : CATEGORY_META[key as keyof typeof CATEGORY_META];
             const active = category === key;
+            const Icon   = CATEGORY_ICONS[key] ?? LayoutGrid;
             return (
               <button
                 key={key}
                 onClick={() => setCategory(key)}
-                className="h-7 px-3 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-all active:scale-95"
+                className="h-7 px-3 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-all active:scale-95 flex items-center gap-1.5"
                 style={{
                   background: active ? "hsl(var(--primary))" : "rgba(255,255,255,0.05)",
                   border:     active ? "1px solid transparent" : "1px solid rgba(255,255,255,0.08)",
                   color:      active ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
                 }}
               >
-                {isAll ? "✦ All" : `${meta!.emoji} ${meta!.label}`}
+                <Icon className="w-3 h-3 shrink-0" />
+                {isAll ? "All" : meta!.label}
               </button>
             );
           })}
@@ -134,7 +154,7 @@ export default function ProfileThemePage() {
       <div className="flex-1 overflow-y-auto px-4 pb-12">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center gap-2">
-            <span className="text-3xl">🎮</span>
+            <Search className="w-8 h-8 text-muted-foreground opacity-40" />
             <p className="text-sm font-bold text-foreground">No themes found</p>
             <p className="text-xs text-muted-foreground">Try a different search or category</p>
           </div>
@@ -164,8 +184,6 @@ function ThemeCard({
   isActive,
   onSelect,
 }: { theme: ThemeEntry; isActive: boolean; onSelect: () => void }) {
-  const locked = t.tier === "premium";
-
   return (
     <button
       onClick={onSelect}
@@ -177,7 +195,6 @@ function ThemeCard({
         background:  isActive ? "hsl(var(--primary)/0.08)" : "hsl(var(--card))",
         borderColor: isActive ? "hsl(var(--primary)/0.55)" : "hsl(var(--border))",
         ["--tw-ring-color" as string]: "hsl(var(--primary)/0.3)",
-        opacity: locked ? 0.72 : 1,
       }}
     >
       {/* Swatch */}
@@ -196,29 +213,20 @@ function ThemeCard({
         </div>
       )}
 
-      {/* Lock badge */}
-      {locked && !isActive && (
+      {/* Popular badge */}
+      {t.popular && !isActive && (
         <div
-          className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center z-10"
-          style={{ background: "rgba(0,0,0,0.65)", border: "1px solid rgba(255,255,255,0.15)" }}
+          className="absolute top-2 left-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full z-10"
+          style={{ background: "rgba(250,173,20,0.18)", border: "1px solid rgba(250,173,20,0.35)" }}
         >
-          <Lock className="w-2.5 h-2.5 text-zinc-400" />
+          <Star className="w-2 h-2" style={{ color: "#faad14", fill: "#faad14" }} />
+          <span className="text-[8px] font-bold" style={{ color: "#faad14" }}>Popular</span>
         </div>
       )}
 
       {/* Info */}
       <div className="px-2.5 pt-2 pb-2.5 flex-1">
-        <div className="flex items-start justify-between gap-1 mb-0.5">
-          <p className="text-[11px] font-bold text-foreground leading-tight line-clamp-1 flex-1">{t.name}</p>
-          {locked && (
-            <span
-              className="text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded shrink-0"
-              style={{ background: "rgba(251,191,36,0.14)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}
-            >
-              PRO
-            </span>
-          )}
-        </div>
+        <p className="text-[11px] font-bold text-foreground leading-tight line-clamp-1 mb-0.5">{t.name}</p>
         <p className="text-[9px] leading-snug line-clamp-2" style={{ color: "hsl(var(--muted-foreground))" }}>
           {t.tagline}
         </p>
@@ -269,9 +277,8 @@ function SwatchSystem() {
   );
 }
 
-/* mini swatches used in the active banner */
 function MiniColorSwatch({
-  bg, accent, accent2, size,
+  bg, accent, accent2,
 }: { bg: string; accent: string; accent2: string; size: "lg" }) {
   return (
     <div className="w-10 h-10 rounded-xl shrink-0 relative overflow-hidden" style={{ background: bg }}>
@@ -281,7 +288,7 @@ function MiniColorSwatch({
   );
 }
 
-function MiniSystemSwatch({ size }: { size: "lg" }) {
+function MiniSystemSwatch({ size: _ }: { size: "lg" }) {
   return (
     <div className="w-10 h-10 rounded-xl overflow-hidden flex shrink-0">
       <div className="flex-1 bg-[#f8f8fa]" />

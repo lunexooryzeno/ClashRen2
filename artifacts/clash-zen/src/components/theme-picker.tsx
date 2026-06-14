@@ -1,12 +1,27 @@
 import React, { useState, useMemo } from "react";
 import { useTheme } from "next-themes";
-import { Check, X, Search, Monitor, Lock, Shuffle } from "lucide-react";
+import {
+  Check, X, Search, Monitor, Shuffle, Star,
+  Zap, Flame, Sparkles, Layers, Music, Crown, Droplets, Hexagon, LayoutGrid,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost } from "@/lib/api";
 import {
   THEME_CATALOG, CATEGORY_META, ALL_CATEGORY_KEYS,
   type CategoryFilter, type ThemeEntry,
 } from "@/lib/themes";
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  all:           LayoutGrid,
+  esports:       Zap,
+  aggressive:    Flame,
+  atmospheric:   Sparkles,
+  clean:         Layers,
+  culture:       Music,
+  classic:       Crown,
+  glassmorphism: Droplets,
+  neumorphism:   Hexagon,
+};
 
 function Overlay({ onClose }: { onClose: () => void }) {
   return (
@@ -34,15 +49,14 @@ export function ThemePicker({ onClose }: ThemePickerProps) {
   }, [category, search]);
 
   function applyTheme(t: ThemeEntry) {
-    if (t.tier === "premium") return;
     setTheme(t.id);
     apiPost("/users/theme", { theme: t.id }).catch(() => {});
     onClose();
   }
 
   function randomize() {
-    const free = THEME_CATALOG.filter(t => t.tier === "free" && !t.isSystem);
-    const pick  = free[Math.floor(Math.random() * free.length)];
+    const pool = THEME_CATALOG.filter(t => !t.isSystem);
+    const pick  = pool[Math.floor(Math.random() * pool.length)];
     applyTheme(pick);
   }
 
@@ -109,18 +123,20 @@ export function ThemePicker({ onClose }: ThemePickerProps) {
               const isAll  = key === "all";
               const meta   = isAll ? null : CATEGORY_META[key as keyof typeof CATEGORY_META];
               const active = category === key;
+              const Icon   = CATEGORY_ICONS[key] ?? LayoutGrid;
               return (
                 <button
                   key={key}
                   onClick={() => setCategory(key)}
-                  className="h-6 px-2.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 transition-all active:scale-95"
+                  className="h-6 px-2.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 transition-all active:scale-95 flex items-center gap-1"
                   style={{
                     background: active ? "hsl(var(--primary))" : "rgba(255,255,255,0.05)",
                     border:     active ? "1px solid transparent" : "1px solid rgba(255,255,255,0.08)",
                     color:      active ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
                   }}
                 >
-                  {isAll ? "✦ All" : `${meta!.emoji} ${meta!.label}`}
+                  <Icon className="w-2.5 h-2.5 shrink-0" />
+                  {isAll ? "All" : meta!.label}
                 </button>
               );
             })}
@@ -138,7 +154,6 @@ export function ThemePicker({ onClose }: ThemePickerProps) {
             <div className="grid grid-cols-2 gap-2">
               {filtered.map(t => {
                 const isActive = theme === t.id;
-                const locked   = t.tier === "premium";
                 return (
                   <button
                     key={t.id}
@@ -151,7 +166,6 @@ export function ThemePicker({ onClose }: ThemePickerProps) {
                       background:  isActive ? "hsl(var(--primary)/0.08)" : "hsl(var(--card))",
                       borderColor: isActive ? "hsl(var(--primary)/0.55)" : "hsl(var(--border))",
                       ["--tw-ring-color" as string]: "hsl(var(--primary)/0.3)",
-                      opacity: locked ? 0.72 : 1,
                     }}
                   >
                     {t.isSystem ? <MiniSystemSwatch /> : <MiniColorSwatch bg={t.bg} accent={t.accent} accent2={t.accent2} />}
@@ -164,22 +178,19 @@ export function ThemePicker({ onClose }: ThemePickerProps) {
                         <Check className="w-2.5 h-2.5" style={{ color: "hsl(var(--primary-foreground))" }} strokeWidth={3} />
                       </div>
                     )}
-                    {locked && !isActive && (
+
+                    {t.popular && !isActive && (
                       <div
-                        className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center z-10"
-                        style={{ background: "rgba(0,0,0,0.65)", border: "1px solid rgba(255,255,255,0.15)" }}
+                        className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded-full z-10"
+                        style={{ background: "rgba(250,173,20,0.18)", border: "1px solid rgba(250,173,20,0.35)" }}
                       >
-                        <Lock className="w-2 h-2 text-zinc-400" />
+                        <Star className="w-1.5 h-1.5" style={{ color: "#faad14", fill: "#faad14" }} />
+                        <span className="text-[7px] font-bold" style={{ color: "#faad14" }}>Hot</span>
                       </div>
                     )}
 
                     <div className="px-2 pt-1.5 pb-2">
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <p className="text-[10px] font-bold text-foreground leading-tight line-clamp-1 flex-1">{t.name}</p>
-                        {locked && (
-                          <span className="text-[7px] font-bold uppercase tracking-widest" style={{ color: "#fbbf24" }}>PRO</span>
-                        )}
-                      </div>
+                      <p className="text-[10px] font-bold text-foreground leading-tight line-clamp-1 mb-0.5">{t.name}</p>
                       <p className="text-[8px] text-muted-foreground leading-snug line-clamp-1">{t.tagline}</p>
                     </div>
                   </button>
