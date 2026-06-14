@@ -74,6 +74,31 @@ export default function Profile() {
     ? (profilePicture.startsWith("/api/") || profilePicture.startsWith("http") ? profilePicture : `/api/storage${profilePicture}`)
     : null;
 
+  const [showUidChangeRequest, setShowUidChangeRequest] = useState(false);
+  const [uidChangeNew, setUidChangeNew]     = useState("");
+  const [uidChangeReason, setUidChangeReason] = useState("");
+  const [uidChangeBusy, setUidChangeBusy]   = useState(false);
+  const [uidChangeDone, setUidChangeDone]   = useState(false);
+
+  async function submitUidChangeRequest() {
+    if (!uidChangeNew.trim()) return;
+    setUidChangeBusy(true);
+    try {
+      const msg = `[UID CHANGE REQUEST]\nCurrent UID: ${user?.uid ?? "unknown"}\nRequested UID: ${uidChangeNew.trim()}${uidChangeReason.trim() ? `\nReason: ${uidChangeReason.trim()}` : ""}`;
+      await fetch("/api/support/messages", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      setUidChangeDone(true);
+    } catch {
+      toast({ title: "Failed to send request", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setUidChangeBusy(false);
+    }
+  }
+
   const [showFriends, setShowFriends] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = useState(() => hapticSettings.isEnabled());
@@ -376,6 +401,62 @@ export default function Profile() {
                 <Share2 className="w-4 h-4 text-primary" />
                 <span className="text-[11px] font-bold text-foreground leading-none">Share</span>
               </button>
+            </div>
+
+            {/* UID + Platform ID boxes */}
+            <div className="grid grid-cols-2 gap-2 w-full mt-3">
+              {/* In-Game UID */}
+              <div
+                className="rounded-2xl p-3 flex flex-col gap-1.5 relative overflow-hidden"
+                style={{
+                  background: "hsl(var(--primary) / 0.06)",
+                  border: "1px solid hsl(var(--primary) / 0.18)",
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Crosshair className="w-3 h-3 text-primary shrink-0" strokeWidth={2.5} />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70">In-Game UID</span>
+                </div>
+                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide">
+                  {user?.uid ?? "—"}
+                </p>
+                <button
+                  onClick={() => { setUidChangeDone(false); setUidChangeNew(""); setUidChangeReason(""); setShowUidChangeRequest(true); }}
+                  className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors active:opacity-60"
+                >
+                  <Edit3 className="w-2.5 h-2.5" />
+                  Request Change
+                </button>
+              </div>
+
+              {/* Platform ID */}
+              <div
+                className="rounded-2xl p-3 flex flex-col gap-1.5 relative overflow-hidden"
+                style={{
+                  background: "hsl(var(--primary) / 0.06)",
+                  border: "1px solid hsl(var(--primary) / 0.18)",
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Smartphone className="w-3 h-3 text-primary shrink-0" strokeWidth={2.5} />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70">Platform ID</span>
+                </div>
+                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide truncate">
+                  {user?.platformId ?? "—"}
+                </p>
+                {user?.platformId && (
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(user.platformId!);
+                      toast({ title: "Copied!", description: "Platform ID copied to clipboard." });
+                    }}
+                    className="mt-0.5 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-primary/70 hover:text-primary transition-colors active:opacity-60"
+                  >
+                    <Share2 className="w-2.5 h-2.5" />
+                    Copy
+                  </button>
+                )}
+              </div>
             </div>
 
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -1080,6 +1161,97 @@ export default function Profile() {
               })()}
             </div>
           </div>
+        </BottomSheet>
+      )}
+
+      {showUidChangeRequest && (
+        <BottomSheet
+          title="Request UID Change"
+          onClose={() => { setShowUidChangeRequest(false); setUidChangeDone(false); }}
+        >
+          {uidChangeDone ? (
+            <div className="flex flex-col items-center text-center gap-4 py-6">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ background: "hsl(var(--primary) / 0.12)", border: "1px solid hsl(var(--primary) / 0.25)" }}
+              >
+                <CheckCircle className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-white mb-1">Request Sent</p>
+                <p className="text-sm text-zinc-400 leading-relaxed">
+                  Your UID change request has been sent to the admin team. You'll be notified via Messages once it's reviewed.
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowUidChangeRequest(false); setUidChangeDone(false); }}
+                className="w-full h-11 rounded-xl text-white font-bold text-sm btn-primary-gradient active:scale-[0.98] transition-transform"
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Current UID display */}
+              <div
+                className="rounded-xl p-3 flex items-center gap-3"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+              >
+                <Crosshair className="w-4 h-4 text-primary shrink-0" />
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Current UID</p>
+                  <p className="font-mono text-sm font-bold text-white">{user?.uid ?? "—"}</p>
+                </div>
+              </div>
+
+              {/* New UID input */}
+              <div>
+                <label className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mb-1.5 block">
+                  New UID
+                </label>
+                <input
+                  value={uidChangeNew}
+                  onChange={e => setUidChangeNew(e.target.value.replace(/\D/g, ""))}
+                  placeholder="Enter your new Free Fire UID"
+                  maxLength={14}
+                  inputMode="numeric"
+                  className="w-full h-11 rounded-xl px-3 text-sm text-white font-mono outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                />
+              </div>
+
+              {/* Reason input */}
+              <div>
+                <label className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider mb-1.5 block">
+                  Reason <span className="text-zinc-600 normal-case tracking-normal font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={uidChangeReason}
+                  onChange={e => setUidChangeReason(e.target.value)}
+                  placeholder="e.g. Linked wrong account, account transferred…"
+                  rows={3}
+                  className="w-full rounded-xl px-3 py-2.5 text-sm text-white resize-none outline-none"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                />
+              </div>
+
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                Admin will review your request and update your UID. You'll receive a reply in Messages.
+              </p>
+
+              <button
+                onClick={submitUidChangeRequest}
+                disabled={uidChangeBusy || !uidChangeNew.trim()}
+                className="w-full h-11 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 btn-primary-gradient active:scale-[0.98] transition-transform disabled:opacity-50"
+                style={{ boxShadow: "0 6px 20px hsl(var(--primary) / 0.3)" }}
+              >
+                {uidChangeBusy
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                  : <><Crosshair className="w-4 h-4" /> Send Request</>
+                }
+              </button>
+            </div>
+          )}
         </BottomSheet>
       )}
 
