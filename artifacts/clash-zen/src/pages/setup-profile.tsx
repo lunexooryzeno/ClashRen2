@@ -7,7 +7,7 @@ import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { WelcomeModal } from "@/components/welcome-modal";
 import { haptic } from "@/lib/haptics";
-import { Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw } from "lucide-react";
+import { Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw, Youtube, ShieldAlert } from "lucide-react";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
@@ -121,9 +121,22 @@ export default function SetupProfileScreen() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">
-                Free Fire UID
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                  Free Fire UID
+                </label>
+                <a
+                  href="https://www.youtube.com/results?search_query=How+to+copy+free+fire+uid"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors active:opacity-60"
+                  style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.18)" }}
+                  onClick={() => haptic.lightTap?.()}
+                >
+                  <Youtube className="w-3 h-3" />
+                  How to find my UID?
+                </a>
+              </div>
               <input
                 value={uid}
                 onChange={e => {
@@ -153,6 +166,17 @@ export default function SetupProfileScreen() {
                 <p className="text-[11px] text-zinc-500">8–14 digits only</p>
                 <p className="text-[11px] tabular-nums text-zinc-500">{trimmedUid.length}/14</p>
               </div>
+            </div>
+
+            {/* Warning box */}
+            <div
+              className="rounded-xl p-3 flex items-start gap-3"
+              style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.18)" }}
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-[12px] text-amber-300/80 leading-relaxed">
+                <span className="font-bold text-amber-300">Enter carefully.</span> Once your UID is linked, changing it requires admin approval. Double-check before continuing.
+              </p>
             </div>
 
             {/* Error state */}
@@ -186,7 +210,7 @@ export default function SetupProfileScreen() {
           </form>
 
           <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
-            Your UID is visible in-game under your profile name.
+            Your UID is shown in-game under your profile name.
           </p>
         </div>
       </div>
