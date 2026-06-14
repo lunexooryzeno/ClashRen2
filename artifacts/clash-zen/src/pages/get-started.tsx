@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, Check, MessageSquare, Smartphone, KeyRound } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, MessageSquare } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -410,58 +410,6 @@ export default function GetStartedPage() {
           <span className="font-medium">Back</span>
         </button>
 
-        {/* Step indicator — absolutely centered */}
-        <AnimatePresence>
-          {(step === "phone" || step === "otp") && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5"
-            >
-              <div className={`flex items-center gap-1.5 transition-colors ${step === "phone" ? "text-white" : "text-zinc-400"}`}>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                    step === "otp"
-                      ? "bg-green-500/20 border border-green-500/50"
-                      : "bg-primary border border-primary/60"
-                  }`}
-                  style={step === "phone" ? { boxShadow: "0 0 10px rgba(139,92,246,0.5)" } : {}}
-                >
-                  {step === "otp"
-                    ? <Check className="w-3 h-3 text-green-400" strokeWidth={2.5} />
-                    : <Smartphone className="w-3 h-3 text-white" strokeWidth={2} />
-                  }
-                </div>
-                <span className="text-xs font-semibold">Number</span>
-              </div>
-
-              <div className="relative w-8 h-px overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
-                <motion.div
-                  className="absolute inset-y-0 left-0 rounded-full"
-                  style={{ background: "linear-gradient(90deg, rgba(34,197,94,0.7), rgba(139,92,246,0.7))" }}
-                  initial={{ width: "0%" }}
-                  animate={{ width: step === "otp" ? "100%" : "0%" }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                />
-              </div>
-
-              <div className={`flex items-center gap-1.5 transition-colors ${step === "otp" ? "text-white" : "text-zinc-600"}`}>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                    step === "otp"
-                      ? "bg-primary border border-primary/60"
-                      : "bg-zinc-900 border border-zinc-700"
-                  }`}
-                  style={step === "otp" ? { boxShadow: "0 0 10px rgba(139,92,246,0.5)" } : {}}
-                >
-                  <KeyRound className="w-3 h-3" strokeWidth={2} />
-                </div>
-                <span className="text-xs font-semibold">Verify</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Main layout */}
