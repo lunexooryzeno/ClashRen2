@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Check, Search, Shuffle, Monitor,
-  Zap, Flame, Sparkles, Layers, Music, Crown, Droplets, Hexagon, LayoutGrid, Star,
+  Zap, Flame, Sparkles, Layers, Music, Crown, Droplets, LayoutGrid, Star,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,6 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   culture:       Music,
   classic:       Crown,
   glassmorphism: Droplets,
-  neumorphism:   Hexagon,
 };
 
 export default function ProfileThemePage() {

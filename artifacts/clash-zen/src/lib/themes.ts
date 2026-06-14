@@ -6,8 +6,7 @@ export type ThemeCategory =
   | "clean"
   | "culture"
   | "classic"
-  | "glassmorphism"
-  | "neumorphism";
+  | "glassmorphism";
 
 export interface ThemeEntry {
   id: string;
@@ -30,7 +29,6 @@ export const CATEGORY_META: Record<ThemeCategory, { label: string }> = {
   culture:       { label: "Culture" },
   classic:       { label: "Classics" },
   glassmorphism: { label: "Glassmorphism" },
-  neumorphism:   { label: "Neumorphism" },
 };
 
 export const THEME_CATALOG: ThemeEntry[] = [
@@ -71,12 +69,6 @@ export const THEME_CATALOG: ThemeEntry[] = [
   { id: "deep-ocean",        name: "Deep Ocean",            tagline: "Pressure builds legends. Breathe.",                    bg: "#010810", accent: "#0891b2", accent2: "#38bdf8", category: "glassmorphism", tier: "free" },
   { id: "ice",               name: "Ice / Glacier",         tagline: "Coolest player in the lobby. Always.",                 bg: "#020e1c", accent: "#bae6fd", accent2: "#7dd3fc", category: "glassmorphism", tier: "free" },
   { id: "gridrunner",        name: "Gridrunner",            tagline: "On the grid. In the zone. Unstoppable.",               bg: "#010810", accent: "#00d4ff", accent2: "#0097b2", category: "glassmorphism", tier: "free" },
-  /* ── NEUMORPHISM ─────────────────────────────────────────────── */
-  { id: "neu-light",         name: "Neu Light",             tagline: "Soft shadows. Smooth edges. Pure flow.",               bg: "#e1e1eb", accent: "#6366f1", accent2: "#4f46e5", category: "neumorphism",   tier: "free", popular: true },
-  { id: "neu-dark",          name: "Neu Dark",              tagline: "Deep shadows. Raised precision.",                      bg: "#1e1e2e", accent: "#818cf8", accent2: "#6366f1", category: "neumorphism",   tier: "free" },
-  { id: "neu-clay",          name: "Neu Clay",              tagline: "Warm. Tactile. Every tap feels real.",                 bg: "#e8d5c4", accent: "#b87333", accent2: "#c9864a", category: "neumorphism",   tier: "free" },
-  { id: "neu-ocean",         name: "Neu Ocean",             tagline: "Depth without darkness. Flow without limits.",         bg: "#d0e8f0", accent: "#0369a1", accent2: "#0284c7", category: "neumorphism",   tier: "free" },
-  { id: "neu-rose",          name: "Neu Rose",              tagline: "Soft power. Bold presence.",                           bg: "#ecdde8", accent: "#be185d", accent2: "#db2777", category: "neumorphism",   tier: "free" },
   /* ── COOL & COMPETITIVE / CLEAN UI ──────────────────────────── */
   { id: "carbon",            name: "Carbon Fiber",          tagline: "Engineered to win. No decoration required.",           bg: "#080a0c", accent: "#64748b", accent2: "#94a3b8", category: "clean",         tier: "free" },
   { id: "stealth",           name: "Stealth",               tagline: "Invisible. Until it's too late.",                      bg: "#040408", accent: "#475569", accent2: "#64748b", category: "clean",         tier: "free" },
@@ -111,6 +103,6 @@ export const THEME_CATALOG: ThemeEntry[] = [
 ];
 
 export const ALL_CATEGORY_KEYS = [
-  "all", "esports", "aggressive", "atmospheric", "clean", "culture", "classic", "glassmorphism", "neumorphism",
+  "all", "esports", "aggressive", "atmospheric", "clean", "culture", "classic", "glassmorphism",
 ] as const;
 export type CategoryFilter = (typeof ALL_CATEGORY_KEYS)[number];

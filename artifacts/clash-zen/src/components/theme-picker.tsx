@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useTheme } from "next-themes";
 import {
   Check, X, Search, Monitor, Shuffle, Star,
-  Zap, Flame, Sparkles, Layers, Music, Crown, Droplets, Hexagon, LayoutGrid,
+  Zap, Flame, Sparkles, Layers, Music, Crown, Droplets, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost } from "@/lib/api";
@@ -20,7 +20,6 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   culture:       Music,
   classic:       Crown,
   glassmorphism: Droplets,
-  neumorphism:   Hexagon,
 };
 
 function Overlay({ onClose }: { onClose: () => void }) {
