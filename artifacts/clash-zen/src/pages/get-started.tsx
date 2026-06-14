@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, MessageSquare } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, MessageSquare, Phone } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -520,26 +520,15 @@ export default function GetStartedPage() {
                 transition={{ duration: 0.3 }}
                 className="flex flex-col gap-6"
               >
-                {/* Logo + brand name */}
-                <div className="flex items-center justify-center gap-2.5 mb-1">
-                  <div
-                    className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0"
-                    style={{ boxShadow: "0 0 18px rgba(139,92,246,0.25)" }}
-                  >
-                    <img src="/icons/logo.png" alt="Clashren" className="w-5 h-5 object-contain" />
-                  </div>
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "0.08em", fontSize: "1.15rem" }}>
-                    <span style={{ background: "linear-gradient(180deg,#e8e8e8 0%,#aaa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH</span>
-                    <span style={{ color: "#e01010" }}>REN</span>
-                  </span>
-                </div>
-
                 <div className="text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_28px_rgba(139,92,246,0.25)]">
+                    <Phone className="w-6 h-6 text-primary" />
+                  </div>
                   <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">
                     Enter Your Number
                   </h1>
                   <p className="text-sm text-zinc-500">
-                    We'll send a one-time code to verify it's you
+                    Login or sign up using your mobile number
                   </p>
                 </div>
 
