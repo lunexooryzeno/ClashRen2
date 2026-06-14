@@ -18,7 +18,7 @@ import {
   Shield, Star, Heart, PawPrint, Pencil, Lock,
   User, Hash, Crown, CheckCircle2, Flame, ChevronRight, Check,
   AlertCircle, AlertTriangle, Loader2, RotateCcw, TrendingUp,
-  ClipboardEdit,
+  ClipboardEdit, LogOut,
 } from "lucide-react";
 
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
@@ -71,7 +71,7 @@ const REGIONS = [
 
 export default function SetupProfileScreen() {
   const updateMe = useUpdateMe();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -221,6 +221,17 @@ export default function SetupProfileScreen() {
         {/* ── STEP: UID entry ── */}
         {step === "uid" && (
           <div className="w-full max-w-sm relative z-10">
+            {/* Logout button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => { haptic.mediumTap(); logout(); }}
+                className="flex items-center gap-1.5 text-zinc-600 hover:text-red-400 transition-colors text-xs font-medium"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Logout
+              </button>
+            </div>
+
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-700/20 border border-primary/30 mb-5 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
                 <Flame className="w-8 h-8 text-primary" strokeWidth={1.5} />
@@ -270,8 +281,8 @@ export default function SetupProfileScreen() {
                               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                             </div>
                             <div>
-                              <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-0.5">Permanent UID</p>
-                              <p className="text-[12px] text-zinc-300 leading-snug">Your UID <span className="text-white font-semibold">cannot be changed</span> after confirmation. Double-check before continuing.</p>
+                              <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-0.5">Double-check your UID</p>
+                              <p className="text-[12px] text-zinc-300 leading-snug">UID changes require <span className="text-white font-semibold">admin authorization</span>. Contact support if you need to update it later.</p>
                             </div>
                           </div>
                         </div>
