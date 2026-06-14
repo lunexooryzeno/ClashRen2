@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, MessageSquare, Phone } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, MessageSquare, Phone } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -613,18 +613,6 @@ export default function GetStartedPage() {
 
                 <form onSubmit={(e) => { e.preventDefault(); onOtpSubmit(); }} className="w-full flex flex-col items-center gap-5">
                   <OtpBoxInput value={otpValue} onChange={setOtpValue} testId="input-otp" />
-
-                  {otpSendState !== "failed" && (
-                    <div
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg mx-auto"
-                      style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.22)" }}
-                    >
-                      <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <p className="text-[11px] text-amber-200/70 leading-snug">
-                        OTP can sometimes take a few minutes — please wait before tapping Resend.
-                      </p>
-                    </div>
-                  )}
 
                   <div className="w-full space-y-2.5">
                     <Button
