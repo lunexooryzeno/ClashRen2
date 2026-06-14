@@ -38,6 +38,7 @@ function WAIcon() {
   );
 }
 
+// Plain CSS OTP boxes — no framer-motion, no per-keystroke re-animations
 function OtpBoxInput({
   value,
   onChange,
@@ -77,38 +78,23 @@ function OtpBoxInput({
         const isFilled = !!value[i];
         const isActive = value.length === i;
         return (
-          <motion.div
+          <div
             key={i}
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: i * 0.05, type: "spring", stiffness: 300, damping: 20 }}
             className={[
               "w-11 h-14 rounded-xl border text-2xl font-bold text-white flex items-center justify-center select-none relative overflow-hidden",
+              "transition-[border-color,box-shadow,background] duration-150",
               isFilled
                 ? "border-primary/70 bg-primary/15 shadow-[0_0_12px_rgba(139,92,246,0.3)]"
                 : isActive
                 ? "border-primary/60 bg-black/60 shadow-[0_0_8px_rgba(139,92,246,0.2)]"
-                : "border-white/15 bg-white/3",
+                : "border-white/15 bg-white/[0.03]",
             ].join(" ")}
-            style={{ transition: "border-color 0.15s, box-shadow 0.15s, background 0.15s" }}
           >
-            {isFilled && (
-              <motion.span
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-              >
-                {value[i]}
-              </motion.span>
-            )}
+            {isFilled && <span>{value[i]}</span>}
             {isActive && !isFilled && (
-              <motion.div
-                className="w-0.5 h-6 bg-primary/70 rounded-full"
-                animate={{ opacity: [1, 0, 1] }}
-                transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
-              />
+              <div className="w-0.5 h-6 bg-primary/70 rounded-full animate-pulse" />
             )}
-          </motion.div>
+          </div>
         );
       })}
     </div>
@@ -140,15 +126,11 @@ export default function GetStartedPage() {
   const [twoFaError, setTwoFaError] = useState("");
   const [isVerifying2fa, setIsVerifying2fa] = useState(false);
 
-  // Refs to always hold current values — avoids stale closures in async callbacks
   const phoneRef = useRef(phone);
-  // Honeypot — real users never fill this; bots typically auto-fill it
   const honeypotRef = useRef("");
   const otpValueRef = useRef(otpValue);
   const isVerifyingRef = useRef(false);
   const invalidateUserRef = useRef(invalidateUser);
-  // Token returned by /api/auth/send-otp — presented to complete-login to prove
-  // that rate-limiting was applied before antcloud was called from the browser.
   const browserTokenRef = useRef<string>("");
 
   useEffect(() => { phoneRef.current = phone; }, [phone]);
@@ -203,14 +185,11 @@ export default function GetStartedPage() {
     return undefined;
   }, [timer]);
 
-  // Core submit function — reads phone/code from parameters or refs, never from stale closures.
-  // Flow: verify OTP with antcloud from browser → on success, call complete-login with browserToken.
   const submitWithCode = useCallback(async (code: string) => {
     if (isVerifyingRef.current) return;
     isVerifyingRef.current = true;
     setIsVerifying(true);
 
-    // Step 1: verify OTP with antcloud from the browser (no credentials — avoids CORS)
     const antcloudResult = await verifyOtpViaBrowser(phoneRef.current, code);
     if (!antcloudResult.success) {
       isVerifyingRef.current = false;
@@ -224,7 +203,6 @@ export default function GetStartedPage() {
       return;
     }
 
-    // Step 2: complete login on our server using the browserToken from send-otp
     const fp = await collectFingerprint().catch(() => null);
     const res = await fetch("/api/auth/complete-login", {
       method: "POST",
@@ -274,7 +252,6 @@ export default function GetStartedPage() {
     haptic.impact(); sound.success();
     invalidateUserRef.current();
     toast({ title: "Verified!", description: "Welcome to Clash Ren." });
-  // toast is stable; refs are mutable and don't need to be deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -320,12 +297,10 @@ export default function GetStartedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
   const doSendOtp = async (digits: string) => {
     setIsSending(true);
     setOtpSendError("");
     try {
-      // Step 1: rate-check with our server and get a browserToken
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -343,7 +318,6 @@ export default function GetStartedPage() {
       const { browserToken } = await res.json().catch(() => ({})) as { browserToken?: string };
       browserTokenRef.current = browserToken ?? "";
 
-      // Step 2: send the actual SMS via antcloud from the browser (server-side is blocked by antcloud)
       const antcloudResult = await sendOtpViaBrowser(digits);
       setIsSending(false);
       if (!antcloudResult.success) {
@@ -366,7 +340,6 @@ export default function GetStartedPage() {
 
   const onPhoneSubmit = async (data: z.infer<typeof phoneSchema>) => {
     haptic.mediumTap();
-    // Navigate immediately — don't block on OTP API call
     setPhone(data.phone);
     phoneRef.current = data.phone;
     setDisplayPhone(formatPhoneDisplay(data.phone));
@@ -377,7 +350,6 @@ export default function GetStartedPage() {
     setOtpSendState(ok ? "sent" : "failed");
   };
 
-  // Manual submit — reads current otpValue from ref to stay fresh
   const onOtpSubmit = () => { haptic.mediumTap(); submitWithCode(otpValueRef.current); };
 
   const handleResend = async () => {
@@ -413,57 +385,41 @@ export default function GetStartedPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col relative overflow-hidden bg-black">
-      {/* Animated background orbs */}
-      <motion.div
+      {/* Static background blobs — no infinite animation */}
+      <div
         className="pointer-events-none absolute rounded-full blur-[130px]"
-        style={{ width: 500, height: 400, background: "rgba(139,92,246,0.18)", top: -80, left: "50%", translateX: "-50%" }}
-        animate={{ scale: [1, 1.15, 1], opacity: [0.18, 0.25, 0.18] }}
-        transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+        style={{ width: 500, height: 400, background: "rgba(139,92,246,0.18)", top: -80, left: "50%", transform: "translateX(-50%)" }}
       />
-      <motion.div
+      <div
         className="pointer-events-none absolute rounded-full blur-[100px]"
         style={{ width: 300, height: 300, background: "rgba(180,30,30,0.18)", bottom: 0, right: 0 }}
-        animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.22, 0.15] }}
-        transition={{ repeat: Infinity, duration: 8, ease: "easeInOut", delay: 2 }}
       />
-      <motion.div
+      <div
         className="pointer-events-none absolute rounded-full blur-[90px]"
         style={{ width: 220, height: 220, background: "rgba(100,60,200,0.15)", bottom: "25%", left: 0 }}
-        animate={{ scale: [1, 1.1, 1], y: [0, -20, 0] }}
-        transition={{ repeat: Infinity, duration: 10, ease: "easeInOut", delay: 4 }}
       />
 
       {/* Back button */}
-      <motion.button
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
+      <button
         className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
         onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
         data-testid="back-to-landing"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="font-medium">Back</span>
-      </motion.button>
+      </button>
 
       {/* Main layout */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative z-10">
 
-        {/* Brand header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex flex-col items-center gap-3 mb-8"
-        >
-          <motion.div
-            animate={{ y: [0, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+        {/* Brand header — static */}
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <div
             className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center"
             style={{ boxShadow: "0 0 40px rgba(139,92,246,0.3), 0 0 0 1px rgba(255,255,255,0.05)" }}
           >
             <img src={LOGO_URL} alt="Clash Ren Logo" style={{ width: 52, height: 52 }} className="object-contain" />
-          </motion.div>
+          </div>
           <div className="flex flex-col items-center gap-0.5">
             <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "0.1em", fontSize: "1rem" }}>
               <span style={{ background: "linear-gradient(180deg,#e8e8e8 0%,#aaa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH </span>
@@ -471,7 +427,7 @@ export default function GetStartedPage() {
             </span>
             <p className="text-[10px] text-zinc-600 tracking-widest uppercase font-medium">Free Fire Tournament Platform</p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Step indicator */}
         <AnimatePresence>
@@ -482,10 +438,8 @@ export default function GetStartedPage() {
               exit={{ opacity: 0, y: -8 }}
               className="flex items-center gap-3 mb-8"
             >
-              {/* Step 1 */}
               <div className={`flex items-center gap-2 transition-colors ${step === "phone" ? "text-white" : "text-zinc-400"}`}>
-                <motion.div
-                  layout
+                <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                     step === "otp"
                       ? "bg-green-500/20 border border-green-500/50"
@@ -497,7 +451,7 @@ export default function GetStartedPage() {
                     ? <Check className="w-3.5 h-3.5 text-green-400" strokeWidth={2.5} />
                     : <span className="text-[11px] font-bold text-white">1</span>
                   }
-                </motion.div>
+                </div>
                 <span className="text-xs font-semibold">Number</span>
               </div>
 
@@ -512,10 +466,8 @@ export default function GetStartedPage() {
                 />
               </div>
 
-              {/* Step 2 */}
               <div className={`flex items-center gap-2 transition-colors ${step === "otp" ? "text-white" : "text-zinc-600"}`}>
-                <motion.div
-                  layout
+                <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                     step === "otp"
                       ? "bg-primary border border-primary/60"
@@ -524,7 +476,7 @@ export default function GetStartedPage() {
                   style={step === "otp" ? { boxShadow: "0 0 14px rgba(139,92,246,0.5)" } : {}}
                 >
                   <span className="text-[11px] font-bold">2</span>
-                </motion.div>
+                </div>
                 <span className="text-xs font-semibold">Verify</span>
               </div>
             </motion.div>
@@ -553,10 +505,13 @@ export default function GetStartedPage() {
                     {suspendedData.status === "blocked" ? "Account Blocked" : "Account Deleted"}
                   </h1>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${suspendedData.status === "blocked" ? "bg-orange-500/20 text-orange-300" : "bg-red-500/20 text-red-300"}`}>
-                    {suspendedData.status === "blocked" ? "ACCESS RESTRICTED" : "ACCOUNT REMOVED"}
+                    {suspendedData.status === "blocked" ? "Temporary Block" : "Permanently Removed"}
                   </span>
                 </div>
-                <div className="w-full rounded-2xl p-4 flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div
+                  className="w-full rounded-2xl p-4 space-y-3"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
                   <div className="flex items-center gap-2">
                     <ShieldX className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                     <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Reason</span>
@@ -606,13 +561,9 @@ export default function GetStartedPage() {
                 className="flex flex-col items-center gap-6"
               >
                 <div className="text-center space-y-1">
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(139,92,246,0.25)]"
-                  >
+                  <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(139,92,246,0.25)]">
                     <Shield className="w-7 h-7 text-primary" />
-                  </motion.div>
+                  </div>
                   <h1 className="font-heading text-2xl font-bold tracking-tight text-white">2FA Verification</h1>
                   <p className="text-sm text-zinc-500">Enter your 6-digit security passcode</p>
                 </div>
@@ -638,28 +589,15 @@ export default function GetStartedPage() {
                 className="flex flex-col gap-6"
               >
                 <div className="text-center">
-                  <motion.h1
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="font-heading text-3xl font-bold tracking-tight text-white mb-2"
-                  >
+                  <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">
                     Enter Your Number
-                  </motion.h1>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-sm text-zinc-500"
-                  >
+                  </h1>
+                  <p className="text-sm text-zinc-500">
                     We'll send a one-time code to verify it's you
-                  </motion.p>
+                  </p>
                 </div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
+                <div
                   className="rounded-2xl p-5"
                   style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
                 >
@@ -694,33 +632,22 @@ export default function GetStartedPage() {
                           </FormItem>
                         )}
                       />
-                      <motion.div whileTap={{ scale: 0.98 }}>
-                        <Button
-                          type="submit"
-                          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider relative overflow-hidden"
-                          style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.5)" }}
-                          disabled={isSending}
-                          data-testid="btn-send-otp"
-                        >
-                          {!isSending && (
-                            <motion.div
-                              className="absolute inset-0 bg-white/10"
-                              initial={{ x: "-100%" }}
-                              animate={{ x: "200%" }}
-                              transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut", repeatDelay: 1.5 }}
-                              style={{ skewX: -20 }}
-                            />
-                          )}
-                          {isSending ? "Sending…" : "Get OTP"}
-                        </Button>
-                      </motion.div>
+                      <Button
+                        type="submit"
+                        className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider active:scale-[0.98] transition-all"
+                        style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.4)" }}
+                        disabled={isSending}
+                        data-testid="btn-send-otp"
+                      >
+                        {isSending ? "Sending…" : "Get OTP"}
+                      </Button>
                       <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
                         onChange={e => { honeypotRef.current = e.target.value; }}
                         style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
                       />
                     </form>
                   </Form>
-                </motion.div>
+                </div>
               </motion.div>
 
             ) : (
@@ -731,28 +658,21 @@ export default function GetStartedPage() {
                 className="flex flex-col items-center gap-6"
               >
                 <div className="text-center space-y-2 w-full">
-                  <motion.div
-                    initial={{ scale: 0.7, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  <div
                     className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-2"
                     style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", boxShadow: "0 0 28px rgba(139,92,246,0.25)" }}
                   >
                     <MessageSquare className="w-6 h-6 text-primary" />
-                  </motion.div>
+                  </div>
                   <h1 className="font-heading text-2xl font-bold tracking-tight text-white">Check Your SMS</h1>
                   <p className="text-sm text-zinc-500">
                     Code sent to <span className="text-zinc-300 font-semibold">+91 {displayPhone}</span>
                   </p>
                   {otpSendState === "sending" && (
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-amber-400/80 animate-pulse">
-                      Sending OTP…
-                    </motion.p>
+                    <p className="text-xs text-amber-400/80 animate-pulse">Sending OTP…</p>
                   )}
                   {otpSendState === "failed" && (
-                    <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-red-400">
-                      {otpSendError || "Failed to send — tap Resend below"}
-                    </motion.p>
+                    <p className="text-xs text-red-400">{otpSendError || "Failed to send — tap Resend below"}</p>
                   )}
                 </div>
 
@@ -760,10 +680,7 @@ export default function GetStartedPage() {
                   <OtpBoxInput value={otpValue} onChange={setOtpValue} testId="input-otp" />
 
                   {otpSendState !== "failed" && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
+                    <div
                       className="inline-flex items-center gap-2 px-3 py-2 rounded-lg mx-auto"
                       style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.22)" }}
                     >
@@ -771,21 +688,19 @@ export default function GetStartedPage() {
                       <p className="text-[11px] text-amber-200/70 leading-snug">
                         OTP can sometimes take a few minutes — please wait before tapping Resend.
                       </p>
-                    </motion.div>
+                    </div>
                   )}
 
                   <div className="w-full space-y-2.5">
-                    <motion.div whileTap={{ scale: 0.98 }}>
-                      <Button
-                        type="submit"
-                        className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider relative overflow-hidden"
-                        style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.5)" }}
-                        disabled={isVerifying || otpValue.length !== 6}
-                        data-testid="btn-verify-otp"
-                      >
-                        {isVerifying ? "Verifying…" : "Verify & Continue"}
-                      </Button>
-                    </motion.div>
+                    <Button
+                      type="submit"
+                      className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider active:scale-[0.98] transition-all"
+                      style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.4)" }}
+                      disabled={isVerifying || otpValue.length !== 6}
+                      data-testid="btn-verify-otp"
+                    >
+                      {isVerifying ? "Verifying…" : "Verify & Continue"}
+                    </Button>
                     <Button
                       type="button" variant="ghost"
                       className="w-full h-10 rounded-xl text-zinc-600 hover:text-zinc-300 text-sm transition-colors"
@@ -793,10 +708,7 @@ export default function GetStartedPage() {
                       onClick={handleResend}
                       data-testid="btn-resend-otp"
                     >
-                      {timer > 0
-                        ? <><motion.span key={timer} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>{timer}</motion.span>s before Resend</>
-                        : "Resend Code"
-                      }
+                      {timer > 0 ? `${timer}s before Resend` : "Resend Code"}
                     </Button>
                   </div>
                 </form>
@@ -809,18 +721,13 @@ export default function GetStartedPage() {
 
       {/* Bottom trust line */}
       {step !== "suspended" && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="pb-8 text-[11px] text-zinc-700 text-center px-6"
-        >
+        <p className="pb-8 text-[11px] text-zinc-700 text-center px-6">
           {step === "phone"
             ? "By continuing, you agree to Clash Ren's Terms & Privacy Policy."
             : step === "2fa"
             ? "Your account is protected with a 6-digit security passcode."
             : "OTP delivered via SMS · Standard rates apply"}
-        </motion.p>
+        </p>
       )}
     </div>
   );
