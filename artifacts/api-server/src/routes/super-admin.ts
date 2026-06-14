@@ -26,7 +26,7 @@ import { getSystemSettings, saveSystemSettings } from "../lib/systemSettings.js"
 
 const router: IRouter = Router();
 
-const SECURITY_CODE = process.env.ADMIN_SECURITY_CODE ?? "blue apple";
+const SECURITY_CODE = process.env.ADMIN_SAFE_WORD ?? process.env.ADMIN_SECURITY_CODE ?? "blue apple";
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "clutchx";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "gxB>{\\B2=J52:~{`K]ZOAs(5F~D{!FDBrI4ZG8#";
 
