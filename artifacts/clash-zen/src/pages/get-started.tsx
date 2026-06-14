@@ -348,6 +348,7 @@ export default function GetStartedPage() {
     setOtpSendState("sending");
     const ok = await doSendOtp(data.phone);
     setOtpSendState(ok ? "sent" : "failed");
+    if (!ok) setTimer(0);
   };
 
   const onOtpSubmit = () => { haptic.mediumTap(); submitWithCode(otpValueRef.current); };
@@ -358,6 +359,7 @@ export default function GetStartedPage() {
     setOtpSendState("sending");
     const ok = await doSendOtp(phone);
     setOtpSendState(ok ? "sent" : "failed");
+    if (!ok) setTimer(0);
   };
 
   if (isLoading) {
