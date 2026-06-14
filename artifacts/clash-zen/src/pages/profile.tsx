@@ -316,32 +316,6 @@ export default function Profile() {
               {user?.inGameName ?? "Player"}
             </h1>
 
-            {/* Platform ID */}
-            {user?.platformId && (
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(user.platformId!);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-2 active:scale-95 transition-transform"
-                style={{
-                  background: "hsl(var(--primary) / 0.12)",
-                  border: "1px solid hsl(var(--primary) / 0.3)",
-                }}
-              >
-                <span className="text-[11px] font-mono tracking-widest text-primary font-bold">{user.platformId}</span>
-              </button>
-            )}
-
-            {/* UID */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4"
-              style={{
-                background: "hsl(var(--primary) / 0.08)",
-                border: "1px solid hsl(var(--primary) / 0.2)",
-              }}>
-              <Bookmark className="w-3 h-3 text-primary" strokeWidth={2.5} />
-              <span className="text-[11px] font-mono tracking-wider text-foreground/80">IN-GAME UID · {user?.uid ?? "—"}</span>
-            </div>
-
             {/* 3 action buttons in a row */}
             <div className="grid grid-cols-3 gap-2 w-full">
               <button
