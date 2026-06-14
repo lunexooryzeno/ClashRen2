@@ -456,7 +456,7 @@ export default function Profile() {
                   <Smartphone className="w-3 h-3 text-primary shrink-0" strokeWidth={2.5} />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70">Platform ID</span>
                 </div>
-                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide truncate pr-8">
+                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide truncate pr-8 text-left">
                   {user?.platformId ?? "—"}
                 </p>
               </div>
