@@ -267,7 +267,7 @@ export default function SetupProfileScreen() {
                                 {...field}
                                 type="text"
                                 inputMode="numeric"
-                                placeholder="e.g. 1234567890"
+                                placeholder="Your 8–14 digit UID"
                                 maxLength={14}
                                 className="pl-10 h-12 rounded-xl text-white placeholder:text-zinc-700 text-base font-mono tracking-wider focus-visible:ring-1"
                                 style={{
@@ -288,11 +288,19 @@ export default function SetupProfileScreen() {
                       )}
                     />
 
-                    {/* Info hint */}
-                    <div className="flex items-center gap-2 px-1">
-                      <div className="w-1 h-1 rounded-full bg-zinc-700" />
-                      <p className="text-[11px] text-zinc-600">Free Fire → Profile → tap your avatar → copy UID</p>
-                    </div>
+                    {/* Info hint — opens YouTube search */}
+                    <button
+                      type="button"
+                      onClick={() => window.open("https://www.youtube.com/results?search_query=How+to+copy+free+fire+uid", "_blank")}
+                      className="flex items-center gap-2 px-1 group w-fit"
+                    >
+                      <svg className="w-3.5 h-3.5 text-red-500 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span className="text-[11px] text-zinc-600 group-hover:text-zinc-400 transition-colors underline underline-offset-2 decoration-dotted">
+                        How to find your Free Fire UID?
+                      </span>
+                    </button>
 
                     {/* Warning */}
                     <div
@@ -367,7 +375,7 @@ export default function SetupProfileScreen() {
                           </>
                         ) : (
                           <>
-                            Fetch Profile <ChevronRight className="w-4 h-4" />
+                            Fetch Info <ChevronRight className="w-4 h-4" />
                           </>
                         )}
                       </Button>
