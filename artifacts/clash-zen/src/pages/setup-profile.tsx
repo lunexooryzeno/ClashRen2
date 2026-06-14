@@ -18,6 +18,7 @@ import {
   Shield, Star, Heart, PawPrint, Pencil, Lock,
   User, Hash, Crown, CheckCircle2, Flame, ChevronRight, Check,
   AlertCircle, AlertTriangle, Loader2, RotateCcw, TrendingUp,
+  ClipboardEdit,
 } from "lucide-react";
 
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
@@ -29,6 +30,13 @@ const uidSchema = z.object({
     .min(8, "UID must be at least 8 digits")
     .max(14, "UID must be at most 14 digits")
     .regex(/^\d+$/, "UID must contain numbers only"),
+});
+
+const manualSchema = z.object({
+  inGameName: z.string().min(2, "Name must be at least 2 characters").max(20, "Max 20 characters"),
+  level: z.string().regex(/^\d+$/, "Must be a number").transform(Number).refine(n => n >= 1 && n <= 100, "Enter a valid level (1–100)"),
+  region: z.enum(["IND", "SG", "ID", "BR", "US", "PK", "BD"]),
+  signature: z.string().max(80, "Max 80 characters").optional(),
 });
 
 interface FreefireProfile {
@@ -44,10 +52,22 @@ interface FreefireProfile {
   primeLevel: number;
   signature: string;
   pet: { level: number; exp: number } | null;
+  source?: "hlgaming" | "gameskinbo" | "manual";
 }
 
-type FetchState = "idle" | "loading" | "success" | "error" | "level_too_low";
-type Step = "uid" | "profile";
+type FetchState = "idle" | "loading" | "success" | "error" | "level_too_low" | "manual_needed";
+type Step = "uid" | "manual" | "profile";
+
+
+const REGIONS = [
+  { value: "IND", label: "India" },
+  { value: "SG", label: "Singapore" },
+  { value: "ID", label: "Indonesia" },
+  { value: "BR", label: "Brazil" },
+  { value: "US", label: "United States" },
+  { value: "PK", label: "Pakistan" },
+  { value: "BD", label: "Bangladesh" },
+];
 
 export default function SetupProfileScreen() {
   const updateMe = useUpdateMe();
@@ -60,6 +80,7 @@ export default function SetupProfileScreen() {
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState<string>("");
   const [profile, setProfile] = useState<FreefireProfile | null>(null);
+  const [pendingUid, setPendingUid] = useState("");
   const [nickname, setNickname] = useState("");
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [signature, setSignature] = useState("");
@@ -80,17 +101,30 @@ export default function SetupProfileScreen() {
     defaultValues: { uid: "" },
   });
 
+  const manualForm = useForm<z.infer<typeof manualSchema>>({
+    resolver: zodResolver(manualSchema),
+    defaultValues: { inGameName: "", level: "", region: "IND", signature: "" } as any,
+  });
+
   const onUidSubmit = async (data: z.infer<typeof uidSchema>) => {
     haptic.mediumTap();
     setFetchState("loading");
     setFetchError("");
+    setPendingUid(data.uid);
 
     try {
       const res = await fetch(
         `/api/freefire/player?uid=${encodeURIComponent(data.uid)}&region=ind`,
         { credentials: "include" }
       );
-      const json = await res.json() as FreefireProfile & { error?: string };
+      const json = await res.json() as (FreefireProfile & { error?: string; manual?: boolean; uid?: string });
+
+      // Manual fallback — both APIs returned no data
+      if (json.manual) {
+        setFetchState("manual_needed");
+        setStep("manual");
+        return;
+      }
 
       if (!res.ok) {
         setFetchState("error");
@@ -114,6 +148,30 @@ export default function SetupProfileScreen() {
     }
   };
 
+  const onManualSubmit = (data: z.infer<typeof manualSchema>) => {
+    haptic.mediumTap();
+    const syntheticProfile: FreefireProfile = {
+      accountId: pendingUid,
+      nickname: data.inGameName,
+      level: Number(data.level),
+      rank: 0,
+      rankingPoints: 0,
+      region: data.region,
+      liked: 0,
+      exp: "0",
+      creditScore: 100,
+      primeLevel: 0,
+      signature: data.signature ?? "",
+      pet: null,
+      source: "manual",
+    };
+    setProfile(syntheticProfile);
+    setNickname(data.inGameName);
+    setSignature(data.signature ?? "");
+    setFetchState("success");
+    setStep("profile");
+  };
+
   const onConfirm = () => {
     if (!profile) return;
     haptic.mediumTap();
@@ -127,7 +185,6 @@ export default function SetupProfileScreen() {
           );
           const raw = sessionStorage.getItem("redirectAfterLogin") || "/";
           sessionStorage.removeItem("redirectAfterLogin");
-          // Never redirect back to auth/setup pages — always fall through to home
           const INVALID_REDIRECTS = ["/setup-profile", "/landing", "/get-started", "/onboarding"];
           const redirectTo = INVALID_REDIRECTS.includes(raw) ? "/" : raw;
           setPendingRedirect(redirectTo);
@@ -161,7 +218,7 @@ export default function SetupProfileScreen() {
         <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-orange-700/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-blue-600/8 rounded-full blur-[90px] pointer-events-none" />
 
-        {/* ── STEP 1: UID entry ── */}
+        {/* ── STEP: UID entry ── */}
         {step === "uid" && (
           <div className="w-full max-w-sm relative z-10">
             <div className="text-center mb-8">
@@ -222,7 +279,6 @@ export default function SetupProfileScreen() {
                     )}
                   />
 
-                  {/* Generic error banner */}
                   {fetchState === "error" && (
                     <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
                       <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -230,7 +286,6 @@ export default function SetupProfileScreen() {
                     </div>
                   )}
 
-                  {/* Level too low banner */}
                   {fetchState === "level_too_low" && (
                     <div className="rounded-xl overflow-hidden border border-red-500/30" style={{ background: "rgba(239,68,68,0.07)" }}>
                       <div className="flex items-start gap-3 px-3.5 py-3.5">
@@ -238,9 +293,7 @@ export default function SetupProfileScreen() {
                           <TrendingUp className="w-4 h-4 text-red-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-1">
-                            Level Too Low
-                          </p>
+                          <p className="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-1">Level Too Low</p>
                           <p className="text-[12px] text-zinc-300 leading-snug mb-3">
                             Your account must be at least{" "}
                             <span className="text-white font-bold">Level 40</span> to join Clash Ren.
@@ -251,11 +304,7 @@ export default function SetupProfileScreen() {
                             size="sm"
                             variant="outline"
                             className="h-8 rounded-lg border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200 hover:border-red-500/50 text-xs font-semibold gap-1.5 transition-all"
-                            onClick={() => {
-                              haptic.mediumTap();
-                              setFetchState("idle");
-                              form.reset();
-                            }}
+                            onClick={() => { haptic.mediumTap(); setFetchState("idle"); form.reset(); }}
                           >
                             <RotateCcw className="w-3 h-3" />
                             Re-enter FF UID
@@ -291,7 +340,145 @@ export default function SetupProfileScreen() {
           </div>
         )}
 
-        {/* ── STEP 2: Profile card ── */}
+        {/* ── STEP: Manual fallback ── */}
+        {step === "manual" && (
+          <div className="w-full max-w-sm relative z-10">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-700/20 border border-primary/30 mb-5 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
+                <ClipboardEdit className="w-8 h-8 text-primary" strokeWidth={1.5} />
+              </div>
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-white mb-2">
+                Enter Your Details
+              </h1>
+              <p className="text-sm text-zinc-500 leading-relaxed">
+                Fill in your Free Fire profile details<br />
+                to complete your account setup.
+              </p>
+            </div>
+
+            <div
+              className="rounded-2xl p-5 border border-white/10"
+              style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)" }}
+            >
+              <Form {...manualForm}>
+                <form onSubmit={manualForm.handleSubmit(onManualSubmit)} className="space-y-4">
+                  {/* In-Game Name */}
+                  <FormField
+                    control={manualForm.control}
+                    name="inGameName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">In-Game Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Your Free Fire nickname"
+                            maxLength={20}
+                            className="bg-black/60 border border-white/10 rounded-xl h-11 focus-visible:ring-1 focus-visible:ring-primary/60 text-white placeholder:text-zinc-700"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Level */}
+                  <FormField
+                    control={manualForm.control}
+                    name="level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Account Level</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Star className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                            <Input
+                              {...field}
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="e.g. 52"
+                              maxLength={3}
+                              className="pl-10 bg-black/60 border border-white/10 rounded-xl h-11 focus-visible:ring-1 focus-visible:ring-primary/60 text-white placeholder:text-zinc-700"
+                              onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ""))}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-[10px] text-zinc-700 mt-1">Minimum level 40 required to join Clash Ren.</p>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Region */}
+                  <FormField
+                    control={manualForm.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Region</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            className="w-full h-11 rounded-xl px-3 text-sm text-white bg-black/60 border border-white/10 focus:outline-none focus:ring-1 focus:ring-primary/60 focus:border-primary/50"
+                          >
+                            {REGIONS.map(r => (
+                              <option key={r.value} value={r.value} className="bg-zinc-900">{r.label}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Bio */}
+                  <FormField
+                    control={manualForm.control}
+                    name="signature"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">Bio / Signature <span className="normal-case text-zinc-600">(optional)</span></FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            placeholder="Your in-game bio..."
+                            maxLength={80}
+                            rows={2}
+                            className="bg-black/40 border border-white/8 rounded-xl text-sm text-white resize-none focus-visible:ring-1 focus-visible:ring-primary/50 placeholder:text-zinc-700"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex gap-2.5 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-xl border-white/10 bg-white/[0.02] text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300"
+                      onClick={() => { haptic.mediumTap(); setStep("uid"); setFetchState("idle"); setPendingUid(""); manualForm.reset(); }}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold shadow-[0_0_20px_rgba(234,88,12,0.3)] active:scale-[0.98]"
+                    >
+                      Continue <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
+            <p className="text-center text-[11px] text-zinc-700 mt-4">
+              Your data will be verified by our team before tournament participation.
+            </p>
+          </div>
+        )}
+
+        {/* ── STEP: Profile preview ── */}
         {step === "profile" && profile && (
           <div className="w-full max-w-sm flex flex-col gap-3 relative z-10">
 
@@ -334,11 +521,17 @@ export default function SetupProfileScreen() {
                   </div>
 
                   <div className="flex flex-col items-end gap-1 pb-1">
-                    <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/25 rounded-full px-2.5 py-1">
-                      <Shield className="w-3 h-3 text-blue-400" />
-                      <span className="text-xs font-bold text-blue-300">Rank #{profile.rank}</span>
-                    </div>
-                    <span className="text-[10px] text-zinc-600 font-mono">{profile.rankingPoints.toLocaleString()} pts</span>
+                    {profile.rank > 0 ? (
+                      <>
+                        <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/25 rounded-full px-2.5 py-1">
+                          <Shield className="w-3 h-3 text-blue-400" />
+                          <span className="text-xs font-bold text-blue-300">Rank #{profile.rank}</span>
+                        </div>
+                        <span className="text-[10px] text-zinc-600 font-mono">{profile.rankingPoints.toLocaleString()} pts</span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-zinc-600 italic">Rank not available</span>
+                    )}
                   </div>
                 </div>
 
@@ -363,20 +556,28 @@ export default function SetupProfileScreen() {
                       </button>
                     </div>
                   ) : (
-                    <span className="font-heading text-2xl font-bold text-white leading-tight tracking-tight truncate">
-                      {nickname}
-                    </span>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="font-heading text-2xl font-bold text-white leading-tight tracking-tight truncate">
+                        {nickname}
+                      </span>
+                      <button
+                        onClick={() => { haptic.mediumTap(); setIsEditingNickname(true); }}
+                        className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors shrink-0"
+                      >
+                        <Pencil className="w-3 h-3 text-zinc-500" />
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {/* UID + India badge + Prime row */}
+                {/* UID + Region + Prime row */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex items-center gap-1 text-xs text-zinc-600">
                     <Hash className="w-3 h-3" />{profile.accountId}
                   </span>
                   <span className="w-px h-3 bg-white/10" />
                   <span className="flex items-center gap-1 text-xs font-medium text-zinc-400 bg-white/[0.04] border border-white/10 rounded-full px-2 py-0.5">
-                    🇮🇳 India
+                    {profile.region}
                   </span>
                   {profile.primeLevel > 0 && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-2 py-0.5">
@@ -388,44 +589,54 @@ export default function SetupProfileScreen() {
             </div>
 
             {/* ── Stats row ── */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <GlowStat
-                icon={<Heart className="w-4 h-4" />}
-                label="Likes"
-                value={Number(profile.liked).toLocaleString()}
-                gradient="from-pink-600/30 to-rose-800/20"
-                border="border-pink-500/20"
-                iconColor="text-pink-400"
-                glow="rgba(236,72,153,0.2)"
-              />
-              <GlowStat
-                icon={<CheckCircle2 className="w-4 h-4" />}
-                label="Trust Score"
-                value={`${profile.creditScore}/100`}
-                gradient="from-emerald-600/30 to-green-800/20"
-                border="border-emerald-500/20"
-                iconColor="text-emerald-400"
-                glow="rgba(52,211,153,0.2)"
-              />
-              <GlowStat
-                icon={<Crown className="w-4 h-4" />}
-                label="Prime Level"
-                value={profile.primeLevel > 0 ? `Tier ${profile.primeLevel}` : "None"}
-                gradient="from-yellow-600/30 to-amber-800/20"
-                border="border-yellow-500/20"
-                iconColor="text-yellow-400"
-                glow="rgba(250,204,21,0.2)"
-              />
-              <GlowStat
-                icon={<PawPrint className="w-4 h-4" />}
-                label={profile.pet ? `Pet · Lv.${profile.pet.level}` : "Pet"}
-                value={profile.pet ? `${profile.pet.exp.toLocaleString()} XP` : "None"}
-                gradient="from-teal-600/30 to-cyan-800/20"
-                border="border-teal-500/20"
-                iconColor="text-teal-400"
-                glow="rgba(20,184,166,0.2)"
-              />
-            </div>
+            {(profile.liked > 0 || profile.creditScore > 0 || profile.primeLevel > 0 || profile.pet) && (
+              <div className="grid grid-cols-2 gap-2.5">
+                {profile.liked > 0 && (
+                  <GlowStat
+                    icon={<Heart className="w-4 h-4" />}
+                    label="Likes"
+                    value={Number(profile.liked).toLocaleString()}
+                    gradient="from-pink-600/30 to-rose-800/20"
+                    border="border-pink-500/20"
+                    iconColor="text-pink-400"
+                    glow="rgba(236,72,153,0.2)"
+                  />
+                )}
+                {profile.creditScore > 0 && (
+                  <GlowStat
+                    icon={<CheckCircle2 className="w-4 h-4" />}
+                    label="Trust Score"
+                    value={`${profile.creditScore}/100`}
+                    gradient="from-emerald-600/30 to-green-800/20"
+                    border="border-emerald-500/20"
+                    iconColor="text-emerald-400"
+                    glow="rgba(52,211,153,0.2)"
+                  />
+                )}
+                {profile.primeLevel > 0 && (
+                  <GlowStat
+                    icon={<Crown className="w-4 h-4" />}
+                    label="Prime Level"
+                    value={`Tier ${profile.primeLevel}`}
+                    gradient="from-yellow-600/30 to-amber-800/20"
+                    border="border-yellow-500/20"
+                    iconColor="text-yellow-400"
+                    glow="rgba(250,204,21,0.2)"
+                  />
+                )}
+                {profile.pet && (
+                  <GlowStat
+                    icon={<PawPrint className="w-4 h-4" />}
+                    label={`Pet · Lv.${profile.pet.level}`}
+                    value={`${profile.pet.exp.toLocaleString()} XP`}
+                    gradient="from-teal-600/30 to-cyan-800/20"
+                    border="border-teal-500/20"
+                    iconColor="text-teal-400"
+                    glow="rgba(20,184,166,0.2)"
+                  />
+                )}
+              </div>
+            )}
 
             {/* ── Bio / Signature ── */}
             <div
@@ -455,7 +666,7 @@ export default function SetupProfileScreen() {
             <div className="flex items-start gap-2 px-0.5">
               <Lock className="w-3 h-3 text-zinc-700 mt-0.5 shrink-0" />
               <p className="text-[11px] text-zinc-700 leading-relaxed">
-                UID, rank &amp; stats are pulled live from your Free Fire account. Nickname and bio are yours to customise.
+                Your UID and stats are locked after confirmation. Nickname and bio are yours to customise.
               </p>
             </div>
 
@@ -467,7 +678,10 @@ export default function SetupProfileScreen() {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-0.5">Permanent UID</p>
-                  <p className="text-[12px] text-zinc-300 leading-snug">Your UID <span className="text-white font-semibold">cannot be changed</span> after confirmation. Double-check before continuing.</p>
+                  <p className="text-[12px] text-zinc-300 leading-snug">
+                    Your UID <span className="text-white font-semibold">cannot be changed</span> after confirmation.
+                    To request a correction, contact support.
+                  </p>
                 </div>
               </div>
             </div>
@@ -479,8 +693,11 @@ export default function SetupProfileScreen() {
                   <AlertCircle className="w-3.5 h-3.5 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">In-Game Name</p>
-                  <p className="text-[12px] text-zinc-300 leading-snug">Use your <span className="text-white font-semibold">Free Fire in-game name</span> only. To change it later, contact our support team.</p>
+                  <p className="text-[11px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">In-Game Name Changes</p>
+                  <p className="text-[12px] text-zinc-300 leading-snug">
+                    Name changes require <span className="text-white font-semibold">admin approval</span> and are not instant.
+                    Use your actual Free Fire name.
+                  </p>
                 </div>
               </div>
             </div>
