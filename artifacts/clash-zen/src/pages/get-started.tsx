@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, Check, MessageSquare } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, Clock, Check, MessageSquare, Smartphone, KeyRound } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -449,7 +449,7 @@ export default function GetStartedPage() {
                 >
                   {step === "otp"
                     ? <Check className="w-3.5 h-3.5 text-green-400" strokeWidth={2.5} />
-                    : <span className="text-[11px] font-bold text-white">1</span>
+                    : <Smartphone className="w-3.5 h-3.5 text-white" strokeWidth={2} />
                   }
                 </div>
                 <span className="text-xs font-semibold">Number</span>
@@ -475,7 +475,7 @@ export default function GetStartedPage() {
                   }`}
                   style={step === "otp" ? { boxShadow: "0 0 14px rgba(139,92,246,0.5)" } : {}}
                 >
-                  <span className="text-[11px] font-bold">2</span>
+                  <KeyRound className="w-3.5 h-3.5" strokeWidth={2} />
                 </div>
                 <span className="text-xs font-semibold">Verify</span>
               </div>
