@@ -399,8 +399,8 @@ export default function GetStartedPage() {
         style={{ width: 220, height: 220, background: "rgba(100,60,200,0.15)", bottom: "25%", left: 0 }}
       />
 
-      {/* Top bar — Back button + step indicator on the same row */}
-      <div className="relative z-20 flex items-center justify-between px-5 pt-5">
+      {/* Top bar — Back button left, step indicator centered */}
+      <div className="relative z-20 flex items-center px-5 pt-5">
         <button
           className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
           onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
@@ -410,14 +410,14 @@ export default function GetStartedPage() {
           <span className="font-medium">Back</span>
         </button>
 
-        {/* Step indicator */}
+        {/* Step indicator — absolutely centered */}
         <AnimatePresence>
           {(step === "phone" || step === "otp") && (
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              className="flex items-center gap-2.5"
+              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5"
             >
               <div className={`flex items-center gap-1.5 transition-colors ${step === "phone" ? "text-white" : "text-zinc-400"}`}>
                 <div
