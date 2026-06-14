@@ -413,65 +413,23 @@ export default function GetStartedPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col relative overflow-hidden bg-black">
-      {/* Animated background orbs */}
-      <motion.div
-        className="pointer-events-none absolute rounded-full blur-[130px]"
-        style={{ width: 500, height: 400, background: "rgba(139,92,246,0.18)", top: -80, left: "50%", translateX: "-50%" }}
-        animate={{ scale: [1, 1.15, 1], opacity: [0.18, 0.25, 0.18] }}
-        transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="pointer-events-none absolute rounded-full blur-[100px]"
-        style={{ width: 300, height: 300, background: "rgba(180,30,30,0.18)", bottom: 0, right: 0 }}
-        animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.22, 0.15] }}
-        transition={{ repeat: Infinity, duration: 8, ease: "easeInOut", delay: 2 }}
-      />
-      <motion.div
-        className="pointer-events-none absolute rounded-full blur-[90px]"
-        style={{ width: 220, height: 220, background: "rgba(100,60,200,0.15)", bottom: "25%", left: 0 }}
-        animate={{ scale: [1, 1.1, 1], y: [0, -20, 0] }}
-        transition={{ repeat: Infinity, duration: 10, ease: "easeInOut", delay: 4 }}
-      />
+      {/* Static background blobs — no animation to prevent lag */}
+      <div className="pointer-events-none absolute rounded-full blur-[130px]" style={{ width: 500, height: 400, background: "rgba(139,92,246,0.16)", top: -80, left: "50%", transform: "translateX(-50%)" }} />
+      <div className="pointer-events-none absolute rounded-full blur-[100px]" style={{ width: 300, height: 300, background: "rgba(180,30,30,0.15)", bottom: 0, right: 0 }} />
+      <div className="pointer-events-none absolute rounded-full blur-[90px]" style={{ width: 220, height: 220, background: "rgba(100,60,200,0.12)", bottom: "25%", left: 0 }} />
 
-      {/* Back button */}
-      <motion.button
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-        className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
+      {/* Back button — boxed */}
+      <button
+        className="absolute top-5 left-5 z-20 w-9 h-9 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
         onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
         data-testid="back-to-landing"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span className="font-medium">Back</span>
-      </motion.button>
+      </button>
 
       {/* Main layout */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative z-10">
-
-        {/* Brand header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex flex-col items-center gap-3 mb-8"
-        >
-          <motion.div
-            animate={{ y: [0, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-            className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center"
-            style={{ boxShadow: "0 0 40px rgba(139,92,246,0.3), 0 0 0 1px rgba(255,255,255,0.05)" }}
-          >
-            <img src={LOGO_URL} alt="Clash Ren Logo" style={{ width: 52, height: 52 }} className="object-contain" />
-          </motion.div>
-          <div className="flex flex-col items-center gap-0.5">
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "0.1em", fontSize: "1rem" }}>
-              <span style={{ background: "linear-gradient(180deg,#e8e8e8 0%,#aaa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH </span>
-              <span style={{ color: "#e01010" }}>REN</span>
-            </span>
-            <p className="text-[10px] text-zinc-600 tracking-widest uppercase font-medium">Free Fire Tournament Platform</p>
-          </div>
-        </motion.div>
 
         {/* Step indicator */}
         <AnimatePresence>
@@ -697,20 +655,11 @@ export default function GetStartedPage() {
                       <motion.div whileTap={{ scale: 0.98 }}>
                         <Button
                           type="submit"
-                          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider relative overflow-hidden"
+                          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider"
                           style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.5)" }}
                           disabled={isSending}
                           data-testid="btn-send-otp"
                         >
-                          {!isSending && (
-                            <motion.div
-                              className="absolute inset-0 bg-white/10"
-                              initial={{ x: "-100%" }}
-                              animate={{ x: "200%" }}
-                              transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut", repeatDelay: 1.5 }}
-                              style={{ skewX: -20 }}
-                            />
-                          )}
                           {isSending ? "Sending…" : "Get OTP"}
                         </Button>
                       </motion.div>
