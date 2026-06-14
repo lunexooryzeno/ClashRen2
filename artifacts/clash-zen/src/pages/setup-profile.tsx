@@ -221,17 +221,6 @@ export default function SetupProfileScreen() {
         {/* ── STEP: UID entry ── */}
         {step === "uid" && (
           <div className="w-full max-w-sm relative z-10">
-            {/* Logout button */}
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => { haptic.mediumTap(); logout(); }}
-                className="flex items-center gap-1.5 text-zinc-600 hover:text-red-400 transition-colors text-xs font-medium"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Logout
-              </button>
-            </div>
-
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-700/20 border border-primary/30 mb-5 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
                 <Flame className="w-8 h-8 text-primary" strokeWidth={1.5} />
@@ -325,23 +314,33 @@ export default function SetupProfileScreen() {
                     </div>
                   )}
 
-                  <Button
-                    type="submit"
-                    disabled={fetchState === "loading" || fetchState === "level_too_low"}
-                    className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_0_24px_rgba(234,88,12,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
-                    data-testid="button-fetch-profile"
-                  >
-                    {fetchState === "loading" ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Fetching Profile…
-                      </>
-                    ) : (
-                      <>
-                        Fetch Profile <ChevronRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { haptic.mediumTap(); logout(); }}
+                      className="h-12 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-red-500/10 hover:border-red-500/30 text-zinc-500 hover:text-red-400 transition-all flex items-center gap-1.5 text-sm font-medium shrink-0"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                    <Button
+                      type="submit"
+                      disabled={fetchState === "loading" || fetchState === "level_too_low"}
+                      className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_0_24px_rgba(234,88,12,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+                      data-testid="button-fetch-profile"
+                    >
+                      {fetchState === "loading" ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Fetching…
+                        </>
+                      ) : (
+                        <>
+                          Fetch Profile <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             </div>
