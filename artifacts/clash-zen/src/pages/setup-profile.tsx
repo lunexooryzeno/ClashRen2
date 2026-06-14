@@ -7,10 +7,18 @@ import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { WelcomeModal } from "@/components/welcome-modal";
 import { haptic } from "@/lib/haptics";
-import { Gamepad2, Loader2, ChevronRight } from "lucide-react";
+import { Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw } from "lucide-react";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
+
+type FetchState = "idle" | "loading" | "error";
+
+interface FetchedProfile {
+  nickname: string;
+  level: number;
+  region: string;
+}
 
 export default function SetupProfileScreen() {
   const updateMe = useUpdateMe();
@@ -19,28 +27,55 @@ export default function SetupProfileScreen() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const [name, setName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [uid, setUid] = useState("");
+  const [fetchState, setFetchState] = useState<FetchState>("idle");
+  const [fetchError, setFetchError] = useState("");
   const [showWelcome, setShowWelcome] = useState(false);
   const pendingRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) ?? "/";
 
-  const trimmedName = name.trim();
-  const nameValid = trimmedName.length >= 2 && trimmedName.length <= 20;
+  const trimmedUid = uid.trim();
+  const uidValid = /^\d{8,14}$/.test(trimmedUid);
+  const isLoading = fetchState === "loading";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nameValid || isSaving) return;
+    if (!uidValid || isLoading) return;
     haptic.mediumTap();
-    setIsSaving(true);
+    setFetchState("loading");
+    setFetchError("");
+
     try {
-      await updateMe.mutateAsync({ inGameName: trimmedName } as any);
+      const res = await fetch(
+        `/api/freefire/player?uid=${encodeURIComponent(trimmedUid)}&region=ind`,
+        { credentials: "include" }
+      );
+      const json = await res.json() as {
+        nickname?: string; level?: number; region?: string;
+        manual?: boolean; error?: string;
+      };
+
+      if (!res.ok || json.manual || !json.nickname) {
+        haptic.error();
+        setFetchState("error");
+        setFetchError(
+          json.error ??
+          (json.manual
+            ? "Could not find your account. Please check your UID and try again."
+            : "Failed to fetch player data. Please try again.")
+        );
+        return;
+      }
+
+      // Save uid + fetched in-game name
+      await updateMe.mutateAsync({ uid: trimmedUid, inGameName: json.nickname } as any);
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
+      haptic.success();
       setShowWelcome(true);
     } catch {
-      toast({ title: "Failed to save", description: "Please try again.", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
+      haptic.error();
+      setFetchState("error");
+      setFetchError("Network error. Check your connection and try again.");
     }
   }
 
@@ -66,7 +101,7 @@ export default function SetupProfileScreen() {
         </div>
 
         <div className="relative z-10 w-full max-w-sm flex flex-col gap-8">
-          {/* Icon */}
+          {/* Icon + heading */}
           <div className="flex flex-col items-center gap-3">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
@@ -75,11 +110,11 @@ export default function SetupProfileScreen() {
                 boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
               }}
             >
-              <Gamepad2 className="w-8 h-8 text-white" strokeWidth={2} />
+              <Crosshair className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
             <div className="text-center">
-              <h1 className="text-xl font-black text-white tracking-tight">Set Up Your Profile</h1>
-              <p className="text-sm text-zinc-400 mt-1">Enter the name you use in Free Fire Max</p>
+              <h1 className="text-xl font-black text-white tracking-tight">Link Your Account</h1>
+              <p className="text-sm text-zinc-400 mt-1">Enter your Free Fire Max UID to get started</p>
             </div>
           </div>
 
@@ -87,40 +122,63 @@ export default function SetupProfileScreen() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">
-                In-Game Name
+                Free Fire UID
               </label>
               <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Your Free Fire nickname"
-                maxLength={20}
+                value={uid}
+                onChange={e => {
+                  setUid(e.target.value.replace(/\D/g, ""));
+                  if (fetchState === "error") { setFetchState("idle"); setFetchError(""); }
+                }}
+                placeholder="Enter your 8–14 digit UID"
+                maxLength={14}
+                inputMode="numeric"
                 autoFocus
-                className="w-full h-12 rounded-xl px-4 text-base text-white font-semibold outline-none transition-all"
+                className="w-full h-12 rounded-xl px-4 text-base text-white font-mono font-semibold outline-none transition-all"
                 style={{
                   background: "rgba(255,255,255,0.06)",
-                  border: `1px solid ${nameValid || !name ? "rgba(255,255,255,0.10)" : "hsl(var(--primary) / 0.5)"}`,
-                  boxShadow: nameValid ? "0 0 0 1px hsl(var(--primary) / 0.25)" : undefined,
+                  border: `1px solid ${
+                    fetchState === "error"
+                      ? "rgba(239,68,68,0.5)"
+                      : uidValid
+                      ? "hsl(var(--primary) / 0.5)"
+                      : "rgba(255,255,255,0.10)"
+                  }`,
+                  boxShadow: uidValid && fetchState !== "error"
+                    ? "0 0 0 1px hsl(var(--primary) / 0.25)"
+                    : undefined,
                 }}
               />
               <div className="flex justify-between mt-1.5 px-0.5">
-                <p className="text-[11px] text-zinc-500">2–20 characters</p>
-                <p className={`text-[11px] tabular-nums ${trimmedName.length > 18 ? "text-amber-400" : "text-zinc-500"}`}>
-                  {trimmedName.length}/20
-                </p>
+                <p className="text-[11px] text-zinc-500">8–14 digits only</p>
+                <p className="text-[11px] tabular-nums text-zinc-500">{trimmedUid.length}/14</p>
               </div>
             </div>
 
+            {/* Error state */}
+            {fetchState === "error" && (
+              <div
+                className="rounded-xl p-3 flex items-start gap-3"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+              >
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-300 leading-snug">{fetchError}</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={!nameValid || isSaving}
+              disabled={!uidValid || isLoading}
               className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
               style={{
                 background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-                boxShadow: nameValid ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
+                boxShadow: uidValid ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
               }}
             >
-              {isSaving ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Looking up account…</>
+              ) : fetchState === "error" ? (
+                <><RotateCcw className="w-4 h-4" /> Try Again</>
               ) : (
                 <>Continue <ChevronRight className="w-4 h-4" /></>
               )}
@@ -128,7 +186,7 @@ export default function SetupProfileScreen() {
           </form>
 
           <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
-            You can update your name later from your profile settings.
+            Your UID is visible in-game under your profile name.
           </p>
         </div>
       </div>
