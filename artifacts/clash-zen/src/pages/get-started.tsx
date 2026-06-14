@@ -399,47 +399,44 @@ export default function GetStartedPage() {
         style={{ width: 220, height: 220, background: "rgba(100,60,200,0.15)", bottom: "25%", left: 0 }}
       />
 
-      {/* Back button */}
-      <button
-        className="absolute top-5 left-5 z-20 flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
-        onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
-        data-testid="back-to-landing"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span className="font-medium">Back</span>
-      </button>
-
-      {/* Main layout */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 relative z-10">
+      {/* Top bar — Back button + step indicator on the same row */}
+      <div className="relative z-20 flex items-center justify-between px-5 pt-5">
+        <button
+          className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
+          onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
+          data-testid="back-to-landing"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="font-medium">Back</span>
+        </button>
 
         {/* Step indicator */}
         <AnimatePresence>
           {(step === "phone" || step === "otp") && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="flex items-center gap-3 mb-8"
+              exit={{ opacity: 0, y: -6 }}
+              className="flex items-center gap-2.5"
             >
-              <div className={`flex items-center gap-2 transition-colors ${step === "phone" ? "text-white" : "text-zinc-400"}`}>
+              <div className={`flex items-center gap-1.5 transition-colors ${step === "phone" ? "text-white" : "text-zinc-400"}`}>
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                     step === "otp"
                       ? "bg-green-500/20 border border-green-500/50"
                       : "bg-primary border border-primary/60"
                   }`}
-                  style={step === "phone" ? { boxShadow: "0 0 14px rgba(139,92,246,0.5)" } : {}}
+                  style={step === "phone" ? { boxShadow: "0 0 10px rgba(139,92,246,0.5)" } : {}}
                 >
                   {step === "otp"
-                    ? <Check className="w-3.5 h-3.5 text-green-400" strokeWidth={2.5} />
-                    : <Smartphone className="w-3.5 h-3.5 text-white" strokeWidth={2} />
+                    ? <Check className="w-3 h-3 text-green-400" strokeWidth={2.5} />
+                    : <Smartphone className="w-3 h-3 text-white" strokeWidth={2} />
                   }
                 </div>
                 <span className="text-xs font-semibold">Number</span>
               </div>
 
-              {/* Connector line */}
-              <div className="relative w-10 h-px overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
+              <div className="relative w-8 h-px overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
                 <motion.div
                   className="absolute inset-y-0 left-0 rounded-full"
                   style={{ background: "linear-gradient(90deg, rgba(34,197,94,0.7), rgba(139,92,246,0.7))" }}
@@ -449,22 +446,26 @@ export default function GetStartedPage() {
                 />
               </div>
 
-              <div className={`flex items-center gap-2 transition-colors ${step === "otp" ? "text-white" : "text-zinc-600"}`}>
+              <div className={`flex items-center gap-1.5 transition-colors ${step === "otp" ? "text-white" : "text-zinc-600"}`}>
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                     step === "otp"
                       ? "bg-primary border border-primary/60"
                       : "bg-zinc-900 border border-zinc-700"
                   }`}
-                  style={step === "otp" ? { boxShadow: "0 0 14px rgba(139,92,246,0.5)" } : {}}
+                  style={step === "otp" ? { boxShadow: "0 0 10px rgba(139,92,246,0.5)" } : {}}
                 >
-                  <KeyRound className="w-3.5 h-3.5" strokeWidth={2} />
+                  <KeyRound className="w-3 h-3" strokeWidth={2} />
                 </div>
                 <span className="text-xs font-semibold">Verify</span>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Main layout */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative z-10">
 
         {/* Step content */}
         <div className="w-full max-w-sm">
@@ -571,6 +572,20 @@ export default function GetStartedPage() {
                 transition={{ duration: 0.3 }}
                 className="flex flex-col gap-6"
               >
+                {/* Logo + brand name */}
+                <div className="flex items-center justify-center gap-2.5 mb-1">
+                  <div
+                    className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0"
+                    style={{ boxShadow: "0 0 18px rgba(139,92,246,0.25)" }}
+                  >
+                    <img src="/icons/logo.png" alt="Clashren" className="w-5 h-5 object-contain" />
+                  </div>
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "0.08em", fontSize: "1.15rem" }}>
+                    <span style={{ background: "linear-gradient(180deg,#e8e8e8 0%,#aaa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH</span>
+                    <span style={{ color: "#e01010" }}>REN</span>
+                  </span>
+                </div>
+
                 <div className="text-center">
                   <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">
                     Enter Your Number
