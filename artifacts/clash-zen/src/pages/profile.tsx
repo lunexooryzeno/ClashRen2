@@ -426,7 +426,7 @@ export default function Profile() {
                   <Crosshair className="w-3 h-3 text-primary shrink-0" strokeWidth={2.5} />
                   <span className="text-[9px] font-bold uppercase tracking-widest text-primary/70">In-Game UID</span>
                 </div>
-                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide pr-8">
+                <p className="font-mono text-sm font-bold text-foreground leading-none tracking-wide pr-8 text-left">
                   {user?.uid ?? "—"}
                 </p>
               </div>
