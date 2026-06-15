@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Send, Shield, CheckCheck, User } from "lucide-react";
+import { ArrowLeft, Send, Shield, CheckCheck } from "lucide-react";
 import { apiFetch, apiPost } from "@/lib/api";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 interface ChatMessage {
   id: number;
@@ -22,33 +23,34 @@ function fmtTime(iso: string) {
   catch { return ""; }
 }
 
-function formatLastActive(iso: string | null): string {
-  if (!iso) return "Offline";
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diffMs / 60000);
-  if (m < 1) return "Last active just now";
-  if (m < 60) return `Last active ${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `Last active ${h}h ago`;
-  return `Last active ${Math.floor(h / 24)}d ago`;
+function resolveAvatar(pic: string | null | undefined): string | null {
+  if (!pic) return null;
+  if (pic.startsWith("/api/") || pic.startsWith("http")) return pic;
+  return `/api/storage${pic}`;
 }
 
 export default function ChatPage() {
   const [, navigate]  = useLocation();
-  const [messages, setMessages]     = useState<ChatMessage[]>([]);
-  const [input, setInput]           = useState("");
-  const [loading, setLoading]       = useState(true);
-  const [sending, setSending]       = useState(false);
-  const [error, setError]           = useState<string | null>(null);
-  const [adminTyping, setAdminTyping] = useState(false);
-  const [presence, setPresence]     = useState<Presence>({ online: false, lastActive: null });
-  const [chatH, setChatH]           = useState<number | null>(null);
+  const { user }      = useAuth();
 
-  const scrollRef          = useRef<HTMLDivElement>(null);
-  const inputRef           = useRef<HTMLInputElement>(null);
-  const adminTypingTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const userTypingActive   = useRef(false);
-  const userTypingTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [messages, setMessages]       = useState<ChatMessage[]>([]);
+  const [input, setInput]             = useState("");
+  const [loading, setLoading]         = useState(true);
+  const [sending, setSending]         = useState(false);
+  const [error, setError]             = useState<string | null>(null);
+  const [adminTyping, setAdminTyping] = useState(false);
+  const [presence, setPresence]       = useState<Presence>({ online: false, lastActive: null });
+  const [chatH, setChatH]             = useState<number | null>(null);
+
+  const scrollRef        = useRef<HTMLDivElement>(null);
+  const inputRef         = useRef<HTMLInputElement>(null);
+  const adminTypingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userTypingActive = useRef(false);
+  const userTypingTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Resolved user avatar URL
+  const userAvatar = resolveAvatar(user?.profilePicture);
+  const userInitial = (user?.inGameName?.[0] ?? "U").toUpperCase();
 
   /* ── Scroll to bottom ─────────────────────────────────────────────────────── */
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -164,8 +166,6 @@ export default function ChatPage() {
     if (!input.trim() || sending) return;
     const text = input.trim();
     setInput("");
-
-    // Stop typing signal
     if (userTypingTimer.current) clearTimeout(userTypingTimer.current);
     userTypingActive.current = false;
     notifyTyping(false);
@@ -191,6 +191,18 @@ export default function ChatPage() {
   }
 
   const isEmpty = !loading && messages.length === 0 && !error;
+
+  /* ── User avatar node (reused in message list) ───────────────────────────── */
+  function UserAvatar() {
+    return userAvatar ? (
+      <img src={userAvatar} alt="" className="w-7 h-7 rounded-full object-cover" />
+    ) : (
+      <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+        style={{ background: "linear-gradient(135deg,rgba(56,189,248,0.4),rgba(99,102,241,0.4))", border: "1px solid rgba(56,189,248,0.35)" }}>
+        {userInitial}
+      </div>
+    );
+  }
 
   /* ─────────────────────────────────────────────────────────────────────────── */
   return (
@@ -222,7 +234,7 @@ export default function ChatPage() {
           <ArrowLeft className="w-4 h-4 text-white" />
         </button>
 
-        {/* Avatar */}
+        {/* Support avatar */}
         <div className="relative shrink-0">
           <div className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{
@@ -237,7 +249,7 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Name + status */}
+        {/* Name + status — only shown when online or typing */}
         <div className="flex-1 min-w-0">
           <p className="font-heading font-bold text-white text-sm">Human Support</p>
           {adminTyping ? (
@@ -254,11 +266,7 @@ export default function ChatPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               Online
             </p>
-          ) : (
-            <p className="text-[11px] text-zinc-500">
-              {formatLastActive(presence.lastActive)}
-            </p>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -284,15 +292,53 @@ export default function ChatPage() {
         )}
 
         {isEmpty && (
-          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.18)" }}>
-              <User className="w-7 h-7 text-sky-400" strokeWidth={1.5} />
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center pb-6">
+            {/* Support avatar */}
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg,rgba(56,189,248,0.15),rgba(99,102,241,0.15))",
+                  border: "1px solid rgba(56,189,248,0.25)",
+                  boxShadow: "0 0 32px rgba(56,189,248,0.1)",
+                }}>
+                <Shield className="w-8 h-8 text-sky-300" strokeWidth={1.5} />
+              </div>
+              {presence.online && (
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#060a14] flex items-center justify-center"
+                  style={{ boxShadow: "0 0 8px rgba(52,211,153,0.7)" }} />
+              )}
             </div>
-            <p className="font-bold text-white text-sm">Chat with Human Support</p>
-            <p className="text-zinc-500 text-xs max-w-[220px] leading-relaxed">
-              Send your message and a real person from our team will get back to you.
-            </p>
+
+            {presence.online ? (
+              <>
+                <div>
+                  <p className="font-bold text-white text-base">We're online right now!</p>
+                  <p className="text-emerald-400 text-xs mt-0.5 flex items-center justify-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Support is available
+                  </p>
+                </div>
+                <div className="rounded-2xl px-4 py-3 max-w-[260px]"
+                  style={{ background: "rgba(56,189,248,0.07)", border: "1px solid rgba(56,189,248,0.15)" }}>
+                  <p className="text-zinc-300 text-sm leading-relaxed">
+                    Tell us what problem you're facing — we'll help you right away 👇
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="font-bold text-white text-base">Chat with Human Support</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">We'll reply as soon as we're back</p>
+                </div>
+                <div className="rounded-2xl px-4 py-3 max-w-[260px]"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <p className="text-zinc-400 text-sm leading-relaxed">
+                    Describe your issue below and we'll get back to you shortly.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -305,26 +351,27 @@ export default function ChatPage() {
                 new Date(m.createdAt).getTime() - new Date(messages[idx - 1].createdAt).getTime()
               ) < 60000 && messages[idx - 1].isFromAdmin === m.isFromAdmin;
               return (
-                <div key={m.id} className={cn("flex gap-2", isMe ? "flex-row-reverse" : "flex-row")}>
+                <div key={m.id} className={cn("flex gap-2 items-end", isMe ? "flex-row-reverse" : "flex-row")}>
                   <div className={cn("w-7 h-7 shrink-0", prevSameSide && "invisible")}>
                     {!prevSameSide && (
-                      <div className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center",
-                        isMe
-                          ? "bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border border-cyan-500/40"
-                          : "bg-gradient-to-br from-sky-500/30 to-indigo-600/30 border border-sky-500/40"
-                      )}>
-                        {isMe ? "🎮" : <Shield className="w-3.5 h-3.5 text-sky-300" />}
-                      </div>
+                      isMe ? <UserAvatar /> : (
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center"
+                          style={{ background: "rgba(56,189,248,0.15)", border: "1px solid rgba(56,189,248,0.3)" }}>
+                          <Shield className="w-3.5 h-3.5 text-sky-300" />
+                        </div>
+                      )
                     )}
                   </div>
                   <div className={cn("max-w-[75%] flex flex-col", isMe ? "items-end" : "items-start")}>
                     <div className={cn(
                       "px-3.5 py-2 text-sm leading-relaxed shadow-md break-words",
                       isMe
-                        ? "bg-gradient-to-br from-cyan-600 to-sky-700 text-white rounded-2xl rounded-tr-sm"
-                        : "bg-white/8 border border-white/10 text-white rounded-2xl rounded-tl-sm backdrop-blur-sm"
-                    )}>
+                        ? "text-white rounded-2xl rounded-br-sm"
+                        : "bg-white/8 border border-white/10 text-white rounded-2xl rounded-bl-sm backdrop-blur-sm"
+                    )} style={isMe ? {
+                      background: "linear-gradient(135deg,rgba(14,165,233,0.9),rgba(6,182,212,0.85))",
+                      boxShadow: "0 2px 12px rgba(14,165,233,0.25)",
+                    } : {}}>
                       {m.message}
                     </div>
                     {!prevSameMin && (
@@ -347,7 +394,7 @@ export default function ChatPage() {
               style={{ background: "rgba(56,189,248,0.15)", border: "1px solid rgba(56,189,248,0.3)" }}>
               <Shield className="w-3.5 h-3.5 text-sky-300" />
             </div>
-            <div className="px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-1"
+            <div className="px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1"
               style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.09)" }}>
               <span className="typing-dot w-1.5 h-1.5 rounded-full bg-zinc-400 inline-block" />
               <span className="typing-dot w-1.5 h-1.5 rounded-full bg-zinc-400 inline-block" />
@@ -360,14 +407,25 @@ export default function ChatPage() {
       {/* ── Input bar (WhatsApp-style, keyboard-aware) ── */}
       <div className="relative z-20 px-3 py-3 shrink-0"
         style={{ background: "rgba(8,10,16,0.95)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <div className="flex items-center gap-2 rounded-full px-4 py-1.5"
+        <div className="flex items-center gap-2 rounded-full px-3 py-1.5"
           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
+          {/* User's own avatar pill */}
+          <div className="shrink-0">
+            {userAvatar ? (
+              <img src={userAvatar} alt="" className="w-7 h-7 rounded-full object-cover" />
+            ) : (
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                style={{ background: "linear-gradient(135deg,rgba(14,165,233,0.4),rgba(6,182,212,0.4))", border: "1px solid rgba(14,165,233,0.35)" }}>
+                {userInitial}
+              </div>
+            )}
+          </div>
           <input
             ref={inputRef}
             value={input}
             onChange={e => handleInputChange(e.target.value)}
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
-            placeholder="Message support…"
+            placeholder="Describe your problem…"
             className="flex-1 bg-transparent text-sm text-white placeholder:text-zinc-600 outline-none py-2"
           />
           <button
