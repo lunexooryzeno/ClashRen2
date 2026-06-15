@@ -12,7 +12,7 @@ import {
   freefireApiKeysTable,
   topupSessionsTable,
 } from "@workspace/db";
-import { eq, sql, count, and, lt } from "drizzle-orm";
+import { eq, sql, count, and, lt, inArray } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
@@ -103,6 +103,30 @@ async function expireAbandonedTopupSessions() {
   }
 }
 
+async function purgeOldTopupSessions() {
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const deleted = await db
+      .delete(topupSessionsTable)
+      .where(
+        and(
+          inArray(topupSessionsTable.status, ["abandoned", "completed"]),
+          lt(topupSessionsTable.createdAt, thirtyDaysAgo),
+        ),
+      )
+      .returning({ sessionToken: topupSessionsTable.sessionToken });
+
+    if (deleted.length > 0) {
+      logger.info(
+        { count: deleted.length },
+        "Purged old topup session records (>30 days)",
+      );
+    }
+  } catch (e) {
+    logger.error({ err: e }, "Error purging old topup sessions");
+  }
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -132,4 +156,8 @@ app.listen(port, (err) => {
   // Expire abandoned topup sessions every 5 minutes
   setInterval(expireAbandonedTopupSessions, 5 * 60_000);
   expireAbandonedTopupSessions();
+
+  // Purge topup sessions older than 30 days (abandoned/completed) every 6 hours
+  setInterval(purgeOldTopupSessions, 6 * 60 * 60_000);
+  purgeOldTopupSessions();
 });
