@@ -533,6 +533,8 @@ router.get("/super-admin/topup-requests", requireSuperAdmin, async (_req, res) =
       utr: topupRequestsTable.utr,
       status: topupRequestsTable.status,
       bharatpeData: topupRequestsTable.bharatpeData,
+      actualPaise: topupRequestsTable.actualPaise,
+      sessionToken: topupRequestsTable.sessionToken,
       verifiedAt: topupRequestsTable.verifiedAt,
       rejectedAt: topupRequestsTable.rejectedAt,
       rejectedReason: topupRequestsTable.rejectedReason,

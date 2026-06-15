@@ -2881,6 +2881,8 @@ router.get("/admin/users/:id/topup-history", requireAdmin, async (req, res) => {
     status: r.status,
     rejectedReason: r.rejectedReason ?? null,
     bharatpeData: r.bharatpeData ?? null,
+    actualPaise: r.actualPaise ?? null,
+    sessionToken: r.sessionToken ?? null,
     verifiedAt: r.verifiedAt?.toISOString() ?? null,
     rejectedAt: r.rejectedAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),

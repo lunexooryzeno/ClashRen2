@@ -57,6 +57,8 @@ interface TopupRequest {
   createdAt: string; verifiedAt: string | null;
   rejectedAt: string | null; rejectedReason: string | null;
   bharatpeData: unknown;
+  actualPaise: number | null;
+  sessionToken: string | null;
 }
 interface WithdrawalAdminRecord {
   id: number; userId: number; rupees: number; diamondsRedeemed: number;
@@ -432,6 +434,9 @@ function TransactionsView({ toast }: { toast: ReturnType<typeof useToast>["toast
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold text-white">₹{req.rupees}</p>
+                  {req.actualPaise != null && (
+                    <p className="text-[9px] text-amber-400 font-mono">₹{(req.actualPaise / 100).toFixed(2)} actual</p>
+                  )}
                   <p className="text-[9px] text-cyan-400">{req.diamonds}💎</p>
                 </div>
               </div>
