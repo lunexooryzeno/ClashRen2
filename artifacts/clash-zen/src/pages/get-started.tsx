@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -10,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, MessageSquare, Phone } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -38,7 +37,6 @@ function WAIcon() {
   );
 }
 
-// Plain CSS OTP boxes — no framer-motion, no per-keystroke re-animations
 function OtpBoxInput({
   value,
   onChange,
@@ -57,10 +55,11 @@ function OtpBoxInput({
 
   return (
     <div
-      className="relative flex gap-2.5 cursor-text"
+      className="relative flex gap-2 cursor-text"
       data-testid={testId}
       onClick={() => inputRef.current?.focus()}
     >
+      {/* Single invisible input — handles all typing, paste, and autocomplete natively */}
       <input
         ref={inputRef}
         type="text"
@@ -74,29 +73,22 @@ function OtpBoxInput({
         className="absolute inset-0 w-full h-full opacity-0 cursor-default z-10 select-all"
         style={{ caretColor: "transparent" }}
       />
-      {Array.from({ length: 6 }).map((_, i) => {
-        const isFilled = !!value[i];
-        const isActive = value.length === i;
-        return (
-          <div
-            key={i}
-            className={[
-              "w-11 h-14 rounded-xl border text-2xl font-bold text-white flex items-center justify-center select-none relative overflow-hidden",
-              "transition-[border-color,box-shadow,background] duration-150",
-              isFilled
-                ? "border-primary/70 bg-primary/15 shadow-[0_0_12px_rgba(139,92,246,0.3)]"
-                : isActive
-                ? "border-primary/60 bg-black/60 shadow-[0_0_8px_rgba(139,92,246,0.2)]"
-                : "border-white/15 bg-white/[0.03]",
-            ].join(" ")}
-          >
-            {isFilled && <span>{value[i]}</span>}
-            {isActive && !isFilled && (
-              <div className="w-0.5 h-6 bg-primary/70 rounded-full animate-pulse" />
-            )}
-          </div>
-        );
-      })}
+      {/* 6 visual boxes reflecting single input value */}
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className={[
+            "w-10 h-12 rounded-lg border text-xl font-bold text-white flex items-center justify-center select-none transition-all duration-150",
+            value[i]
+              ? "border-primary/60 bg-primary/10"
+              : value.length === i
+              ? "border-primary/50 bg-black/50 ring-1 ring-primary/40"
+              : "border-white/20 bg-black/50",
+          ].join(" ")}
+        >
+          {value[i] ?? ""}
+        </div>
+      ))}
     </div>
   );
 }
@@ -126,11 +118,15 @@ export default function GetStartedPage() {
   const [twoFaError, setTwoFaError] = useState("");
   const [isVerifying2fa, setIsVerifying2fa] = useState(false);
 
+  // Refs to always hold current values — avoids stale closures in async callbacks
   const phoneRef = useRef(phone);
+  // Honeypot — real users never fill this; bots typically auto-fill it
   const honeypotRef = useRef("");
   const otpValueRef = useRef(otpValue);
   const isVerifyingRef = useRef(false);
   const invalidateUserRef = useRef(invalidateUser);
+  // Token returned by /api/auth/send-otp — presented to complete-login to prove
+  // that rate-limiting was applied before antcloud was called from the browser.
   const browserTokenRef = useRef<string>("");
 
   useEffect(() => { phoneRef.current = phone; }, [phone]);
@@ -185,11 +181,14 @@ export default function GetStartedPage() {
     return undefined;
   }, [timer]);
 
+  // Core submit function — reads phone/code from parameters or refs, never from stale closures.
+  // Flow: verify OTP with antcloud from browser → on success, call complete-login with browserToken.
   const submitWithCode = useCallback(async (code: string) => {
     if (isVerifyingRef.current) return;
     isVerifyingRef.current = true;
     setIsVerifying(true);
 
+    // Step 1: verify OTP with antcloud from the browser (no credentials — avoids CORS)
     const antcloudResult = await verifyOtpViaBrowser(phoneRef.current, code);
     if (!antcloudResult.success) {
       isVerifyingRef.current = false;
@@ -203,6 +202,7 @@ export default function GetStartedPage() {
       return;
     }
 
+    // Step 2: complete login on our server using the browserToken from send-otp
     const fp = await collectFingerprint().catch(() => null);
     const res = await fetch("/api/auth/complete-login", {
       method: "POST",
@@ -252,6 +252,7 @@ export default function GetStartedPage() {
     haptic.impact(); sound.success();
     invalidateUserRef.current();
     toast({ title: "Verified!", description: "Welcome to Clash Ren." });
+  // toast is stable; refs are mutable and don't need to be deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -297,10 +298,12 @@ export default function GetStartedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
   const doSendOtp = async (digits: string) => {
     setIsSending(true);
     setOtpSendError("");
     try {
+      // Step 1: rate-check with our server and get a browserToken
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -318,6 +321,7 @@ export default function GetStartedPage() {
       const { browserToken } = await res.json().catch(() => ({})) as { browserToken?: string };
       browserTokenRef.current = browserToken ?? "";
 
+      // Step 2: send the actual SMS via antcloud from the browser (server-side is blocked by antcloud)
       const antcloudResult = await sendOtpViaBrowser(digits);
       setIsSending(false);
       if (!antcloudResult.success) {
@@ -340,26 +344,26 @@ export default function GetStartedPage() {
 
   const onPhoneSubmit = async (data: z.infer<typeof phoneSchema>) => {
     haptic.mediumTap();
+    // Navigate immediately — don't block on OTP API call
     setPhone(data.phone);
     phoneRef.current = data.phone;
     setDisplayPhone(formatPhoneDisplay(data.phone));
     setStep("otp");
-    setTimer(30);
+    setTimer(60);
     setOtpSendState("sending");
     const ok = await doSendOtp(data.phone);
     setOtpSendState(ok ? "sent" : "failed");
-    if (!ok) setTimer(0);
   };
 
+  // Manual submit — reads current otpValue from ref to stay fresh
   const onOtpSubmit = () => { haptic.mediumTap(); submitWithCode(otpValueRef.current); };
 
   const handleResend = async () => {
     haptic.mediumTap();
-    setTimer(30);
+    setTimer(60);
     setOtpSendState("sending");
     const ok = await doSendOtp(phone);
     setOtpSendState(ok ? "sent" : "failed");
-    if (!ok) setTimer(0);
   };
 
   if (isLoading) {
@@ -379,279 +383,275 @@ export default function GetStartedPage() {
     );
   }
 
-  const slideVariants = {
-    enter: { opacity: 0, x: 40 },
-    center: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -40 },
-  };
-
   return (
-    <div className="min-h-[100dvh] flex flex-col relative overflow-hidden bg-black">
-      {/* Static background blobs — no infinite animation */}
-      <div
-        className="pointer-events-none absolute rounded-full blur-[130px]"
-        style={{ width: 500, height: 400, background: "rgba(139,92,246,0.18)", top: -80, left: "50%", transform: "translateX(-50%)" }}
-      />
-      <div
-        className="pointer-events-none absolute rounded-full blur-[100px]"
-        style={{ width: 300, height: 300, background: "rgba(180,30,30,0.18)", bottom: 0, right: 0 }}
-      />
-      <div
-        className="pointer-events-none absolute rounded-full blur-[90px]"
-        style={{ width: 220, height: 220, background: "rgba(100,60,200,0.15)", bottom: "25%", left: 0 }}
-      />
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] h-[350px] bg-primary/20 rounded-full blur-[100px]" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-[250px] h-[250px] bg-purple-800/15 rounded-full blur-[80px]" />
 
-      {/* Top bar — Back button left, step indicator centered */}
-      <div className="relative z-20 flex items-center px-5 pt-5">
-        <button
-          className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
-          onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
-          data-testid="back-to-landing"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="font-medium">Back</span>
-        </button>
+      <button
+        className="absolute top-5 left-5 flex items-center gap-1.5 text-muted-foreground hover:text-white transition-colors text-sm font-heading tracking-wide"
+        onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
+        data-testid="back-to-landing"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
 
-      </div>
+      <div className="glass-panel w-full max-w-sm rounded-2xl p-8 flex flex-col items-center gap-6 relative z-10">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+            <img src={LOGO_URL} alt="Clash Ren Logo" className="w-11 h-11 object-contain" />
+          </div>
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", letterSpacing: "0.08em", fontSize: "0.8rem" }}>
+            <span style={{ background: "linear-gradient(180deg,#e0e0e0 0%,#999 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH </span><span style={{ color: "#e01010" }}>REN</span>
+          </span>
+        </div>
 
-      {/* Main layout */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 relative z-10">
+        {step === "suspended" && suspendedData ? (
+          <>
+            {/* Status icon */}
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${suspendedData.status === "blocked" ? "bg-orange-500/15 border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.2)]" : "bg-red-500/15 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]"}`}>
+              {suspendedData.status === "blocked"
+                ? <Ban className="w-8 h-8 text-orange-400" strokeWidth={1.5} />
+                : <Trash2 className="w-8 h-8 text-red-400" strokeWidth={1.5} />
+              }
+            </div>
 
-        {/* Step content */}
-        <div className="w-full max-w-sm">
-          <AnimatePresence mode="wait">
+            {/* Title */}
+            <div className="text-center -mt-2">
+              <h1 className="font-heading text-xl font-bold tracking-tight text-white mb-0.5">
+                {suspendedData.status === "blocked" ? "Account Blocked" : "Account Deleted"}
+              </h1>
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${suspendedData.status === "blocked" ? "bg-orange-500/20 text-orange-300" : "bg-red-500/20 text-red-300"}`}>
+                {suspendedData.status === "blocked" ? "ACCESS RESTRICTED" : "ACCOUNT REMOVED"}
+              </span>
+            </div>
 
-            {step === "suspended" && suspendedData ? (
-              <motion.div
-                key="suspended"
-                variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.3 }}
-                className="flex flex-col items-center gap-5"
-              >
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${suspendedData.status === "blocked" ? "bg-orange-500/15 border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.2)]" : "bg-red-500/15 border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]"}`}>
-                  {suspendedData.status === "blocked"
-                    ? <Ban className="w-8 h-8 text-orange-400" strokeWidth={1.5} />
-                    : <Trash2 className="w-8 h-8 text-red-400" strokeWidth={1.5} />
-                  }
-                </div>
-                <div className="text-center">
-                  <h1 className="font-heading text-xl font-bold tracking-tight text-white mb-1">
-                    {suspendedData.status === "blocked" ? "Account Blocked" : "Account Deleted"}
-                  </h1>
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${suspendedData.status === "blocked" ? "bg-orange-500/20 text-orange-300" : "bg-red-500/20 text-red-300"}`}>
-                    {suspendedData.status === "blocked" ? "Temporary Block" : "Permanently Removed"}
+            {/* Info card */}
+            <div className="w-full rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-center gap-2">
+                <ShieldX className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Reason from clash zen support team</span>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed pl-0.5">
+                {suspendedData.reason ?? <span className="italic text-zinc-500">No reason provided</span>}
+              </p>
+              {suspendedData.status === "blocked" && (
+                <div className="flex items-center justify-between pt-2 border-t border-white/6">
+                  <span className="text-xs text-zinc-500">Blocked until</span>
+                  <span className={`text-xs font-bold ${suspendedData.blockedUntil ? "text-orange-300" : "text-zinc-400"}`}>
+                    {suspendedData.blockedUntil ? fmtDate(suspendedData.blockedUntil) : "Indefinite"}
                   </span>
                 </div>
-                <div
-                  className="w-full rounded-2xl p-4 space-y-3"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+              )}
+            </div>
+
+            {/* Support buttons */}
+            <div className="w-full flex flex-col gap-2.5">
+              <p className="text-[10px] text-zinc-600 text-center uppercase tracking-widest font-bold">Contact Support</p>
+              <button
+                onClick={() => { haptic.mediumTap(); window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(suspendedData.status === "blocked" ? "Hi Clash Ren Support, my account has been blocked. I'd like to appeal this decision." : "Hi Clash Ren Support, my account was removed. I'd like to understand why or restore it.")}`, "_blank"); }}
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl active:scale-[0.98] transition-all text-left"
+                style={{ background: "rgba(37,211,102,0.10)", border: "1px solid rgba(37,211,102,0.25)" }}
+              >
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-[#25D366]" style={{ background: "rgba(37,211,102,0.15)" }}>
+                  <WAIcon />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">WhatsApp Support</p>
+                  <p className="text-[10px] text-zinc-500">Fastest response · Appeal your case</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-zinc-600 shrink-0" />
+              </button>
+              <button
+                onClick={() => { haptic.mediumTap(); setStep("phone"); setSuspendedData(null); setOtpValue(""); setDisplayPhone(""); phoneForm.reset(); }}
+                className="w-full text-xs text-zinc-600 hover:text-zinc-400 transition-colors pt-1"
+              >
+                ← Try a different number
+              </button>
+            </div>
+          </>
+        ) : step === "2fa" ? (
+          <>
+            <div className="text-center w-full space-y-1">
+              <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(139,92,246,0.25)]">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-white">
+                2FA Verification
+              </h1>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Enter your 6-digit security passcode
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); submit2FA(twoFaCode); }}
+              className="w-full flex flex-col items-center gap-5"
+            >
+              <OtpBoxInput
+                value={twoFaCode}
+                onChange={(v) => { setTwoFaCode(v); setTwoFaError(""); }}
+              />
+
+              {twoFaError && (
+                <p className="text-xs text-red-400 text-center">{twoFaError}</p>
+              )}
+
+              <div className="w-full space-y-3">
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-[0_0_15px_rgba(139,92,246,0.5)] transition-all active:scale-95 font-heading tracking-wide"
+                  disabled={isVerifying2fa || twoFaCode.length !== 6}
                 >
-                  <div className="flex items-center gap-2">
-                    <ShieldX className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Reason</span>
-                  </div>
-                  <p className="text-sm text-zinc-300 leading-relaxed pl-0.5">
-                    {suspendedData.reason ?? <span className="italic text-zinc-500">No reason provided</span>}
-                  </p>
-                  {suspendedData.status === "blocked" && (
-                    <div className="flex items-center justify-between pt-2 border-t border-white/6">
-                      <span className="text-xs text-zinc-500">Blocked until</span>
-                      <span className={`text-xs font-bold ${suspendedData.blockedUntil ? "text-orange-300" : "text-zinc-400"}`}>
-                        {suspendedData.blockedUntil ? fmtDate(suspendedData.blockedUntil) : "Indefinite"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="w-full flex flex-col gap-2.5">
-                  <p className="text-[10px] text-zinc-600 text-center uppercase tracking-widest font-bold">Contact Support</p>
-                  <button
-                    onClick={() => { haptic.mediumTap(); window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(suspendedData.status === "blocked" ? "Hi Clash Ren Support, my account has been blocked. I'd like to appeal this decision." : "Hi Clash Ren Support, my account was removed. I'd like to understand why or restore it.")}`, "_blank"); }}
-                    className="w-full flex items-center gap-3 p-3.5 rounded-2xl active:scale-[0.98] transition-all text-left"
-                    style={{ background: "rgba(37,211,102,0.10)", border: "1px solid rgba(37,211,102,0.25)" }}
-                  >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[#25D366]" style={{ background: "rgba(37,211,102,0.15)" }}>
-                      <WAIcon />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-white">WhatsApp Support</p>
-                      <p className="text-[10px] text-zinc-500">Fastest response · Appeal your case</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-zinc-600 shrink-0" />
-                  </button>
-                  <button
-                    onClick={() => { haptic.mediumTap(); setStep("phone"); setSuspendedData(null); setOtpValue(""); setDisplayPhone(""); phoneForm.reset(); }}
-                    className="w-full text-xs text-zinc-600 hover:text-zinc-400 transition-colors pt-1"
-                  >
-                    ← Try a different number
-                  </button>
-                </div>
-              </motion.div>
+                  {isVerifying2fa ? "Verifying..." : "Unlock Account"}
+                </Button>
 
-            ) : step === "2fa" ? (
-              <motion.div
-                key="2fa"
-                variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.3 }}
-                className="flex flex-col items-center gap-6"
-              >
-                <div className="text-center space-y-1">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(139,92,246,0.25)]">
-                    <Shield className="w-7 h-7 text-primary" />
-                  </div>
-                  <h1 className="font-heading text-2xl font-bold tracking-tight text-white">2FA Verification</h1>
-                  <p className="text-sm text-zinc-500">Enter your 6-digit security passcode</p>
-                </div>
-                <form onSubmit={(e) => { e.preventDefault(); submit2FA(twoFaCode); }} className="w-full flex flex-col items-center gap-5">
-                  <OtpBoxInput value={twoFaCode} onChange={(v) => { setTwoFaCode(v); setTwoFaError(""); }} />
-                  {twoFaError && <p className="text-xs text-red-400 text-center">{twoFaError}</p>}
-                  <div className="w-full space-y-3">
-                    <Button type="submit" className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_4px_20px_rgba(139,92,246,0.4)] transition-all active:scale-[0.98] font-heading tracking-wide" style={{ height: 52 }} disabled={isVerifying2fa || twoFaCode.length !== 6}>
-                      {isVerifying2fa ? "Verifying..." : "Unlock Account"}
-                    </Button>
-                    <Button type="button" variant="ghost" size="sm" className="w-full text-zinc-600 hover:text-zinc-400 text-xs" onClick={() => { haptic.mediumTap(); setStep("phone"); setOtpValue(""); setTwoFaCode(""); setTwoFaError(""); }}>
-                      <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Start over
-                    </Button>
-                  </div>
-                </form>
-              </motion.div>
-
-            ) : step === "phone" ? (
-              <motion.div
-                key="phone"
-                variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.3 }}
-                className="flex flex-col gap-6"
-              >
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_28px_rgba(139,92,246,0.25)]">
-                    <Phone className="w-6 h-6 text-primary" />
-                  </div>
-                  <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">
-                    Enter Your Number
-                  </h1>
-                  <p className="text-sm text-zinc-500">
-                    Login or sign up using your mobile number
-                  </p>
-                </div>
-
-                <div
-                  className="rounded-2xl p-5"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground/60 hover:text-muted-foreground text-xs"
+                  onClick={() => { haptic.mediumTap(); setStep("phone"); setOtpValue(""); setTwoFaCode(""); setTwoFaError(""); }}
                 >
-                  <Form {...phoneForm}>
-                    <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-3">
-                      <FormField
-                        control={phoneForm.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="flex rounded-xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/50"
-                                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                                <div className="px-4 flex items-center select-none shrink-0 border-r" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
-                                  <span className="text-base font-bold text-zinc-300">+91</span>
-                                </div>
-                                <Input
-                                  ref={field.ref} name={field.name} onBlur={field.onBlur}
-                                  type="tel" inputMode="numeric" placeholder="Enter Phone Number"
-                                  className="border-0 bg-transparent focus-visible:ring-0 rounded-none text-lg tracking-wider font-medium placeholder:text-zinc-600"
-                                  style={{ height: 52 }} maxLength={12} value={displayPhone}
-                                  onChange={(e) => {
-                                    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                    setDisplayPhone(formatPhoneDisplay(digits));
-                                    field.onChange(digits);
-                                  }}
-                                  data-testid="input-phone"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage className="text-xs pl-1 mt-1.5" />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="submit"
-                        className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider active:scale-[0.98] transition-all"
-                        style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.4)" }}
-                        disabled={isSending}
-                        data-testid="btn-send-otp"
-                      >
-                        {isSending ? "Sending…" : "Get OTP"}
-                      </Button>
-                      <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
-                        onChange={e => { honeypotRef.current = e.target.value; }}
-                        style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
-                      />
-                    </form>
-                  </Form>
-                </div>
-              </motion.div>
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                  Start over
+                </Button>
+              </div>
+            </form>
+          </>
+        ) : step === "phone" ? (
+          <>
+            <div className="text-center">
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-white mb-1">
+                Enter Your Number
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                We'll send a quick OTP to verify it's you
+              </p>
+            </div>
 
-            ) : (
-              <motion.div
-                key="otp"
-                variants={slideVariants} initial="enter" animate="center" exit="exit"
-                transition={{ duration: 0.3 }}
-                className="flex flex-col items-center gap-6"
-              >
-                <div className="text-center space-y-2 w-full">
-                  <div
-                    className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-2"
-                    style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", boxShadow: "0 0 28px rgba(139,92,246,0.25)" }}
-                  >
-                    <MessageSquare className="w-6 h-6 text-primary" />
-                  </div>
-                  <h1 className="font-heading text-2xl font-bold tracking-tight text-white">Check Your SMS</h1>
-                  <p className="text-sm text-zinc-500">
-                    Code sent to <span className="text-zinc-300 font-semibold">+91 {displayPhone}</span>
-                  </p>
-                  {otpSendState === "sending" && (
-                    <p className="text-xs text-amber-400/80 animate-pulse">Sending OTP…</p>
+            <Form {...phoneForm}>
+              <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="w-full space-y-4">
+                <FormField
+                  control={phoneForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="flex bg-black/50 border border-white/10 rounded-xl overflow-hidden focus-within:border-primary/50 transition-colors">
+                          <div className="bg-white/5 px-3 flex items-center gap-1.5 text-muted-foreground border-r border-white/10 select-none shrink-0">
+                            <span className="text-xs font-bold text-zinc-300">+91</span>
+                          </div>
+                          <Input
+                            ref={field.ref}
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            type="tel"
+                            inputMode="numeric"
+                            placeholder="XXXXX XXXXX"
+                            className="border-0 bg-transparent focus-visible:ring-0 rounded-none h-12 text-lg tracking-widest"
+                            maxLength={12}
+                            value={displayPhone}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                              const formatted = formatPhoneDisplay(digits);
+                              setDisplayPhone(formatted);
+                              field.onChange(digits);
+                            }}
+                            data-testid="input-phone"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  {otpSendState === "failed" && (
-                    <p className="text-xs text-red-400">{otpSendError || "Failed to send — tap Resend below"}</p>
-                  )}
-                </div>
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-[0_0_15px_rgba(139,92,246,0.5)] transition-all active:scale-95 font-heading tracking-wide"
+                  disabled={isSending}
+                  data-testid="btn-send-otp"
+                >
+                  {isSending ? "Sending..." : "Send OTP"}
+                </Button>
+                {/* Honeypot — visually hidden, never shown to real users */}
+                <input
+                  type="text"
+                  name="website"
+                  autoComplete="off"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onChange={e => { honeypotRef.current = e.target.value; }}
+                  style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
+                />
+              </form>
+            </Form>
+          </>
+        ) : (
+          <>
+            <div className="text-center w-full space-y-1">
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-white">
+                Verify Your Number
+              </h1>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Enter the 6-digit code sent to
+              </p>
+              <p className="text-sm font-semibold text-white tracking-wide">
+                +91 {phone}
+              </p>
+              {otpSendState === "sending" && (
+                <p className="text-[11px] text-amber-400/80 animate-pulse">Sending OTP…</p>
+              )}
+              {otpSendState === "failed" && (
+                <p className="text-[11px] text-red-400">{otpSendError || "Failed to send — tap Resend below"}</p>
+              )}
+            </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); onOtpSubmit(); }} className="w-full flex flex-col items-center gap-5">
-                  <OtpBoxInput value={otpValue} onChange={setOtpValue} testId="input-otp" />
+            <form
+              onSubmit={(e) => { e.preventDefault(); onOtpSubmit(); }}
+              className="w-full flex flex-col items-center gap-6"
+            >
+              <OtpBoxInput
+                value={otpValue}
+                onChange={setOtpValue}
+                testId="input-otp"
+              />
 
-                  <div className="w-full space-y-2.5">
-                    <Button
-                      type="submit"
-                      className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider active:scale-[0.98] transition-all"
-                      style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.4)" }}
-                      disabled={isVerifying || otpValue.length !== 6}
-                      data-testid="btn-verify-otp"
-                    >
-                      {isVerifying ? "Verifying…" : "Verify & Continue"}
-                    </Button>
-                    <Button
-                      type="button" variant="ghost"
-                      className="w-full h-10 rounded-xl text-zinc-600 hover:text-zinc-300 text-sm transition-colors"
-                      disabled={timer > 0 || isSending}
-                      onClick={handleResend}
-                      data-testid="btn-resend-otp"
-                    >
-                      {timer > 0 ? `${timer}s before Resend` : "Resend Code"}
-                    </Button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
+              <div className="w-full space-y-3">
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-[0_0_15px_rgba(139,92,246,0.5)] transition-all active:scale-95 font-heading tracking-wide"
+                  disabled={isVerifying || otpValue.length !== 6}
+                  data-testid="btn-verify-otp"
+                >
+                  {isVerifying ? "Verifying..." : "Continue"}
+                </Button>
 
-          </AnimatePresence>
-        </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:text-white"
+                  disabled={timer > 0 || isSending}
+                  onClick={handleResend}
+                  data-testid="btn-resend-otp"
+                >
+                  {timer > 0 ? `Resend Code (${timer}s)` : "Resend Code"}
+                </Button>
+
+              </div>
+            </form>
+          </>
+        )}
       </div>
 
-      {/* Bottom trust line */}
       {step !== "suspended" && (
-        <p className="pb-8 text-[11px] text-zinc-700 text-center px-6">
+        <p className="mt-6 text-xs text-muted-foreground/60 text-center max-w-xs">
           {step === "phone"
-            ? "By continuing, you agree to Clash Ren's Terms & Privacy Policy."
+            ? "Step into the world of tournaments. Verify your number to continue."
             : step === "2fa"
             ? "Your account is protected with a 6-digit security passcode."
-            : "OTP delivered via SMS · Standard rates apply"}
+            : "By continuing, you agree to Clash Ren's terms. OTP sent via SMS to your mobile."}
         </p>
       )}
     </div>

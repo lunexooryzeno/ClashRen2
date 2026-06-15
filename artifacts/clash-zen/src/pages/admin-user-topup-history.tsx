@@ -57,8 +57,6 @@ interface TopupRecord {
   status: string;
   rejectedReason: string | null;
   bharatpeData: Record<string, unknown> | null;
-  actualPaise: number | null;
-  sessionToken: string | null;
   verifiedAt: string | null;
   rejectedAt: string | null;
   createdAt: string;
@@ -226,8 +224,6 @@ export default function AdminUserTopupHistoryPage() {
                     <div className="border-t px-4 py-3 flex flex-col gap-2.5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
                       {[
                         { label: "UTR Number", value: t.utr, icon: <Hash className="w-3.5 h-3.5 text-cyan-400" />, mono: true },
-                        ...(t.actualPaise != null ? [{ label: "Actual Amount", value: `₹${(t.actualPaise / 100).toFixed(2)} (${t.actualPaise} paise)`, icon: <IndianRupee className="w-3.5 h-3.5 text-amber-400" />, mono: true }] : []),
-                        ...(t.sessionToken ? [{ label: "Session Token", value: t.sessionToken, icon: <Hash className="w-3.5 h-3.5 text-violet-400" />, mono: true }] : []),
                         { label: "Submitted", value: fmtDateTime(t.createdAt), icon: <Calendar className="w-3.5 h-3.5 text-zinc-500" /> },
                         ...(t.verifiedAt ? [{ label: "Verified At", value: fmtDateTime(t.verifiedAt), icon: <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> }] : []),
                         ...(t.rejectedAt ? [{ label: "Rejected At", value: fmtDateTime(t.rejectedAt), icon: <XCircle className="w-3.5 h-3.5 text-red-400" /> }] : []),

@@ -215,11 +215,6 @@ export default function AdminUserDetailPage() {
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  const [chatUserTyping, setChatUserTyping] = useState(false);
-  const chatUserTypingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chatAdminTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const chatSseRef              = useRef<EventSource | null>(null);
-  const chatAdminTypingActive   = useRef(false);
 
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
   const [withdrawalsLoaded, setWithdrawalsLoaded] = useState(false);
@@ -423,16 +418,6 @@ export default function AdminUserDetailPage() {
     const text = chatInput.trim();
     setChatInput("");
     setChatSending(true);
-    // Stop admin typing signal before send
-    if (chatAdminTypingActive.current) {
-      chatAdminTypingActive.current = false;
-      if (chatUserTypingTimerRef.current) clearTimeout(chatUserTypingTimerRef.current);
-      fetch(`/api/admin/support/${userId}/typing`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", "X-Super-Admin-Token": token },
-        body: JSON.stringify({ typing: false }),
-      }).catch(() => {});
-    }
     const optimistic: ChatMessage = { id: Date.now(), message: text, isFromAdmin: true, readByUser: false, createdAt: new Date().toISOString() };
     setChatMessages(prev => [...prev, optimistic]);
     setTimeout(() => chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" }), 50);
@@ -474,53 +459,10 @@ export default function AdminUserDetailPage() {
   }, [section, token, logsLoaded, logsLoading, loadLogs]);
 
   useEffect(() => {
-    if (section !== "chat" || !token) return;
-
-    // Load messages on first open
-    if (!chatLoaded && !chatLoading) loadChatMessages(token);
-
-    // Connect admin chat SSE (presence is implicit: connected = online)
-    const sseUrl = `/api/admin/support/${userId}/chat-sse?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(sseUrl);
-    chatSseRef.current = es;
-
-    es.addEventListener("user_message", (e: MessageEvent) => {
-      try {
-        const msg = JSON.parse(e.data) as ChatMessage;
-        setChatMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
-        setTimeout(() => chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" }), 50);
-      } catch { /* ignore */ }
-    });
-
-    es.addEventListener("user_typing", (e: MessageEvent) => {
-      try {
-        const d = JSON.parse(e.data) as { typing: boolean };
-        setChatUserTyping(d.typing);
-        if (chatAdminTypingTimerRef.current) clearTimeout(chatAdminTypingTimerRef.current);
-        if (d.typing) {
-          chatAdminTypingTimerRef.current = setTimeout(() => setChatUserTyping(false), 6000);
-        }
-      } catch { /* ignore */ }
-    });
-
-    return () => {
-      es.close();
-      chatSseRef.current = null;
-      setChatUserTyping(false);
-      if (chatUserTypingTimerRef.current) clearTimeout(chatUserTypingTimerRef.current);
-      if (chatAdminTypingTimerRef.current) clearTimeout(chatAdminTypingTimerRef.current);
-      // Stop admin typing signal on leave
-      if (chatAdminTypingActive.current) {
-        chatAdminTypingActive.current = false;
-        fetch(`/api/admin/support/${userId}/typing`, {
-          method: "POST", credentials: "include",
-          headers: { "Content-Type": "application/json", "X-Super-Admin-Token": token },
-          body: JSON.stringify({ typing: false }),
-        }).catch(() => {});
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, token, userId]);
+    if (section === "chat" && token && !chatLoaded && !chatLoading) {
+      loadChatMessages(token);
+    }
+  }, [section, token, chatLoaded, chatLoading, loadChatMessages]);
 
   useEffect(() => {
     if (section === "withdrawals" && token && !withdrawalsLoaded && !withdrawalsLoading) {
@@ -2511,19 +2453,7 @@ export default function AdminUserDetailPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{user?.inGameName ?? user?.phone ?? "User"}</p>
-                {chatUserTyping ? (
-                  <p className="text-[10px] text-emerald-400 flex items-center gap-1">
-                    <span className="flex gap-[2px]">
-                      {[0,1,2].map(i => (
-                        <span key={i} className="w-1 h-1 rounded-full bg-emerald-400 animate-bounce"
-                          style={{ animationDelay: `${i * 0.15}s` }} />
-                      ))}
-                    </span>
-                    typing…
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-zinc-500">{user?.isOnline ? "Online now" : "Support thread"}</p>
-                )}
+                <p className="text-[10px] text-zinc-500">{user?.isOnline ? "Online now" : "Support thread"}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {chatMessages.filter(m => !m.isFromAdmin && !m.readByUser).length > 0 && (
@@ -2655,26 +2585,7 @@ export default function AdminUserDetailPage() {
               <div className="flex items-end gap-2 px-3 py-2.5">
                 <textarea
                   value={chatInput}
-                  onChange={e => {
-                    setChatInput(e.target.value);
-                    if (!chatAdminTypingActive.current) {
-                      chatAdminTypingActive.current = true;
-                      fetch(`/api/admin/support/${userId}/typing`, {
-                        method: "POST", credentials: "include",
-                        headers: { "Content-Type": "application/json", "X-Super-Admin-Token": token },
-                        body: JSON.stringify({ typing: true }),
-                      }).catch(() => {});
-                    }
-                    if (chatUserTypingTimerRef.current) clearTimeout(chatUserTypingTimerRef.current);
-                    chatUserTypingTimerRef.current = setTimeout(() => {
-                      chatAdminTypingActive.current = false;
-                      fetch(`/api/admin/support/${userId}/typing`, {
-                        method: "POST", credentials: "include",
-                        headers: { "Content-Type": "application/json", "X-Super-Admin-Token": token },
-                        body: JSON.stringify({ typing: false }),
-                      }).catch(() => {});
-                    }, 2500);
-                  }}
+                  onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendAdminReply(); }
                   }}

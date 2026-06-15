@@ -9,8 +9,6 @@ export const topupRequestsTable = pgTable("topup_requests", {
   utr: text("utr").notNull(),
   status: text("status").notNull().default("pending"),
   bharatpeData: jsonb("bharatpe_data"),
-  actualPaise: integer("actual_paise"),
-  sessionToken: text("session_token"),
   verifiedAt: timestamp("verified_at"),
   rejectedAt: timestamp("rejected_at"),
   rejectedReason: text("rejected_reason"),
