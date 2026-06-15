@@ -164,7 +164,7 @@ export default function SupportPage() {
                 style={{ background: "rgba(234,179,8,0.06)", border: "1px solid rgba(234,179,8,0.15)" }}>
                 <Clock className="w-3.5 h-3.5 text-yellow-400/70 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-zinc-500 leading-relaxed">
-                  Support team is available daily <span className="text-yellow-300/70 font-semibold">{settings.availableHours}</span>. We aim to reply as fast as possible.
+                  Human support replies may not be immediate. We'll get back to you as soon as possible.
                 </p>
               </div>
             </div>
@@ -232,11 +232,6 @@ export default function SupportPage() {
         })}
       </div>
 
-      <div className="px-4 pt-6 relative z-10">
-        <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
-          Our support team is available daily · {settings.availableHours}
-        </p>
-      </div>
     </div>
   );
 }
