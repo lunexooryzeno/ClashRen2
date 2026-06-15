@@ -289,60 +289,6 @@ export default function WalletWithdrawPage() {
 
       <div className="px-4 pt-2 flex flex-col gap-4 relative z-10 pb-10">
 
-        {/* ── Balance breakdown (hidden on done) ── */}
-        {step !== "done" && (
-          <div className="rounded-3xl overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)",
-              border: "1px solid hsl(var(--primary)/0.2)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-            }}>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-bold px-5 pt-4 pb-3">
-              Balance Breakdown
-            </p>
-            <div className="flex items-center gap-4 px-5 py-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-                style={canWithdrawDeposit
-                  ? { background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)" }
-                  : { background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.2)" }}>
-                <ArrowDownLeft className={`w-4 h-4 ${canWithdrawDeposit ? "text-emerald-400" : "text-blue-400"}`} />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Deposit Balance</p>
-                <p className={`text-[11px] mt-0.5 ${canWithdrawDeposit ? "text-emerald-500/80 font-medium" : "text-zinc-500"}`}>
-                  {canWithdrawDeposit ? "Withdrawable ✓ (admin approved)" : "From top-ups · not withdrawable"}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-1 justify-end">
-                  <Gem className={`w-3 h-3 ${canWithdrawDeposit ? "text-emerald-400" : "text-blue-400"}`} strokeWidth={2} />
-                  <span className={`text-sm font-bold ${canWithdrawDeposit ? "text-emerald-300" : "text-blue-300"}`}>
-                    {txLoaded ? effectiveDepositDiamonds.toLocaleString() : "—"}
-                  </span>
-                </div>
-                <p className="text-[10px] text-zinc-600 mt-0.5">₹{depositRupees}</p>
-              </div>
-            </div>
-            <div className="mx-5" style={{ borderTop: "1px dashed rgba(255,255,255,0.06)" }} />
-            <div className="flex items-center gap-4 px-5 py-3.5">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-                style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)" }}>
-                <Trophy className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Winning Balance</p>
-                <p className="text-[11px] text-emerald-500/80 mt-0.5 font-medium">Withdrawable ✓</p>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-1 justify-end">
-                  <Gem className="w-3 h-3 text-blue-400" strokeWidth={2} />
-                  <span className="text-sm font-bold text-emerald-300">{txLoaded ? winningDiamonds.toLocaleString() : "—"}</span>
-                </div>
-                <p className="text-[11px] text-emerald-600/80 mt-0.5 font-semibold">₹{(winningDiamonds * rate).toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ════ STEP 1: Amount ════════════════════════════════════════ */}
         {step === "form" && (
