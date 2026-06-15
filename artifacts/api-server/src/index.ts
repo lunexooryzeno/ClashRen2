@@ -12,6 +12,7 @@ import {
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
+import { startBharatPePoller } from "./lib/bharatpe-poller.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
 
@@ -91,4 +92,7 @@ app.listen(port, (err) => {
   // Auto-release room credentials every 30 seconds
   setInterval(processAutoReleases, 30_000);
   processAutoReleases();
+
+  // BharatPe auto-detection poller (every 15 s)
+  startBharatPePoller();
 });

@@ -1,8 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
-import { ArrowLeft, Gem, ChevronRight, Zap, Star, ScrollText } from "lucide-react";
+import { ArrowLeft, Gem, ChevronRight, Zap, Star, ScrollText, Clock, X } from "lucide-react";
 import { haptic } from "@/lib/haptics";
+
+const STORAGE_KEY = "clash_topup_session";
+
+interface StoredSession {
+  sessionId: number;
+  rupees: number;
+  diamonds: number;
+  expiresAt: string;
+}
 
 const PRESETS = [
   { rupees: 50,  tag: null,      accent: "rgba(59,130,246,0.9)" },
@@ -77,6 +86,7 @@ export default function TopUpPage() {
   const [mounted, setMounted] = useState(false);
   const [rate, setRate] = useState(0.5);
   const [globalMinTopup, setGlobalMinTopup] = useState(20);
+  const [activeSession, setActiveSession] = useState<StoredSession | null>(null);
 
   // Per-user override takes priority; falls back to global setting
   const minTopup = user?.minTopup ?? globalMinTopup;
@@ -91,6 +101,28 @@ export default function TopUpPage() {
         setGlobalMinTopup(s.minTopup ?? 20);
       })
       .catch(() => {});
+
+    // Check for a stored active session
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const stored: StoredSession = JSON.parse(raw);
+        if (new Date(stored.expiresAt) > new Date()) {
+          fetch(`/api/topup/session/${stored.sessionId}`, { credentials: "include" })
+            .then(r => r.json())
+            .then((d: { status: string }) => {
+              if (d.status === "active") setActiveSession(stored);
+              else { localStorage.removeItem(STORAGE_KEY); }
+            })
+            .catch(() => {});
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+
     return () => clearTimeout(t);
   }, []);
 
@@ -119,6 +151,38 @@ export default function TopUpPage() {
   return (
     <div className="min-h-[100dvh] flex flex-col relative overflow-hidden profile-page-bg">
       <FloatingParticles />
+
+      {/* Active session resume banner */}
+      {activeSession && (
+        <div
+          className="relative z-50 mx-4 mt-3 flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer active:scale-[0.98] transition-transform"
+          style={{
+            background: "linear-gradient(135deg, rgba(234,88,12,0.18), rgba(239,68,68,0.12))",
+            border: "1px solid rgba(234,88,12,0.4)",
+            boxShadow: "0 4px 16px rgba(234,88,12,0.15)",
+          }}
+          onClick={() => {
+            haptic.mediumTap();
+            navigate(`/top-up/pay?rupees=${activeSession.rupees}&diamonds=${activeSession.diamonds}`);
+          }}>
+          <div className="relative shrink-0">
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+            <div className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-60" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-bold text-orange-200 leading-tight">Active payment session</p>
+            <p className="text-[11px] text-orange-300/70 truncate">₹{activeSession.rupees} — Tap to resume</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-orange-400/70" />
+            <button
+              onClick={e => { e.stopPropagation(); localStorage.removeItem(STORAGE_KEY); setActiveSession(null); }}
+              className="w-6 h-6 rounded-full flex items-center justify-center ml-1 active:bg-white/10 transition-colors">
+              <X className="w-3.5 h-3.5 text-orange-400/60" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Deep ambient glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] pointer-events-none"

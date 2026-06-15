@@ -22,3 +22,4 @@ export * from "./achievements";
 export * from "./push-subscriptions";
 export * from "./security-flags";
 export * from "./login-history";
+export * from "./payment-sessions";
