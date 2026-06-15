@@ -16,6 +16,7 @@ import {
   balanceChangeLogsTable,
   bannersTable,
   diamondStockEntriesTable,
+  paymentSessionsTable,
 } from "@workspace/db";
 import { eq, desc, sql, gte, lt, and, asc, isNull, like, count, sum, gt } from "drizzle-orm";
 import { requireSuperAdmin } from "../middlewares/auth.js";
@@ -549,6 +550,35 @@ router.get("/super-admin/topup-requests", requireSuperAdmin, async (_req, res) =
     verifiedAt: r.verifiedAt?.toISOString() ?? null,
     rejectedAt: r.rejectedAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
+  })));
+});
+
+// ── GET /super-admin/payment-sessions ─────────────────────────────────────
+// Recent payment sessions (last 100) with status, paisa offset, and user info
+router.get("/super-admin/payment-sessions", requireSuperAdmin, async (_req, res) => {
+  const sessions = await db
+    .select({
+      id: paymentSessionsTable.id,
+      userId: paymentSessionsTable.userId,
+      baseRupees: paymentSessionsTable.baseRupees,
+      offsetPaise: paymentSessionsTable.offsetPaise,
+      status: paymentSessionsTable.status,
+      expiresAt: paymentSessionsTable.expiresAt,
+      createdAt: paymentSessionsTable.createdAt,
+      bharatpeTxnId: paymentSessionsTable.bharatpeTxnId,
+      topupRequestId: paymentSessionsTable.topupRequestId,
+      phone: usersTable.phone,
+      inGameName: usersTable.inGameName,
+    })
+    .from(paymentSessionsTable)
+    .leftJoin(usersTable, eq(paymentSessionsTable.userId, usersTable.id))
+    .orderBy(desc(paymentSessionsTable.createdAt))
+    .limit(100);
+
+  res.json(sessions.map(s => ({
+    ...s,
+    expiresAt: s.expiresAt.toISOString(),
+    createdAt: s.createdAt.toISOString(),
   })));
 });
 

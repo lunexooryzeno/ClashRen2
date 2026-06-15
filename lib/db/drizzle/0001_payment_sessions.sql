@@ -1,14 +1,14 @@
 CREATE TABLE IF NOT EXISTS "payment_sessions" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"user_id" integer NOT NULL,
-	"base_rupees" integer NOT NULL,
-	"offset_paise" integer DEFAULT 0 NOT NULL,
-	"expires_at" timestamp NOT NULL,
-	"status" text DEFAULT 'active' NOT NULL,
-	"topup_request_id" integer,
-	"bharatpe_txn_id" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "payment_sessions_bharatpe_txn_id_unique" UNIQUE("bharatpe_txn_id")
+        "id" serial PRIMARY KEY NOT NULL,
+        "user_id" integer NOT NULL,
+        "base_rupees" integer NOT NULL,
+        "offset_paise" integer DEFAULT 0 NOT NULL,
+        "expires_at" timestamp NOT NULL,
+        "status" text DEFAULT 'active' NOT NULL,
+        "topup_request_id" integer,
+        "bharatpe_txn_id" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        CONSTRAINT "payment_sessions_bharatpe_txn_id_unique" UNIQUE("bharatpe_txn_id")
 );
 --> statement-breakpoint
 DO $$ BEGIN
@@ -25,4 +25,5 @@ END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_ps_user" ON "payment_sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_ps_status" ON "payment_sessions" USING btree ("status");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_ps_base_status" ON "payment_sessions" USING btree ("base_rupees","status");
+CREATE INDEX IF NOT EXISTS "idx_ps_base_status" ON "payment_sessions" USING btree ("base_rupees","status");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_ps_active_slot" ON "payment_sessions" ("base_rupees","offset_paise") WHERE status = 'active';

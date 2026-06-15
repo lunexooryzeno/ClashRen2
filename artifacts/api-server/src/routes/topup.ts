@@ -106,15 +106,36 @@ router.post("/topup/session/create", requireAuth, topupLimiter, async (req, res)
 
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  const [session] = await db
-    .insert(paymentSessionsTable)
-    .values({ userId, baseRupees: rupees, offsetPaise: offset, expiresAt, status: "active" })
-    .returning();
+  let session: typeof paymentSessionsTable.$inferSelect | null = null;
+  let currentOffset = offset;
+
+  while (currentOffset < 100) {
+    try {
+      const [inserted] = await db
+        .insert(paymentSessionsTable)
+        .values({ userId, baseRupees: rupees, offsetPaise: currentOffset, expiresAt, status: "active" })
+        .returning();
+      session = inserted;
+      break;
+    } catch (err: unknown) {
+      const pgErr = err as { code?: string };
+      if (pgErr.code === "23505") {
+        currentOffset++;
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!session) {
+    res.status(503).json({ error: "All payment slots busy. Please try again in a moment." });
+    return;
+  }
 
   res.json({
     sessionId: session.id,
     baseRupees: rupees,
-    offsetPaise: offset,
+    offsetPaise: currentOffset,
     expiresAt: expiresAt.toISOString(),
   });
 });
