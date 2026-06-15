@@ -39,7 +39,20 @@ const ONBOARDING_THEMES = (() => {
 })();
 
 function rankLabel(rank: number): string {
-  if (rank <= 0) return "Unranked";
+  if (!rank || rank <= 0) return "Unranked";
+
+  // Gameskinbo API returns 3-digit codes: 101=Bronze I, 202=Silver II, 303=Gold III…
+  // 1xx=Bronze, 2xx=Silver, 3xx=Gold, 4xx=Platinum, 5xx=Diamond, 6xx=Heroic, 7xx=GM
+  if (rank >= 100) {
+    const tier = Math.floor(rank / 100);
+    const sub  = rank % 100;
+    const subs  = ["I", "II", "III"];
+    const names = ["", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Heroic", "Grandmaster"];
+    const name  = names[tier] ?? "Grandmaster";
+    return sub >= 1 && sub <= 3 ? `${name} ${subs[sub - 1]}` : name;
+  }
+
+  // Fallback: sequential 1–17 format
   if (rank <= 3)  return `Bronze ${["I","II","III"][rank - 1]}`;
   if (rank <= 6)  return `Silver ${["I","II","III"][rank - 4]}`;
   if (rank <= 9)  return `Gold ${["I","II","III"][rank - 7]}`;
@@ -47,6 +60,21 @@ function rankLabel(rank: number): string {
   if (rank <= 15) return `Diamond ${["I","II","III"][rank - 13]}`;
   if (rank === 16) return "Heroic";
   return "Grandmaster";
+}
+
+function rankColor(rank: number): string {
+  const tier = rank >= 100 ? Math.floor(rank / 100) : (rank <= 3 ? 1 : rank <= 6 ? 2 : rank <= 9 ? 3 : rank <= 12 ? 4 : rank <= 15 ? 5 : rank === 16 ? 6 : 7);
+  const colors: Record<number, string> = {
+    0: "rgba(255,255,255,0.15)",
+    1: "#cd7f32", // Bronze
+    2: "#a8a9ad", // Silver
+    3: "#ffd700", // Gold
+    4: "#40e0d0", // Platinum
+    5: "#00bfff", // Diamond
+    6: "#ff6b35", // Heroic
+    7: "#a855f7", // Grandmaster
+  };
+  return colors[tier] ?? colors[0];
 }
 
 export default function SetupProfileScreen() {
@@ -338,13 +366,16 @@ export default function SetupProfileScreen() {
                   {/* Avatar + name row */}
                   <div className="flex items-center gap-4">
                     <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 font-black text-xl text-white"
+                      className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 relative overflow-hidden"
                       style={{
-                        background: "linear-gradient(135deg, hsl(var(--primary)/0.3), hsl(var(--primary)/0.12))",
-                        border: "1.5px solid hsl(var(--primary)/0.35)",
+                        background: "linear-gradient(135deg, hsl(var(--primary)/0.35), hsl(var(--primary)/0.12))",
+                        border: "1.5px solid hsl(var(--primary)/0.45)",
+                        boxShadow: "0 0 18px hsl(var(--primary)/0.2)",
                       }}
                     >
-                      {profile.nickname.charAt(0).toUpperCase()}
+                      <div className="absolute inset-0 opacity-10"
+                        style={{ background: "repeating-linear-gradient(45deg,hsl(var(--primary)) 0px,transparent 1px,transparent 6px,hsl(var(--primary)) 7px)" }} />
+                      <Crosshair className="w-7 h-7 relative z-10" style={{ color: "hsl(var(--primary))" }} strokeWidth={1.5} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-lg font-black text-white truncate leading-tight">{profile.nickname}</p>
@@ -366,7 +397,20 @@ export default function SetupProfileScreen() {
                   <div className="grid grid-cols-3 gap-2">
                     <StatChip icon={<Globe className="w-3 h-3" />} label="Region" value={profile.region} />
                     <StatChip icon={<Heart className="w-3 h-3" />} label="Likes" value={profile.liked.toLocaleString()} />
-                    <StatChip icon={<Trophy className="w-3 h-3" />} label="BR Rank" value={rankLabel(profile.rank)} />
+                    {/* BR Rank with tier color */}
+                    <div
+                      className="rounded-xl px-2 py-2.5 flex flex-col items-center gap-1 text-center"
+                      style={{
+                        background: `${rankColor(profile.rank)}12`,
+                        border: `1px solid ${rankColor(profile.rank)}30`,
+                      }}
+                    >
+                      <Trophy className="w-3 h-3" style={{ color: rankColor(profile.rank) }} />
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">BR Rank</span>
+                      <span className="text-[11px] font-bold leading-tight" style={{ color: rankColor(profile.rank) }}>
+                        {rankLabel(profile.rank)}
+                      </span>
+                    </div>
                   </div>
 
                   {profile.rankingPoints > 0 && (
