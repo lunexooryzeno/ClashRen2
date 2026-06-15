@@ -174,7 +174,7 @@ export default function SupportPage() {
 
       <div className="flex items-center justify-between px-4 pt-5 pb-2 relative z-10">
         <button
-          onClick={() => window.history.back()}
+          onClick={() => navigate("/")}
           className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center active:bg-white/10 transition-colors">
           <ArrowLeft className="w-4 h-4 text-foreground" />
         </button>
