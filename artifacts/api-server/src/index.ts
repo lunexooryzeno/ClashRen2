@@ -10,8 +10,9 @@ import {
   balanceChangeLogsTable,
   tournamentsTable,
   freefireApiKeysTable,
+  topupSessionsTable,
 } from "@workspace/db";
-import { eq, sql, count } from "drizzle-orm";
+import { eq, sql, count, and, lt } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
@@ -78,6 +79,30 @@ async function processScheduledRewards() {
   }
 }
 
+async function expireAbandonedTopupSessions() {
+  try {
+    const updated = await db
+      .update(topupSessionsTable)
+      .set({ status: "abandoned" })
+      .where(
+        and(
+          eq(topupSessionsTable.status, "active"),
+          lt(topupSessionsTable.expiresAt, new Date()),
+        ),
+      )
+      .returning({ sessionToken: topupSessionsTable.sessionToken });
+
+    if (updated.length > 0) {
+      logger.info(
+        { count: updated.length, tokens: updated.map((r) => r.sessionToken) },
+        "Expired abandoned topup sessions",
+      );
+    }
+  } catch (e) {
+    logger.error({ err: e }, "Error expiring abandoned topup sessions");
+  }
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -103,4 +128,8 @@ app.listen(port, (err) => {
   // Auto-release room credentials every 30 seconds
   setInterval(processAutoReleases, 30_000);
   processAutoReleases();
+
+  // Expire abandoned topup sessions every 5 minutes
+  setInterval(expireAbandonedTopupSessions, 5 * 60_000);
+  expireAbandonedTopupSessions();
 });
