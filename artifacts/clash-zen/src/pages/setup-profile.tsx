@@ -375,7 +375,7 @@ export default function SetupProfileScreen() {
                     >
                       <div className="absolute inset-0 opacity-10"
                         style={{ background: "repeating-linear-gradient(45deg,hsl(var(--primary)) 0px,transparent 1px,transparent 6px,hsl(var(--primary)) 7px)" }} />
-                      <Crosshair className="w-7 h-7 relative z-10" style={{ color: "hsl(var(--primary))" }} strokeWidth={1.5} />
+                      <User className="w-7 h-7 relative z-10" style={{ color: "hsl(var(--primary))" }} strokeWidth={1.5} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-lg font-black text-white truncate leading-tight">{profile.nickname}</p>
