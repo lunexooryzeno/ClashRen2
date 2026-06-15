@@ -106,9 +106,10 @@ export default function ChatPage() {
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#060a14] shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-heading font-bold text-white text-sm tracking-tight">Clash Ren Support</p>
-          <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />Online
+          <p className="font-heading font-bold text-white text-sm tracking-tight">Human Support</p>
+          <p className="text-[11px] text-yellow-400/80 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/80 shrink-0" />
+            Replies may take some time
           </p>
         </div>
         <button onClick={() => loadMessages()} disabled={loading} className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
@@ -134,8 +135,15 @@ export default function ChatPage() {
             <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
               <Shield className="w-7 h-7 text-sky-400" strokeWidth={1.5} />
             </div>
-            <p className="font-bold text-white text-sm">How can we help?</p>
-            <p className="text-zinc-500 text-xs max-w-[220px] leading-relaxed">Send us a message and our support team will get back to you as soon as possible.</p>
+            <p className="font-bold text-white text-sm">Chat with Human Support</p>
+            <p className="text-zinc-500 text-xs max-w-[220px] leading-relaxed">
+              Send us your message and a real person from our team will get back to you.
+            </p>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/70 shrink-0" />
+              <p className="text-[10px] text-yellow-400/70 font-semibold">Replies may take some time</p>
+            </div>
           </div>
         )}
 
