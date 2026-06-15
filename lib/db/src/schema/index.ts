@@ -8,6 +8,7 @@ export * from "./notifications";
 export * from "./squads";
 export * from "./admin-logs";
 export * from "./topup-requests";
+export * from "./topup-sessions";
 export * from "./support-messages";
 export * from "./withdrawal-requests";
 export * from "./device-sessions";
