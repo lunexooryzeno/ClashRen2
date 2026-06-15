@@ -2,7 +2,7 @@
   "upiId": "BHARATPE2V0D0M2C0A10930@unitype",
   "upiName": "Clash Ren",
   "ratePerDiamond": 0.5,
-  "minTopup": 10,
+  "minTopup": 20,
   "minWithdrawal": 20,
   "maxWithdrawal": 0,
   "isEnabled": true,
