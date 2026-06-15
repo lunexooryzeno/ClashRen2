@@ -1,18 +1,32 @@
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { WelcomeModal } from "@/components/welcome-modal";
 import { haptic } from "@/lib/haptics";
-import { Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw, Youtube, ShieldAlert } from "lucide-react";
+import { apiPost } from "@/lib/api";
+import { THEME_CATALOG } from "@/lib/themes";
+import {
+  Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw,
+  Youtube, ShieldAlert, Palette, Check,
+} from "lucide-react";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
 
 type FetchState = "idle" | "loading" | "error";
+type Step = "uid" | "theme";
+
+const ONBOARDING_THEMES = THEME_CATALOG.filter(t => t.popular && !t.isSystem).slice(0, 12);
+if (!ONBOARDING_THEMES.find(t => t.id === "molten")) {
+  const molten = THEME_CATALOG.find(t => t.id === "molten");
+  if (molten) ONBOARDING_THEMES.unshift(molten);
+}
 
 export default function SetupProfileScreen() {
+  const { theme: currentTheme, setTheme } = useTheme();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -20,8 +34,10 @@ export default function SetupProfileScreen() {
   const [uid, setUid] = useState("");
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState("");
+  const [step, setStep] = useState<Step>("uid");
   const [showWelcome, setShowWelcome] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [pickedTheme, setPickedTheme] = useState(currentTheme ?? "molten");
   const pendingRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) ?? "/";
 
   const trimmedUid = uid.trim();
@@ -57,7 +73,6 @@ export default function SetupProfileScreen() {
         return;
       }
 
-      // Save uid + fetched in-game name via direct fetch (bypasses generated client)
       const patchRes = await fetch("/api/users/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -72,7 +87,8 @@ export default function SetupProfileScreen() {
       if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
       haptic.successTap();
       setPlayerName(json.nickname);
-      setShowWelcome(true);
+      setFetchState("idle");
+      setStep("theme");
     } catch (err) {
       haptic.error();
       setFetchState("error");
@@ -82,6 +98,18 @@ export default function SetupProfileScreen() {
           : "Network error. Check your connection and try again."
       );
     }
+  }
+
+  function applyTheme(id: string) {
+    haptic.lightTap?.();
+    setPickedTheme(id);
+    setTheme(id);
+    apiPost("/users/theme", { theme: id }).catch(() => {});
+  }
+
+  function finishThemeStep() {
+    haptic.successTap();
+    setShowWelcome(true);
   }
 
   function handleWelcomeDone() {
@@ -106,117 +134,226 @@ export default function SetupProfileScreen() {
         </div>
 
         <div className="relative z-10 w-full max-w-sm flex flex-col gap-8">
-          {/* Icon + heading */}
-          <div className="flex flex-col items-center gap-3">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
-                boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
-              }}
-            >
-              <Crosshair className="w-8 h-8 text-white" strokeWidth={2} />
-            </div>
-            <div className="text-center">
-              <h1 className="text-xl font-black text-white tracking-tight">Link Your Account</h1>
-              <p className="text-sm text-zinc-400 mt-1">Enter your Free Fire Max UID to get started</p>
-            </div>
-          </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">
-                  Free Fire UID
-                </label>
-                <a
-                  href="https://www.youtube.com/results?search_query=How+to+copy+free+fire+uid"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors active:opacity-60"
-                  style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.18)" }}
-                  onClick={() => haptic.lightTap?.()}
+          {step === "uid" && (
+            <>
+              {/* Icon + heading */}
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+                    boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
+                  }}
                 >
-                  <Youtube className="w-3 h-3" />
-                  How to find my UID?
-                </a>
+                  <Crosshair className="w-8 h-8 text-white" strokeWidth={2} />
+                </div>
+                <div className="text-center">
+                  <h1 className="text-xl font-black text-white tracking-tight">Link Your Account</h1>
+                  <p className="text-sm text-zinc-400 mt-1">Enter your Free Fire Max UID to get started</p>
+                </div>
               </div>
-              <input
-                value={uid}
-                onChange={e => {
-                  setUid(e.target.value.replace(/\D/g, ""));
-                  if (fetchState === "error") { setFetchState("idle"); setFetchError(""); }
-                }}
-                placeholder="Enter your 8–14 digit UID"
-                maxLength={14}
-                inputMode="numeric"
-                autoFocus
-                className="w-full h-12 rounded-xl px-4 text-base text-white font-mono font-semibold outline-none transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: `1px solid ${
-                    fetchState === "error"
-                      ? "rgba(239,68,68,0.5)"
-                      : uidValid
-                      ? "hsl(var(--primary) / 0.5)"
-                      : "rgba(255,255,255,0.10)"
-                  }`,
-                  boxShadow: uidValid && fetchState !== "error"
-                    ? "0 0 0 1px hsl(var(--primary) / 0.25)"
-                    : undefined,
-                }}
-              />
-              <div className="flex justify-between mt-1.5 px-0.5">
-                <p className="text-[11px] text-zinc-500">8–14 digits only</p>
-                <p className="text-[11px] tabular-nums text-zinc-500">{trimmedUid.length}/14</p>
-              </div>
-            </div>
 
-            {/* Warning box */}
-            <div
-              className="rounded-xl p-3 flex items-start gap-3"
-              style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.22)" }}
-            >
-              <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-              <p className="text-[12px] text-blue-300/80 leading-relaxed">
-                <span className="font-bold text-blue-300">Enter carefully.</span> Once your UID is linked, changing it requires admin approval. Double-check before continuing.
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                      Free Fire UID
+                    </label>
+                    <a
+                      href="https://www.youtube.com/results?search_query=How+to+copy+free+fire+uid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors active:opacity-60"
+                      style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.18)" }}
+                      onClick={() => haptic.lightTap?.()}
+                    >
+                      <Youtube className="w-3 h-3" />
+                      How to find my UID?
+                    </a>
+                  </div>
+                  <input
+                    value={uid}
+                    onChange={e => {
+                      setUid(e.target.value.replace(/\D/g, ""));
+                      if (fetchState === "error") { setFetchState("idle"); setFetchError(""); }
+                    }}
+                    placeholder="Enter your 8–14 digit UID"
+                    maxLength={14}
+                    inputMode="numeric"
+                    autoFocus
+                    className="w-full h-12 rounded-xl px-4 text-base text-white font-mono font-semibold outline-none transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      border: `1px solid ${
+                        fetchState === "error"
+                          ? "rgba(239,68,68,0.5)"
+                          : uidValid
+                          ? "hsl(var(--primary) / 0.5)"
+                          : "rgba(255,255,255,0.10)"
+                      }`,
+                      boxShadow: uidValid && fetchState !== "error"
+                        ? "0 0 0 1px hsl(var(--primary) / 0.25)"
+                        : undefined,
+                    }}
+                  />
+                  <div className="flex justify-between mt-1.5 px-0.5">
+                    <p className="text-[11px] text-zinc-500">8–14 digits only</p>
+                    <p className="text-[11px] tabular-nums text-zinc-500">{trimmedUid.length}/14</p>
+                  </div>
+                </div>
+
+                {/* Warning box */}
+                <div
+                  className="rounded-xl p-3 flex items-start gap-3"
+                  style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.22)" }}
+                >
+                  <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-blue-300/80 leading-relaxed">
+                    <span className="font-bold text-blue-300">Enter carefully.</span> Once your UID is linked, changing it requires admin approval. Double-check before continuing.
+                  </p>
+                </div>
+
+                {/* Error state */}
+                {fetchState === "error" && (
+                  <div
+                    className="rounded-xl p-3 flex items-start gap-3"
+                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  >
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-300 leading-snug">{fetchError}</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!uidValid || isLoading}
+                  className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                    boxShadow: uidValid ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
+                  }}
+                >
+                  {isLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Looking up account…</>
+                  ) : fetchState === "error" ? (
+                    <><RotateCcw className="w-4 h-4" /> Try Again</>
+                  ) : (
+                    <>Continue <ChevronRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </form>
+
+              <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
+                Your UID is shown in-game under your profile name.
               </p>
-            </div>
+            </>
+          )}
 
-            {/* Error state */}
-            {fetchState === "error" && (
-              <div
-                className="rounded-xl p-3 flex items-start gap-3"
-                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
-              >
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <p className="text-sm text-red-300 leading-snug">{fetchError}</p>
+          {step === "theme" && (
+            <>
+              {/* Icon + heading */}
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+                    boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  <Palette className="w-8 h-8 text-white" strokeWidth={2} />
+                </div>
+                <div className="text-center">
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-2"
+                    style={{ background: "hsl(var(--primary)/0.12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary)/0.25)" }}
+                  >
+                    Step 2 of 2
+                  </div>
+                  <h1 className="text-xl font-black text-white tracking-tight">Choose Your Loadout</h1>
+                  <p className="text-sm text-zinc-400 mt-1">Pick a theme. You can change it anytime.</p>
+                </div>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={!uidValid || isLoading}
-              className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
-              style={{
-                background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-                boxShadow: uidValid ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
-              }}
-            >
-              {isLoading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Looking up account…</>
-              ) : fetchState === "error" ? (
-                <><RotateCcw className="w-4 h-4" /> Try Again</>
-              ) : (
-                <>Continue <ChevronRight className="w-4 h-4" /></>
-              )}
-            </button>
-          </form>
+              {/* Theme grid */}
+              <div className="grid grid-cols-3 gap-2">
+                {ONBOARDING_THEMES.map(t => {
+                  const isActive = pickedTheme === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => applyTheme(t.id)}
+                      className="relative rounded-xl overflow-hidden flex flex-col transition-all active:scale-[0.96]"
+                      style={{
+                        border: isActive
+                          ? "1.5px solid hsl(var(--primary)/0.7)"
+                          : "1.5px solid rgba(255,255,255,0.08)",
+                        boxShadow: isActive
+                          ? "0 0 12px hsl(var(--primary)/0.25)"
+                          : undefined,
+                      }}
+                    >
+                      {/* Colour swatch */}
+                      <div className="w-full h-10 relative overflow-hidden shrink-0" style={{ background: t.bg }}>
+                        <div
+                          className="absolute inset-0"
+                          style={{ background: `linear-gradient(135deg,${t.accent}30 0%,transparent 60%)` }}
+                        />
+                        <div className="absolute bottom-1 left-1.5 flex gap-0.5">
+                          <div className="w-3 h-3 rounded-sm shadow" style={{ background: t.accent }} />
+                          <div className="w-2 h-2 rounded-sm shadow opacity-70 self-end" style={{ background: t.accent2 }} />
+                        </div>
+                        {isActive && (
+                          <div
+                            className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center shadow"
+                            style={{ background: "hsl(var(--primary))" }}
+                          >
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                          </div>
+                        )}
+                      </div>
 
-          <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
-            Your UID is shown in-game under your profile name.
-          </p>
+                      {/* Name */}
+                      <div
+                        className="px-1.5 py-1.5"
+                        style={{ background: isActive ? "hsl(var(--primary)/0.08)" : "rgba(255,255,255,0.03)" }}
+                      >
+                        <p className="text-[9px] font-bold text-white leading-tight line-clamp-1">{t.name}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={finishThemeStep}
+                  className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                    boxShadow: "0 6px 24px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  Continue with {ONBOARDING_THEMES.find(t => t.id === pickedTheme)?.name ?? "this theme"} <ChevronRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => { haptic.lightTap?.(); finishThemeStep(); }}
+                  className="w-full h-10 rounded-xl text-zinc-400 font-semibold text-sm flex items-center justify-center transition-all active:scale-[0.98] hover:text-zinc-300"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  Skip for now
+                </button>
+              </div>
+
+              <p className="text-center text-[11px] text-zinc-600 leading-relaxed -mt-4">
+                Default is Molten Volcanic — the OG loadout.
+              </p>
+            </>
+          )}
+
         </div>
       </div>
 
