@@ -56,7 +56,26 @@ router.post("/topup/session/create", requireAuth, topupLimiter, async (req, res)
 
   const now = new Date();
 
-  // Cancel any previous active sessions for this user
+  // Return existing active unexpired session for the same amount (idempotent create)
+  const existing = await db.query.paymentSessionsTable.findFirst({
+    where: and(
+      eq(paymentSessionsTable.userId, userId),
+      eq(paymentSessionsTable.baseRupees, rupees),
+      eq(paymentSessionsTable.status, "active"),
+      gt(paymentSessionsTable.expiresAt, now),
+    ),
+  });
+  if (existing) {
+    res.json({
+      sessionId: existing.id,
+      baseRupees: existing.baseRupees,
+      offsetPaise: existing.offsetPaise,
+      expiresAt: existing.expiresAt.toISOString(),
+    });
+    return;
+  }
+
+  // Expire any lingering active sessions for this user (different amounts or truly stale)
   await db
     .update(paymentSessionsTable)
     .set({ status: "expired" })
@@ -67,7 +86,7 @@ router.post("/topup/session/create", requireAuth, topupLimiter, async (req, res)
       ),
     );
 
-  // Find all occupied paise offsets for this base amount still active
+  // Find all occupied paise offsets for this base amount still active (other users)
   const occupied = await db.query.paymentSessionsTable.findMany({
     where: and(
       eq(paymentSessionsTable.baseRupees, rupees),

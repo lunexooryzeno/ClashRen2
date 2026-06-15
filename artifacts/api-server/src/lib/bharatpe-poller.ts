@@ -6,13 +6,19 @@ import {
   walletTransactionsTable,
   balanceChangeLogsTable,
 } from "@workspace/db";
-import { eq, and, lt, sql } from "drizzle-orm";
+import { eq, and, lt, isNull, sql } from "drizzle-orm";
 import { getPaymentSettings } from "./paymentSettings.js";
 import { pushToUser } from "./sse-manager.js";
 
 const POLL_INTERVAL_MS = 15_000;
 const SESSION_DURATION_MS = 5 * 60 * 1000;
 const BP_API_URL = "https://payments-tesseract.bharatpe.in/api/v1/merchant/transactions";
+
+const SUCCESS_STATUSES = new Set([
+  "SUCCESS", "PAID", "CREDIT", "COMPLETED", "APPROVED", "CAPTURED", "SETTLED",
+]);
+
+const seenTxnIds = new Set<string>();
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -51,6 +57,7 @@ interface BharatPeTxn {
   type?: string;
   createdAt?: string;
   txnTime?: string;
+  transactionDate?: string;
 }
 
 async function fetchBharatPeTransactions(): Promise<BharatPeTxn[]> {
@@ -114,6 +121,18 @@ function extractTxnId(txn: BharatPeTxn): string {
   );
 }
 
+function extractTxnTime(txn: BharatPeTxn): Date | null {
+  const raw = txn.txnTime ?? txn.createdAt ?? txn.transactionDate;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function isSuccessfulTxn(txn: BharatPeTxn): boolean {
+  if (!txn.status) return true;
+  return SUCCESS_STATUSES.has(txn.status.toUpperCase());
+}
+
 async function approveSession(
   session: typeof paymentSessionsTable.$inferSelect,
   txnId: string,
@@ -128,6 +147,25 @@ async function approveSession(
     columns: { id: true, diamondBalance: true },
   });
   if (!user) return;
+
+  const [claimed] = await db
+    .update(paymentSessionsTable)
+    .set({ status: "completed", bharatpeTxnId: txnId })
+    .where(
+      and(
+        eq(paymentSessionsTable.id, session.id),
+        eq(paymentSessionsTable.status, "active"),
+        isNull(paymentSessionsTable.bharatpeTxnId),
+      ),
+    )
+    .returning({ id: paymentSessionsTable.id });
+
+  if (!claimed) {
+    console.warn(
+      `[BharatPe] Session #${session.id} already claimed or inactive — skipping credit.`,
+    );
+    return;
+  }
 
   const [topupReq] = await db
     .insert(topupRequestsTable)
@@ -149,14 +187,14 @@ async function approveSession(
     .returning();
 
   await db
+    .update(paymentSessionsTable)
+    .set({ topupRequestId: topupReq.id })
+    .where(eq(paymentSessionsTable.id, session.id));
+
+  await db
     .update(usersTable)
     .set({ diamondBalance: sql`diamond_balance + ${diamonds}` })
     .where(eq(usersTable.id, session.userId));
-
-  await db
-    .update(paymentSessionsTable)
-    .set({ status: "completed", topupRequestId: topupReq.id })
-    .where(eq(paymentSessionsTable.id, session.id));
 
   await db.insert(balanceChangeLogsTable).values({
     userId: session.userId,
@@ -200,23 +238,27 @@ async function runPollCycle(): Promise<void> {
     const txns = await fetchBharatPeTransactions();
     if (txns.length === 0) return;
 
-    const processed = new Set<number>();
-
     for (const txn of txns) {
+      if (!isSuccessfulTxn(txn)) continue;
+
+      const txnId = extractTxnId(txn);
+      if (seenTxnIds.has(txnId)) continue;
+
       const amountRupees = extractAmount(txn);
       if (amountRupees === null) continue;
 
       const amountPaise = Math.round(amountRupees * 100);
+      const txnTime = extractTxnTime(txn);
 
       for (const session of activeSessions) {
-        if (processed.has(session.id)) continue;
         const sessionPaise = session.baseRupees * 100 + session.offsetPaise;
-        if (sessionPaise === amountPaise) {
-          processed.add(session.id);
-          const txnId = extractTxnId(txn);
-          await approveSession(session, txnId, amountRupees);
-          break;
-        }
+        if (sessionPaise !== amountPaise) continue;
+
+        if (txnTime && txnTime < new Date(session.createdAt.getTime() - 60_000)) continue;
+
+        seenTxnIds.add(txnId);
+        await approveSession(session, txnId, amountRupees);
+        break;
       }
     }
   } catch (err) {
