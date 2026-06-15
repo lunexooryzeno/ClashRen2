@@ -1,550 +1,534 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useUpdateMe } from "@workspace/api-client-react";
+import { useState } from "react";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetMeQueryKey } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { WelcomeModal } from "@/components/welcome-modal";
 import { haptic } from "@/lib/haptics";
+import { apiPost } from "@/lib/api";
+import { THEME_CATALOG } from "@/lib/themes";
 import {
-  Shield, Star, Heart, PawPrint, Pencil, Lock,
-  User, Hash, Crown, CheckCircle2, Flame, ChevronRight, Check,
-  AlertCircle, AlertTriangle, Loader2, RotateCcw, TrendingUp,
+  Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw,
+  Youtube, ShieldAlert, Palette, Check, User, Star, Trophy,
+  Heart, Globe, ArrowLeft, Pencil, BadgeCheck,
 } from "lucide-react";
 
-const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
+const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
 
-const uidSchema = z.object({
-  uid: z
-    .string()
-    .min(8, "UID must be at least 8 digits")
-    .max(14, "UID must be at most 14 digits")
-    .regex(/^\d+$/, "UID must contain numbers only"),
-});
+type FetchState = "idle" | "loading" | "error";
+type Step = "uid" | "confirm" | "theme";
 
-interface FreefireProfile {
-  accountId: string;
+interface FetchedProfile {
   nickname: string;
   level: number;
-  rank: number;
-  rankingPoints: number;
   region: string;
   liked: number;
-  exp: string;
-  creditScore: number;
-  primeLevel: number;
-  signature: string;
-  pet: { level: number; exp: number } | null;
+  rankingPoints: number;
+  rank: number;
 }
 
-type FetchState = "idle" | "loading" | "success" | "error" | "level_too_low";
-type Step = "uid" | "profile";
+const ONBOARDING_THEMES = (() => {
+  const list = THEME_CATALOG.filter(t => t.popular && !t.isSystem).slice(0, 12);
+  if (!list.find(t => t.id === "molten")) {
+    const molten = THEME_CATALOG.find(t => t.id === "molten");
+    if (molten) list.unshift(molten);
+  }
+  return list;
+})();
+
+function rankLabel(rank: number): string {
+  if (rank <= 0) return "Unranked";
+  if (rank <= 3)  return `Bronze ${["I","II","III"][rank - 1]}`;
+  if (rank <= 6)  return `Silver ${["I","II","III"][rank - 4]}`;
+  if (rank <= 9)  return `Gold ${["I","II","III"][rank - 7]}`;
+  if (rank <= 12) return `Platinum ${["I","II","III"][rank - 10]}`;
+  if (rank <= 15) return `Diamond ${["I","II","III"][rank - 13]}`;
+  if (rank === 16) return "Heroic";
+  return "Grandmaster";
+}
 
 export default function SetupProfileScreen() {
-  const updateMe = useUpdateMe();
+  const { theme: currentTheme, setTheme } = useTheme();
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const [step, setStep] = useState<Step>("uid");
+  const [uid, setUid] = useState("");
   const [fetchState, setFetchState] = useState<FetchState>("idle");
-  const [fetchError, setFetchError] = useState<string>("");
-  const [profile, setProfile] = useState<FreefireProfile | null>(null);
-  const [nickname, setNickname] = useState("");
-  const [isEditingNickname, setIsEditingNickname] = useState(false);
-  const [signature, setSignature] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [fetchError, setFetchError] = useState("");
+  const [step, setStep] = useState<Step>("uid");
+  const [profile, setProfile] = useState<FetchedProfile | null>(null);
+  const [saving, setSaving] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [pendingRedirect, setPendingRedirect] = useState("/");
+  const [pickedTheme, setPickedTheme] = useState(currentTheme ?? "molten");
+  const pendingRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) ?? "/";
 
-  useEffect(() => {
-    const postWelcomeRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY);
-    if (postWelcomeRedirect && user?.inGameName) {
-      sessionStorage.removeItem(POST_WELCOME_REDIRECT_KEY);
-      setLocation(postWelcomeRedirect);
-    }
-  }, [user?.inGameName, setLocation]);
+  const trimmedUid = uid.trim();
+  const uidValid = /^\d{8,14}$/.test(trimmedUid);
+  const isLoading = fetchState === "loading";
 
-  const form = useForm<z.infer<typeof uidSchema>>({
-    resolver: zodResolver(uidSchema),
-    defaultValues: { uid: "" },
-  });
-
-  const onUidSubmit = async (data: z.infer<typeof uidSchema>) => {
+  /* ── Step 1: fetch UID info ────────────────────────────────────────────── */
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!uidValid || isLoading) return;
     haptic.mediumTap();
     setFetchState("loading");
     setFetchError("");
 
     try {
       const res = await fetch(
-        `/api/freefire/player?uid=${encodeURIComponent(data.uid)}&region=ind`,
-        { credentials: "include" }
+        `/api/freefire/player?uid=${encodeURIComponent(trimmedUid)}&region=ind`,
+        { credentials: "include", cache: "no-store" }
       );
-      const json = await res.json() as FreefireProfile & { error?: string };
+      const json = await res.json() as {
+        nickname?: string; level?: number; region?: string;
+        liked?: number; rankingPoints?: number; rank?: number;
+        manual?: boolean; error?: string;
+      };
 
-      if (!res.ok) {
+      if (!res.ok || json.manual || !json.nickname) {
+        haptic.error();
         setFetchState("error");
-        setFetchError(json.error ?? "Failed to fetch player. Try again.");
+        setFetchError(
+          json.error ??
+          (json.manual
+            ? "Could not find your account. Please check your UID and try again."
+            : "Failed to fetch player data. Please try again.")
+        );
         return;
       }
 
-      if (json.level < 40) {
-        setFetchState("level_too_low");
-        return;
-      }
-
-      setProfile(json);
-      setNickname(json.nickname);
-      setSignature(json.signature ?? "");
-      setFetchState("success");
-      setStep("profile");
-    } catch {
+      haptic.successTap();
+      setFetchState("idle");
+      setProfile({
+        nickname:      json.nickname,
+        level:         json.level        ?? 0,
+        region:        json.region       ?? "IND",
+        liked:         json.liked        ?? 0,
+        rankingPoints: json.rankingPoints ?? 0,
+        rank:          json.rank         ?? 0,
+      });
+      setStep("confirm");
+    } catch (err) {
+      haptic.error();
       setFetchState("error");
-      setFetchError("Network error. Check your connection and try again.");
+      setFetchError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Network error. Check your connection and try again."
+      );
     }
-  };
+  }
 
-  const onConfirm = () => {
-    if (!profile) return;
+  /* ── Step 2: confirm → save ────────────────────────────────────────────── */
+  async function handleConfirm() {
+    if (!profile || saving) return;
     haptic.mediumTap();
-    setIsSaving(true);
-    updateMe.mutate(
-      { data: { inGameName: nickname || profile.nickname, uid: profile.accountId } },
-      {
-        onSuccess: () => {
-          queryClient.setQueryData(getGetMeQueryKey(), (old: any) =>
-            old ? { ...old, inGameName: nickname || profile!.nickname, uid: profile!.accountId } : old
-          );
-          const raw = sessionStorage.getItem("redirectAfterLogin") || "/";
-          sessionStorage.removeItem("redirectAfterLogin");
-          // Never redirect back to auth/setup pages — always fall through to home
-          const INVALID_REDIRECTS = ["/setup-profile", "/landing", "/get-started", "/onboarding"];
-          const redirectTo = INVALID_REDIRECTS.includes(raw) ? "/" : raw;
-          setPendingRedirect(redirectTo);
-          setIsSaving(false);
-          setShowWelcome(true);
-        },
-        onError: (err) => {
-          toast({
-            title: "Error",
-            description: (err as any).data?.error || "Failed to update profile",
-            variant: "destructive",
-          });
-          setIsSaving(false);
-        },
+    setSaving(true);
+    try {
+      const patchRes = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ uid: trimmedUid, inGameName: profile.nickname }),
+      });
+      if (!patchRes.ok) {
+        const errJson = await patchRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(errJson.error ?? "Failed to save profile.");
       }
-    );
-  };
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
+      haptic.successTap();
+      setStep("theme");
+    } catch (err) {
+      haptic.error();
+      setFetchState("error");
+      setFetchError(err instanceof Error ? err.message : "Failed to save. Try again.");
+      setStep("uid");
+    } finally {
+      setSaving(false);
+    }
+  }
 
-  const handleWelcomeContinue = () => {
-    if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
+  /* ── Step 3: theme pick ────────────────────────────────────────────────── */
+  function applyTheme(id: string) {
+    haptic.lightTap?.();
+    setPickedTheme(id);
+    setTheme(id);
+    apiPost("/users/theme", { theme: id }).catch(() => {});
+  }
+
+  function finishThemeStep() {
+    haptic.successTap();
+    setShowWelcome(true);
+  }
+
+  function handleWelcomeDone() {
     setShowWelcome(false);
+    sessionStorage.removeItem(POST_WELCOME_REDIRECT_KEY);
     setLocation(pendingRedirect);
-    queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-  };
+  }
 
   return (
     <>
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center py-8 px-4 relative overflow-hidden">
-        {/* Ambient background blobs */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[130px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-orange-700/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-blue-600/8 rounded-full blur-[90px] pointer-events-none" />
+      <div className="min-h-screen flex flex-col items-center justify-center px-5 py-10 relative overflow-hidden">
+        {/* Background glows */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full opacity-20 blur-3xl"
+            style={{ background: "radial-gradient(ellipse, hsl(var(--primary)) 0%, transparent 70%)" }}
+          />
+          <div
+            className="absolute bottom-0 right-0 w-[300px] h-[300px] rounded-full opacity-10 blur-3xl"
+            style={{ background: "radial-gradient(ellipse, hsl(var(--primary)) 0%, transparent 70%)" }}
+          />
+        </div>
 
-        {/* ── STEP 1: UID entry ── */}
-        {step === "uid" && (
-          <div className="w-full max-w-sm relative z-10">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-700/20 border border-primary/30 mb-5 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
-                <Flame className="w-8 h-8 text-primary" strokeWidth={1.5} />
-              </div>
-              <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">
-                LINK ACCOUNT
-              </h1>
-              <p className="text-sm text-zinc-500">Enter your Free Fire UID to fetch your profile</p>
-            </div>
+        <div className="relative z-10 w-full max-w-sm flex flex-col gap-8">
 
-            <div
-              className="rounded-2xl p-6 border border-white/10"
-              style={{ background: "rgba(255,255,255,0.03)", backdropFilter: "blur(20px)" }}
-            >
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onUidSubmit)} className="space-y-5">
-                  <FormField
-                    control={form.control}
-                    name="uid"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest">
-                          Free Fire UID
-                        </FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <Input
-                              {...field}
-                              type="text"
-                              inputMode="numeric"
-                              placeholder="Enter your UID"
-                              maxLength={14}
-                              className="pl-10 bg-black/60 border border-white/10 rounded-xl h-12 focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:border-primary/50 text-white placeholder:text-zinc-700 text-base"
-                              onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, "").slice(0, 14);
-                                field.onChange(val);
-                              }}
-                              data-testid="input-uid"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                        <div className="mt-2 rounded-xl overflow-hidden border border-amber-500/25" style={{ background: "rgba(245,158,11,0.06)" }}>
-                          <div className="flex items-start gap-3 px-3.5 py-3">
-                            <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                            </div>
-                            <div>
-                              <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-0.5">Permanent UID</p>
-                              <p className="text-[12px] text-zinc-300 leading-snug">Your UID <span className="text-white font-semibold">cannot be changed</span> after confirmation. Double-check before continuing.</p>
-                            </div>
-                          </div>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Generic error banner */}
-                  {fetchState === "error" && (
-                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
-                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                      <span>{fetchError}</span>
-                    </div>
-                  )}
-
-                  {/* Level too low banner */}
-                  {fetchState === "level_too_low" && (
-                    <div className="rounded-xl overflow-hidden border border-red-500/30" style={{ background: "rgba(239,68,68,0.07)" }}>
-                      <div className="flex items-start gap-3 px-3.5 py-3.5">
-                        <div className="w-8 h-8 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                          <TrendingUp className="w-4 h-4 text-red-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-bold text-red-400 uppercase tracking-wider mb-1">
-                            Level Too Low
-                          </p>
-                          <p className="text-[12px] text-zinc-300 leading-snug mb-3">
-                            Your account must be at least{" "}
-                            <span className="text-white font-bold">Level 40</span> to join Clash Ren.
-                            Keep playing Free Fire to level up and come back!
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 rounded-lg border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:text-red-200 hover:border-red-500/50 text-xs font-semibold gap-1.5 transition-all"
-                            onClick={() => {
-                              haptic.mediumTap();
-                              setFetchState("idle");
-                              form.reset();
-                            }}
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            Re-enter FF UID
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={fetchState === "loading" || fetchState === "level_too_low"}
-                    className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-[0_0_24px_rgba(234,88,12,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
-                    data-testid="button-fetch-profile"
-                  >
-                    {fetchState === "loading" ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Fetching Profile…
-                      </>
-                    ) : (
-                      <>
-                        Fetch Profile <ChevronRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </div>
-            <p className="text-center text-[11px] text-zinc-700 mt-4">
-              Find your UID in Free Fire → Profile → Settings
-            </p>
-          </div>
-        )}
-
-        {/* ── STEP 2: Profile card ── */}
-        {step === "profile" && profile && (
-          <div className="w-full max-w-sm flex flex-col gap-3 relative z-10">
-
-            {/* ── Hero banner card ── */}
-            <div
-              className="rounded-2xl overflow-hidden border border-white/10 relative"
-              style={{ background: "rgba(10,10,10,0.8)", backdropFilter: "blur(24px)" }}
-            >
-              {/* Decorative banner */}
-              <div className="relative h-24 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/50 via-orange-700/30 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+          {/* ── STEP 1: Enter UID ─────────────────────────────────────────── */}
+          {step === "uid" && (
+            <>
+              <div className="flex flex-col items-center gap-3">
                 <div
-                  className="absolute inset-0 opacity-10"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
                   style={{
-                    backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)`,
-                    backgroundSize: "20px 20px",
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+                    boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
                   }}
-                />
-                {/* Level pill */}
-                <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm border border-yellow-400/25 rounded-full px-2.5 py-1">
-                  <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                  <span className="text-xs font-bold text-yellow-300">Level {profile.level}</span>
+                >
+                  <Crosshair className="w-8 h-8 text-white" strokeWidth={2} />
+                </div>
+                <div className="text-center">
+                  <h1 className="text-xl font-black text-white tracking-tight">Link Your Account</h1>
+                  <p className="text-sm text-zinc-400 mt-1">Enter your Free Fire Max UID to get started</p>
                 </div>
               </div>
 
-              {/* Avatar — overlapping banner */}
-              <div className="px-5 pb-5 -mt-9 relative">
-                <div className="flex items-end justify-between mb-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 rounded-2xl bg-primary/40 blur-[12px] scale-110" />
-                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-orange-600 to-orange-800 border-2 border-primary/60 flex items-center justify-center shadow-[0_8px_24px_rgba(234,88,12,0.5)]">
-                      <User className="w-8 h-8 text-white" strokeWidth={1.5} />
-                    </div>
-                    {profile.primeLevel > 0 && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 border-2 border-black flex items-center justify-center shadow-[0_0_8px_rgba(250,204,21,0.6)]">
-                        <Crown className="w-3 h-3 text-black" strokeWidth={2.5} />
-                      </div>
-                    )}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                      Free Fire UID
+                    </label>
+                    <a
+                      href="https://www.youtube.com/results?search_query=How+to+copy+free+fire+uid"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors active:opacity-60"
+                      style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.18)" }}
+                      onClick={() => haptic.lightTap?.()}
+                    >
+                      <Youtube className="w-3 h-3" />
+                      How to find my UID?
+                    </a>
                   </div>
-
-                  <div className="flex flex-col items-end gap-1 pb-1">
-                    <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/25 rounded-full px-2.5 py-1">
-                      <Shield className="w-3 h-3 text-blue-400" />
-                      <span className="text-xs font-bold text-blue-300">Rank #{profile.rank}</span>
-                    </div>
-                    <span className="text-[10px] text-zinc-600 font-mono">{profile.rankingPoints.toLocaleString()} pts</span>
+                  <input
+                    value={uid}
+                    onChange={e => {
+                      setUid(e.target.value.replace(/\D/g, ""));
+                      if (fetchState === "error") { setFetchState("idle"); setFetchError(""); }
+                    }}
+                    placeholder="Enter your 8–14 digit UID"
+                    maxLength={14}
+                    inputMode="numeric"
+                    autoFocus
+                    className="w-full h-12 rounded-xl px-4 text-base text-white font-mono font-semibold outline-none transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.06)",
+                      border: `1px solid ${
+                        fetchState === "error"
+                          ? "rgba(239,68,68,0.5)"
+                          : uidValid
+                          ? "hsl(var(--primary) / 0.5)"
+                          : "rgba(255,255,255,0.10)"
+                      }`,
+                      boxShadow: uidValid && fetchState !== "error"
+                        ? "0 0 0 1px hsl(var(--primary) / 0.25)"
+                        : undefined,
+                    }}
+                  />
+                  <div className="flex justify-between mt-1.5 px-0.5">
+                    <p className="text-[11px] text-zinc-500">8–14 digits only</p>
+                    <p className="text-[11px] tabular-nums text-zinc-500">{trimmedUid.length}/14</p>
                   </div>
                 </div>
 
-                {/* Nickname row — editable */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  {isEditingNickname ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Input
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        onBlur={() => setIsEditingNickname(false)}
-                        onKeyDown={(e) => e.key === "Enter" && setIsEditingNickname(false)}
-                        autoFocus
-                        maxLength={20}
-                        className="h-9 font-heading text-lg font-bold bg-white/5 border border-primary/40 rounded-xl text-white px-3 focus-visible:ring-1 focus-visible:ring-primary/60 flex-1"
-                      />
-                      <button
-                        onClick={() => { haptic.mediumTap(); setIsEditingNickname(false); }}
-                        className="w-8 h-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center hover:bg-primary/30 transition-colors shrink-0"
-                      >
-                        <Check className="w-4 h-4 text-primary" />
-                      </button>
-                    </div>
+                <div
+                  className="rounded-xl p-3 flex items-start gap-3"
+                  style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.22)" }}
+                >
+                  <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-blue-300/80 leading-relaxed">
+                    <span className="font-bold text-blue-300">Enter carefully.</span> Once your UID is linked, changing it requires admin approval. Double-check before continuing.
+                  </p>
+                </div>
+
+                {fetchState === "error" && (
+                  <div
+                    className="rounded-xl p-3 flex items-start gap-3"
+                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
+                  >
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-300 leading-snug">{fetchError}</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!uidValid || isLoading}
+                  className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                    boxShadow: uidValid ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
+                  }}
+                >
+                  {isLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Looking up account…</>
+                  ) : fetchState === "error" ? (
+                    <><RotateCcw className="w-4 h-4" /> Try Again</>
                   ) : (
-                    <span className="font-heading text-2xl font-bold text-white leading-tight tracking-tight truncate">
-                      {nickname}
-                    </span>
+                    <>Look up UID <ChevronRight className="w-4 h-4" /></>
                   )}
-                </div>
+                </button>
+              </form>
 
-                {/* UID + India badge + Prime row */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs text-zinc-600">
-                    <Hash className="w-3 h-3" />{profile.accountId}
-                  </span>
-                  <span className="w-px h-3 bg-white/10" />
-                  <span className="flex items-center gap-1 text-xs font-medium text-zinc-400 bg-white/[0.04] border border-white/10 rounded-full px-2 py-0.5">
-                    🇮🇳 India
-                  </span>
-                  {profile.primeLevel > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-full px-2 py-0.5">
-                      <Crown className="w-2.5 h-2.5" /> Prime {profile.primeLevel}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Stats row ── */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <GlowStat
-                icon={<Heart className="w-4 h-4" />}
-                label="Likes"
-                value={Number(profile.liked).toLocaleString()}
-                gradient="from-pink-600/30 to-rose-800/20"
-                border="border-pink-500/20"
-                iconColor="text-pink-400"
-                glow="rgba(236,72,153,0.2)"
-              />
-              <GlowStat
-                icon={<CheckCircle2 className="w-4 h-4" />}
-                label="Trust Score"
-                value={`${profile.creditScore}/100`}
-                gradient="from-emerald-600/30 to-green-800/20"
-                border="border-emerald-500/20"
-                iconColor="text-emerald-400"
-                glow="rgba(52,211,153,0.2)"
-              />
-              <GlowStat
-                icon={<Crown className="w-4 h-4" />}
-                label="Prime Level"
-                value={profile.primeLevel > 0 ? `Tier ${profile.primeLevel}` : "None"}
-                gradient="from-yellow-600/30 to-amber-800/20"
-                border="border-yellow-500/20"
-                iconColor="text-yellow-400"
-                glow="rgba(250,204,21,0.2)"
-              />
-              <GlowStat
-                icon={<PawPrint className="w-4 h-4" />}
-                label={profile.pet ? `Pet · Lv.${profile.pet.level}` : "Pet"}
-                value={profile.pet ? `${profile.pet.exp.toLocaleString()} XP` : "None"}
-                gradient="from-teal-600/30 to-cyan-800/20"
-                border="border-teal-500/20"
-                iconColor="text-teal-400"
-                glow="rgba(20,184,166,0.2)"
-              />
-            </div>
-
-            {/* ── Bio / Signature ── */}
-            <div
-              className="rounded-2xl p-4 border border-white/10"
-              style={{ background: "rgba(255,255,255,0.025)", backdropFilter: "blur(16px)" }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center">
-                  <Pencil className="w-3 h-3 text-primary" />
-                </div>
-                <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-widest flex-1">
-                  Bio / Signature
-                </p>
-                <span className="text-[10px] text-zinc-700">{signature.length}/80</span>
-              </div>
-              <Textarea
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                maxLength={80}
-                rows={2}
-                className="bg-black/40 border border-white/8 rounded-xl text-sm text-white/90 resize-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/40 placeholder:text-zinc-700 leading-relaxed"
-                placeholder="Your in-game bio..."
-              />
-            </div>
-
-            {/* ── Read-only hint ── */}
-            <div className="flex items-start gap-2 px-0.5">
-              <Lock className="w-3 h-3 text-zinc-700 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-zinc-700 leading-relaxed">
-                UID, rank &amp; stats are pulled live from your Free Fire account. Nickname and bio are yours to customise.
+              <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
+                Your UID is shown in-game under your profile name.
               </p>
-            </div>
+            </>
+          )}
 
-            {/* ── UID permanent warning ── */}
-            <div className="rounded-xl overflow-hidden border border-amber-500/25" style={{ background: "rgba(245,158,11,0.06)" }}>
-              <div className="flex items-start gap-3 px-3.5 py-3">
-                <div className="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+          {/* ── STEP 2: Confirm player ────────────────────────────────────── */}
+          {step === "confirm" && profile && (
+            <>
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+                    boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  <BadgeCheck className="w-8 h-8 text-white" strokeWidth={2} />
                 </div>
-                <div>
-                  <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-0.5">Permanent UID</p>
-                  <p className="text-[12px] text-zinc-300 leading-snug">Your UID <span className="text-white font-semibold">cannot be changed</span> after confirmation. Double-check before continuing.</p>
+                <div className="text-center">
+                  <h1 className="text-xl font-black text-white tracking-tight">Is this you?</h1>
+                  <p className="text-sm text-zinc-400 mt-1">Confirm your Free Fire account before linking</p>
                 </div>
               </div>
-            </div>
 
-            {/* ── In-game name notice ── */}
-            <div className="rounded-xl overflow-hidden border border-blue-500/20" style={{ background: "rgba(59,130,246,0.06)" }}>
-              <div className="flex items-start gap-3 px-3.5 py-3">
-                <div className="w-6 h-6 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">In-Game Name</p>
-                  <p className="text-[12px] text-zinc-300 leading-snug">Use your <span className="text-white font-semibold">Free Fire in-game name</span> only. To change it later, contact our support team.</p>
+              {/* Player card */}
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                {/* Top accent bar */}
+                <div
+                  className="h-1 w-full"
+                  style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary)/0.3))" }}
+                />
+
+                <div className="px-5 pt-5 pb-4 flex flex-col gap-4">
+                  {/* Avatar + name row */}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 font-black text-xl text-white"
+                      style={{
+                        background: "linear-gradient(135deg, hsl(var(--primary)/0.3), hsl(var(--primary)/0.12))",
+                        border: "1.5px solid hsl(var(--primary)/0.35)",
+                      }}
+                    >
+                      {profile.nickname.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-lg font-black text-white truncate leading-tight">{profile.nickname}</p>
+                      <p className="text-[11px] text-zinc-500 font-mono mt-0.5">UID: {trimmedUid}</p>
+                    </div>
+                    <div
+                      className="ml-auto shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                      style={{
+                        background: "hsl(var(--primary)/0.12)",
+                        border: "1px solid hsl(var(--primary)/0.3)",
+                        color: "hsl(var(--primary))",
+                      }}
+                    >
+                      Lv {profile.level}
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <StatChip icon={<Globe className="w-3 h-3" />} label="Region" value={profile.region} />
+                    <StatChip icon={<Heart className="w-3 h-3" />} label="Likes" value={profile.liked.toLocaleString()} />
+                    <StatChip icon={<Trophy className="w-3 h-3" />} label="BR Rank" value={rankLabel(profile.rank)} />
+                  </div>
+
+                  {profile.rankingPoints > 0 && (
+                    <div
+                      className="rounded-xl px-3 py-2 flex items-center gap-2"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                    >
+                      <Star className="w-3.5 h-3.5 shrink-0" style={{ color: "hsl(var(--primary))" }} />
+                      <span className="text-[11px] text-zinc-400">Ranking Points:</span>
+                      <span className="text-[11px] font-bold text-white ml-auto">{profile.rankingPoints.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* ── Action buttons ── */}
-            <div className="flex gap-2.5 pt-1 pb-3">
-              <Button
-                variant="outline"
-                className="flex-1 h-12 rounded-xl border-white/10 bg-white/[0.02] text-zinc-500 hover:bg-white/[0.05] hover:text-zinc-300 hover:border-white/20 transition-all"
-                onClick={() => { haptic.mediumTap(); setStep("uid"); setFetchState("idle"); setProfile(null); }}
-                disabled={isSaving}
-              >
-                Change UID
-              </Button>
-              <Button
-                className="flex-[2] h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold shadow-[0_0_28px_rgba(234,88,12,0.45)] transition-all active:scale-[0.98]"
-                onClick={onConfirm}
-                disabled={isSaving}
-                data-testid="button-confirm-profile"
-              >
-                {isSaving ? "Saving..." : "Confirm & Continue"}
-              </Button>
-            </div>
-          </div>
-        )}
+              {/* Action buttons */}
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={handleConfirm}
+                  disabled={saving}
+                  className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                    boxShadow: "0 6px 24px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  {saving
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Linking account…</>
+                    : <><Check className="w-4 h-4" /> Yes, this is me — Link account</>
+                  }
+                </button>
+
+                <button
+                  onClick={() => { haptic.lightTap?.(); setStep("uid"); setProfile(null); }}
+                  disabled={saving}
+                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 text-zinc-300 hover:text-white"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit UID
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── STEP 3: Theme picker ──────────────────────────────────────── */}
+          {step === "theme" && (
+            <>
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+                    boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  <Palette className="w-8 h-8 text-white" strokeWidth={2} />
+                </div>
+                <div className="text-center">
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-2"
+                    style={{ background: "hsl(var(--primary)/0.12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary)/0.25)" }}
+                  >
+                    Last step
+                  </div>
+                  <h1 className="text-xl font-black text-white tracking-tight">Choose Your Loadout</h1>
+                  <p className="text-sm text-zinc-400 mt-1">Pick a theme. You can change it anytime.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {ONBOARDING_THEMES.map(t => {
+                  const isActive = pickedTheme === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => applyTheme(t.id)}
+                      className="relative rounded-xl overflow-hidden flex flex-col transition-all active:scale-[0.96]"
+                      style={{
+                        border: isActive
+                          ? "1.5px solid hsl(var(--primary)/0.7)"
+                          : "1.5px solid rgba(255,255,255,0.08)",
+                        boxShadow: isActive ? "0 0 12px hsl(var(--primary)/0.25)" : undefined,
+                      }}
+                    >
+                      <div className="w-full h-10 relative overflow-hidden shrink-0" style={{ background: t.bg }}>
+                        <div
+                          className="absolute inset-0"
+                          style={{ background: `linear-gradient(135deg,${t.accent}30 0%,transparent 60%)` }}
+                        />
+                        <div className="absolute bottom-1 left-1.5 flex gap-0.5">
+                          <div className="w-3 h-3 rounded-sm shadow" style={{ background: t.accent }} />
+                          <div className="w-2 h-2 rounded-sm shadow opacity-70 self-end" style={{ background: t.accent2 }} />
+                        </div>
+                        {isActive && (
+                          <div
+                            className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center shadow"
+                            style={{ background: "hsl(var(--primary))" }}
+                          >
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className="px-1.5 py-1.5"
+                        style={{ background: isActive ? "hsl(var(--primary)/0.08)" : "rgba(255,255,255,0.03)" }}
+                      >
+                        <p className="text-[9px] font-bold text-white leading-tight line-clamp-1">{t.name}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={finishThemeStep}
+                  className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                    boxShadow: "0 6px 24px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  Continue with {ONBOARDING_THEMES.find(t => t.id === pickedTheme)?.name ?? "this theme"} <ChevronRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => { haptic.lightTap?.(); finishThemeStep(); }}
+                  className="w-full h-10 rounded-xl text-zinc-400 font-semibold text-sm flex items-center justify-center transition-all active:scale-[0.98] hover:text-zinc-300"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                >
+                  Skip for now
+                </button>
+              </div>
+
+              <p className="text-center text-[11px] text-zinc-600 leading-relaxed -mt-4">
+                Default is Molten Volcanic — the OG loadout.
+              </p>
+            </>
+          )}
+
+        </div>
       </div>
 
       <WelcomeModal
         open={showWelcome}
-        playerName={nickname || profile?.nickname || "Player"}
-        onContinue={handleWelcomeContinue}
+        playerName={profile?.nickname ?? ""}
+        onContinue={handleWelcomeDone}
       />
     </>
   );
 }
 
-function GlowStat({
-  icon, label, value, gradient, border, iconColor, glow,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  gradient: string;
-  border: string;
-  iconColor: string;
-  glow: string;
-}) {
+/* ── Stat chip ─────────────────────────────────────────────────────────────── */
+function StatChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div
-      className={`relative rounded-2xl p-3.5 border ${border} overflow-hidden`}
-      style={{ background: "rgba(10,10,10,0.7)", backdropFilter: "blur(16px)" }}
+      className="rounded-xl px-2 py-2.5 flex flex-col items-center gap-1 text-center"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-70`} />
-      <div
-        className="absolute top-0 right-0 w-16 h-16 rounded-full blur-[24px] opacity-40"
-        style={{ background: glow }}
-      />
-      <div className="relative flex items-start gap-2.5">
-        <div className={`mt-0.5 ${iconColor}`}>{icon}</div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-zinc-500 leading-none mb-1">{label}</p>
-          <p className="text-sm font-bold text-white truncate">{value}</p>
-        </div>
-      </div>
+      <span className="text-zinc-500">{icon}</span>
+      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">{label}</span>
+      <span className="text-[11px] font-bold text-white leading-tight">{value}</span>
     </div>
   );
 }

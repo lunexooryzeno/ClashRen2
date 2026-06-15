@@ -1,12 +1,15 @@
 import { Router, type IRouter } from "express";
-import { requireAuth } from "../middlewares/auth.js";
-import { getSystemSettings } from "../lib/systemSettings.js";
+import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
+import { fetchFreefireProfile } from "../lib/freefireKeys.js";
+import { db } from "@workspace/db";
+import { freefireApiKeysTable } from "@workspace/db";
+import { eq, asc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const FF_API_BASE = "https://developers.freefirecommunity.com/api/v1";
-const VALID_REGIONS = new Set(["ind", "sg", "id", "br", "us", "th", "vn", "my", "pk", "bd"]);
+export type { NormalizedProfile } from "../lib/freefireKeys.js";
 
+// ── GET /freefire/player ────────────────────────────────────────────────────
 router.get("/freefire/player", requireAuth, async (req, res) => {
   const { uid, region = "ind" } = req.query as { uid?: string; region?: string };
 
@@ -14,76 +17,70 @@ router.get("/freefire/player", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid UID. Must be 8–14 digits." });
   }
 
-  const normalizedRegion = String(region).toLowerCase();
-  if (!VALID_REGIONS.has(normalizedRegion)) {
-    return res.status(400).json({ error: "Invalid region." });
-  }
+  const profile = await fetchFreefireProfile(uid, String(region));
+  if (profile) return res.json(profile);
 
-  const apiKey = process.env.FREEFIRE_API_KEY || getSystemSettings().freefireApiKey;
-  if (!apiKey) {
-    return res.status(500).json({ error: "Free Fire API key not configured." });
-  }
+  return res.json({ manual: true, uid });
+});
 
-  try {
-    const url = new URL(`${FF_API_BASE}/info`);
-    url.searchParams.set("region", normalizedRegion);
-    url.searchParams.set("uid", uid);
+// ── GET /freefire/sources ───────────────────────────────────────────────────
+router.get("/freefire/sources", requireAuth, async (_req, res) => {
+  const keys = await db.query.freefireApiKeysTable.findMany({
+    columns: { id: true, label: true, isActive: true, requestCount: true, lastUsedAt: true },
+    orderBy: asc(freefireApiKeysTable.id),
+  });
+  return res.json({ provider: "Gameskinbo", keys });
+});
 
-    const ffRes = await fetch(url.toString(), {
-      headers: {
-        "accept": "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "no-cache",
-        "content-type": "application/json",
-        "pragma": "no-cache",
-        "referer": "https://developers.freefirecommunity.com/en/dashboard/playground",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        "x-api-key": apiKey,
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+// ── Admin: list API keys ────────────────────────────────────────────────────
+router.get("/freefire/api-keys", requireSuperAdmin, async (_req, res) => {
+  const keys = await db.query.freefireApiKeysTable.findMany({
+    orderBy: asc(freefireApiKeysTable.id),
+  });
+  return res.json(keys);
+});
 
-    if (!ffRes.ok) {
-      if (ffRes.status === 404) {
-        return res.status(404).json({ error: "Player not found. Check the UID and region." });
-      }
-      return res.status(502).json({ error: "Failed to fetch player data. Try again." });
-    }
+// ── Admin: add API key ──────────────────────────────────────────────────────
+router.post("/freefire/api-keys", requireSuperAdmin, async (req, res) => {
+  const { key, label = "" } = req.body as { key?: string; label?: string };
+  if (!key?.trim()) return res.status(400).json({ error: "key is required" });
 
-    const data = await ffRes.json() as Record<string, unknown>;
+  const [row] = await db
+    .insert(freefireApiKeysTable)
+    .values({ key: key.trim(), label: label.trim() })
+    .onConflictDoNothing()
+    .returning();
 
-    // Return only the fields we actually use — keeps response lean
-    const basic = (data.basicInfo ?? {}) as Record<string, unknown>;
-    const credit = (data.creditScoreInfo ?? {}) as Record<string, unknown>;
-    const pet = (data.petInfo ?? {}) as Record<string, unknown>;
-    const social = (data.socialInfo ?? {}) as Record<string, unknown>;
-    const prime = (basic.primePrivilegeDetail ?? {}) as Record<string, unknown>;
+  if (!row) return res.status(409).json({ error: "Key already exists" });
+  return res.status(201).json(row);
+});
 
-    return res.json({
-      accountId: basic.accountId,
-      nickname: basic.nickname,
-      level: basic.level,
-      rank: basic.rank,
-      rankingPoints: basic.rankingPoints,
-      region: basic.region,
-      liked: basic.liked,
-      exp: basic.exp,
-      creditScore: credit.creditScore ?? 100,
-      primeLevel: (prime.primeLevel as number) ?? 0,
-      signature: social.signature ?? "",
-      pet: pet.id
-        ? { level: pet.level, exp: pet.exp }
-        : null,
-    });
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === "TimeoutError") {
-      return res.status(504).json({ error: "Free Fire API timed out. Try again." });
-    }
-    return res.status(502).json({ error: "Failed to reach Free Fire API." });
-  }
+// ── Admin: toggle active ────────────────────────────────────────────────────
+router.patch("/freefire/api-keys/:id", requireSuperAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const { isActive, label } = req.body as { isActive?: boolean; label?: string };
+
+  const patch: Record<string, unknown> = {};
+  if (typeof isActive === "boolean") patch.isActive = isActive;
+  if (typeof label === "string") patch.label = label.trim();
+
+  if (Object.keys(patch).length === 0) return res.status(400).json({ error: "Nothing to update" });
+
+  const [row] = await db
+    .update(freefireApiKeysTable)
+    .set(patch)
+    .where(eq(freefireApiKeysTable.id, id))
+    .returning();
+
+  if (!row) return res.status(404).json({ error: "Key not found" });
+  return res.json(row);
+});
+
+// ── Admin: delete API key ───────────────────────────────────────────────────
+router.delete("/freefire/api-keys/:id", requireSuperAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  await db.delete(freefireApiKeysTable).where(eq(freefireApiKeysTable.id, id));
+  return res.status(204).send();
 });
 
 export default router;
