@@ -10,19 +10,43 @@ import { apiPost } from "@/lib/api";
 import { THEME_CATALOG } from "@/lib/themes";
 import {
   Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw,
-  Youtube, ShieldAlert, Palette, Check,
+  Youtube, ShieldAlert, Palette, Check, User, Star, Trophy,
+  Heart, Globe, ArrowLeft, Pencil, BadgeCheck,
 } from "lucide-react";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
 const getWelcomeShownKey = (userId: number) => `clash-ren:welcomed:${userId}`;
 
 type FetchState = "idle" | "loading" | "error";
-type Step = "uid" | "theme";
+type Step = "uid" | "confirm" | "theme";
 
-const ONBOARDING_THEMES = THEME_CATALOG.filter(t => t.popular && !t.isSystem).slice(0, 12);
-if (!ONBOARDING_THEMES.find(t => t.id === "molten")) {
-  const molten = THEME_CATALOG.find(t => t.id === "molten");
-  if (molten) ONBOARDING_THEMES.unshift(molten);
+interface FetchedProfile {
+  nickname: string;
+  level: number;
+  region: string;
+  liked: number;
+  rankingPoints: number;
+  rank: number;
+}
+
+const ONBOARDING_THEMES = (() => {
+  const list = THEME_CATALOG.filter(t => t.popular && !t.isSystem).slice(0, 12);
+  if (!list.find(t => t.id === "molten")) {
+    const molten = THEME_CATALOG.find(t => t.id === "molten");
+    if (molten) list.unshift(molten);
+  }
+  return list;
+})();
+
+function rankLabel(rank: number): string {
+  if (rank <= 0) return "Unranked";
+  if (rank <= 3)  return `Bronze ${["I","II","III"][rank - 1]}`;
+  if (rank <= 6)  return `Silver ${["I","II","III"][rank - 4]}`;
+  if (rank <= 9)  return `Gold ${["I","II","III"][rank - 7]}`;
+  if (rank <= 12) return `Platinum ${["I","II","III"][rank - 10]}`;
+  if (rank <= 15) return `Diamond ${["I","II","III"][rank - 13]}`;
+  if (rank === 16) return "Heroic";
+  return "Grandmaster";
 }
 
 export default function SetupProfileScreen() {
@@ -35,8 +59,9 @@ export default function SetupProfileScreen() {
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState("");
   const [step, setStep] = useState<Step>("uid");
+  const [profile, setProfile] = useState<FetchedProfile | null>(null);
+  const [saving, setSaving] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [playerName, setPlayerName] = useState("");
   const [pickedTheme, setPickedTheme] = useState(currentTheme ?? "molten");
   const pendingRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) ?? "/";
 
@@ -44,6 +69,7 @@ export default function SetupProfileScreen() {
   const uidValid = /^\d{8,14}$/.test(trimmedUid);
   const isLoading = fetchState === "loading";
 
+  /* ── Step 1: fetch UID info ────────────────────────────────────────────── */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!uidValid || isLoading) return;
@@ -58,6 +84,7 @@ export default function SetupProfileScreen() {
       );
       const json = await res.json() as {
         nickname?: string; level?: number; region?: string;
+        liked?: number; rankingPoints?: number; rank?: number;
         manual?: boolean; error?: string;
       };
 
@@ -73,22 +100,17 @@ export default function SetupProfileScreen() {
         return;
       }
 
-      const patchRes = await fetch("/api/users/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ uid: trimmedUid, inGameName: json.nickname }),
-      });
-      if (!patchRes.ok) {
-        const errJson = await patchRes.json().catch(() => ({})) as { error?: string };
-        throw new Error(errJson.error ?? "Failed to save profile.");
-      }
-      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-      if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
       haptic.successTap();
-      setPlayerName(json.nickname);
       setFetchState("idle");
-      setStep("theme");
+      setProfile({
+        nickname:      json.nickname,
+        level:         json.level        ?? 0,
+        region:        json.region       ?? "IND",
+        liked:         json.liked        ?? 0,
+        rankingPoints: json.rankingPoints ?? 0,
+        rank:          json.rank         ?? 0,
+      });
+      setStep("confirm");
     } catch (err) {
       haptic.error();
       setFetchState("error");
@@ -100,6 +122,37 @@ export default function SetupProfileScreen() {
     }
   }
 
+  /* ── Step 2: confirm → save ────────────────────────────────────────────── */
+  async function handleConfirm() {
+    if (!profile || saving) return;
+    haptic.mediumTap();
+    setSaving(true);
+    try {
+      const patchRes = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ uid: trimmedUid, inGameName: profile.nickname }),
+      });
+      if (!patchRes.ok) {
+        const errJson = await patchRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(errJson.error ?? "Failed to save profile.");
+      }
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      if (user?.id) localStorage.setItem(getWelcomeShownKey(user.id), "true");
+      haptic.successTap();
+      setStep("theme");
+    } catch (err) {
+      haptic.error();
+      setFetchState("error");
+      setFetchError(err instanceof Error ? err.message : "Failed to save. Try again.");
+      setStep("uid");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* ── Step 3: theme pick ────────────────────────────────────────────────── */
   function applyTheme(id: string) {
     haptic.lightTap?.();
     setPickedTheme(id);
@@ -135,9 +188,9 @@ export default function SetupProfileScreen() {
 
         <div className="relative z-10 w-full max-w-sm flex flex-col gap-8">
 
+          {/* ── STEP 1: Enter UID ─────────────────────────────────────────── */}
           {step === "uid" && (
             <>
-              {/* Icon + heading */}
               <div className="flex flex-col items-center gap-3">
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
@@ -154,7 +207,6 @@ export default function SetupProfileScreen() {
                 </div>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -204,7 +256,6 @@ export default function SetupProfileScreen() {
                   </div>
                 </div>
 
-                {/* Warning box */}
                 <div
                   className="rounded-xl p-3 flex items-start gap-3"
                   style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.22)" }}
@@ -215,7 +266,6 @@ export default function SetupProfileScreen() {
                   </p>
                 </div>
 
-                {/* Error state */}
                 {fetchState === "error" && (
                   <div
                     className="rounded-xl p-3 flex items-start gap-3"
@@ -240,7 +290,7 @@ export default function SetupProfileScreen() {
                   ) : fetchState === "error" ? (
                     <><RotateCcw className="w-4 h-4" /> Try Again</>
                   ) : (
-                    <>Continue <ChevronRight className="w-4 h-4" /></>
+                    <>Look up UID <ChevronRight className="w-4 h-4" /></>
                   )}
                 </button>
               </form>
@@ -251,9 +301,119 @@ export default function SetupProfileScreen() {
             </>
           )}
 
+          {/* ── STEP 2: Confirm player ────────────────────────────────────── */}
+          {step === "confirm" && profile && (
+            <>
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+                    boxShadow: "0 0 40px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  <BadgeCheck className="w-8 h-8 text-white" strokeWidth={2} />
+                </div>
+                <div className="text-center">
+                  <h1 className="text-xl font-black text-white tracking-tight">Is this you?</h1>
+                  <p className="text-sm text-zinc-400 mt-1">Confirm your Free Fire account before linking</p>
+                </div>
+              </div>
+
+              {/* Player card */}
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              >
+                {/* Top accent bar */}
+                <div
+                  className="h-1 w-full"
+                  style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary)/0.3))" }}
+                />
+
+                <div className="px-5 pt-5 pb-4 flex flex-col gap-4">
+                  {/* Avatar + name row */}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 font-black text-xl text-white"
+                      style={{
+                        background: "linear-gradient(135deg, hsl(var(--primary)/0.3), hsl(var(--primary)/0.12))",
+                        border: "1.5px solid hsl(var(--primary)/0.35)",
+                      }}
+                    >
+                      {profile.nickname.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-lg font-black text-white truncate leading-tight">{profile.nickname}</p>
+                      <p className="text-[11px] text-zinc-500 font-mono mt-0.5">UID: {trimmedUid}</p>
+                    </div>
+                    <div
+                      className="ml-auto shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                      style={{
+                        background: "hsl(var(--primary)/0.12)",
+                        border: "1px solid hsl(var(--primary)/0.3)",
+                        color: "hsl(var(--primary))",
+                      }}
+                    >
+                      Lv {profile.level}
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <StatChip icon={<Globe className="w-3 h-3" />} label="Region" value={profile.region} />
+                    <StatChip icon={<Heart className="w-3 h-3" />} label="Likes" value={profile.liked.toLocaleString()} />
+                    <StatChip icon={<Trophy className="w-3 h-3" />} label="BR Rank" value={rankLabel(profile.rank)} />
+                  </div>
+
+                  {profile.rankingPoints > 0 && (
+                    <div
+                      className="rounded-xl px-3 py-2 flex items-center gap-2"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                    >
+                      <Star className="w-3.5 h-3.5 shrink-0" style={{ color: "hsl(var(--primary))" }} />
+                      <span className="text-[11px] text-zinc-400">Ranking Points:</span>
+                      <span className="text-[11px] font-bold text-white ml-auto">{profile.rankingPoints.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={handleConfirm}
+                  disabled={saving}
+                  className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+                    boxShadow: "0 6px 24px hsl(var(--primary) / 0.35)",
+                  }}
+                >
+                  {saving
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Linking account…</>
+                    : <><Check className="w-4 h-4" /> Yes, this is me — Link account</>
+                  }
+                </button>
+
+                <button
+                  onClick={() => { haptic.lightTap?.(); setStep("uid"); setProfile(null); }}
+                  disabled={saving}
+                  className="w-full h-10 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 text-zinc-300 hover:text-white"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit UID
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── STEP 3: Theme picker ──────────────────────────────────────── */}
           {step === "theme" && (
             <>
-              {/* Icon + heading */}
               <div className="flex flex-col items-center gap-3">
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
@@ -269,14 +429,13 @@ export default function SetupProfileScreen() {
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-2"
                     style={{ background: "hsl(var(--primary)/0.12)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary)/0.25)" }}
                   >
-                    Step 2 of 2
+                    Last step
                   </div>
                   <h1 className="text-xl font-black text-white tracking-tight">Choose Your Loadout</h1>
                   <p className="text-sm text-zinc-400 mt-1">Pick a theme. You can change it anytime.</p>
                 </div>
               </div>
 
-              {/* Theme grid */}
               <div className="grid grid-cols-3 gap-2">
                 {ONBOARDING_THEMES.map(t => {
                   const isActive = pickedTheme === t.id;
@@ -289,12 +448,9 @@ export default function SetupProfileScreen() {
                         border: isActive
                           ? "1.5px solid hsl(var(--primary)/0.7)"
                           : "1.5px solid rgba(255,255,255,0.08)",
-                        boxShadow: isActive
-                          ? "0 0 12px hsl(var(--primary)/0.25)"
-                          : undefined,
+                        boxShadow: isActive ? "0 0 12px hsl(var(--primary)/0.25)" : undefined,
                       }}
                     >
-                      {/* Colour swatch */}
                       <div className="w-full h-10 relative overflow-hidden shrink-0" style={{ background: t.bg }}>
                         <div
                           className="absolute inset-0"
@@ -313,8 +469,6 @@ export default function SetupProfileScreen() {
                           </div>
                         )}
                       </div>
-
-                      {/* Name */}
                       <div
                         className="px-1.5 py-1.5"
                         style={{ background: isActive ? "hsl(var(--primary)/0.08)" : "rgba(255,255,255,0.03)" }}
@@ -326,7 +480,6 @@ export default function SetupProfileScreen() {
                 })}
               </div>
 
-              {/* Action buttons */}
               <div className="flex flex-col gap-2.5">
                 <button
                   onClick={finishThemeStep}
@@ -359,9 +512,23 @@ export default function SetupProfileScreen() {
 
       <WelcomeModal
         open={showWelcome}
-        playerName={playerName}
+        playerName={profile?.nickname ?? ""}
         onContinue={handleWelcomeDone}
       />
     </>
+  );
+}
+
+/* ── Stat chip ─────────────────────────────────────────────────────────────── */
+function StatChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div
+      className="rounded-xl px-2 py-2.5 flex flex-col items-center gap-1 text-center"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <span className="text-zinc-500">{icon}</span>
+      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">{label}</span>
+      <span className="text-[11px] font-bold text-white leading-tight">{value}</span>
+    </div>
   );
 }
