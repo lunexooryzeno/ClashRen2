@@ -66,9 +66,9 @@ async function sendLoginAlert(userId: number, ua: string | null, ip: string | nu
 
 function generatePlatformId(): string {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const digits = Array.from({ length: 14 }, () => Math.floor(Math.random() * 10)).join("");
-  const letter = letters[Math.floor(Math.random() * 26)];
-  return `${digits}${letter}`;
+  const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
+  const alpha = Array.from({ length: 2 }, () => letters[Math.floor(Math.random() * 26)]).join("");
+  return `${digits}${alpha}`;
 }
 
 async function getUniquePlatformId(): Promise<string> {
