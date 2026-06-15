@@ -18,17 +18,17 @@ async function postJson(url: string, body: unknown): Promise<{ ok: boolean; data
 export async function sendOtpViaBrowser(phone: string): Promise<AntcloudResult> {
   try {
     const fullPhone = `+91${phone}`;
-    const first = await postJson(`${ANTCLOUD_BASE}/otp`, { phone: fullPhone, signup: true });
+
+    // Try signup: false first — works for both new and existing accounts on antcloud
+    const first = await postJson(`${ANTCLOUD_BASE}/otp`, { phone: fullPhone, signup: false });
     if (first.ok) return { success: true };
 
-    const msg = (first.data?.message || first.data?.error || "") as string;
-    if (msg.toLowerCase().includes("already exists")) {
-      const second = await postJson(`${ANTCLOUD_BASE}/otp`, { phone: fullPhone, signup: false });
-      if (second.ok) return { success: true };
-      return { success: false, message: (second.data?.message || second.data?.error || "Failed to send OTP") as string };
-    }
+    // Fallback: some accounts may need signup: true on first creation
+    const second = await postJson(`${ANTCLOUD_BASE}/otp`, { phone: fullPhone, signup: true });
+    if (second.ok) return { success: true };
 
-    return { success: false, message: msg || "Failed to send OTP" };
+    const msg = (second.data?.message || second.data?.error || first.data?.message || first.data?.error || "Failed to send OTP") as string;
+    return { success: false, message: msg };
   } catch (err) {
     return { success: false, message: err instanceof Error ? err.message : "Network error" };
   }

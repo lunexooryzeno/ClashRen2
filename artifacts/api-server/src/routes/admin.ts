@@ -25,11 +25,13 @@ import {
   topupRequestsTable,
 } from "@workspace/db";
 import { eq, sql, lt, and, desc, asc, ne, gte, inArray } from "drizzle-orm";
-import { requireAdmin, requireFinanceAdmin } from "../middlewares/auth.js";
+import { requireAdmin, requireFinanceAdmin, getSuperSecret } from "../middlewares/auth.js";
 import { getSupportSettings, saveSupportSettings } from "../lib/supportSettings.js";
 import { getSystemSettings, saveSystemSettings } from "../lib/systemSettings.js";
 import { sendPushToUser, sendPushToAll } from "../lib/push.js";
-import { pushToUser } from "../lib/sse-manager.js";
+import { pushToUser, subscribeAdminChat, unsubscribeAdminChat } from "../lib/sse-manager.js";
+import { markAdminOnline, markAdminOffline } from "../lib/chat-presence.js";
+import jwt from "jsonwebtoken";
 
 function pushAfter(userId: number, type: string, title: string, body: string, url?: string) {
   sendPushToUser(userId, { type, title, body, url: url ?? "/#/notifications" }).catch(() => {});
@@ -1863,13 +1865,59 @@ router.post("/admin/users/:id/messages", requireAdmin, async (req, res) => {
     .insert(supportMessagesTable)
     .values({ userId: id, message: message.trim(), isFromAdmin: true, readByAdmin: true })
     .returning();
-  res.json({
+  const payload = {
     id: msg.id,
     message: msg.message,
     isFromAdmin: true,
     readByUser: false,
     createdAt: msg.createdAt.toISOString(),
+  };
+  // Push real-time to the user's SSE stream
+  pushToUser(id, "chat_message", payload);
+  res.json(payload);
+});
+
+// ── Admin chat SSE (real-time user messages + typing for admin) ───────────────
+
+router.get("/admin/support/:id/chat-sse", (req, res) => {
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) { res.status(400).end(); return; }
+  const tokenParam = req.query.token as string;
+  let authorized = false;
+  if (tokenParam) {
+    try {
+      const p = jwt.verify(tokenParam, getSuperSecret()) as { type?: string };
+      authorized = p?.type === "super_admin";
+    } catch { /* invalid token */ }
+  }
+  if (!authorized) { res.status(401).end(); return; }
+
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
   });
+  res.flushHeaders();
+  res.write(`event: connected\ndata: {}\n\n`);
+
+  subscribeAdminChat(id, res);
+  markAdminOnline(id);
+  pushToUser(id, "support_presence", { online: true });
+
+  req.on("close", () => {
+    unsubscribeAdminChat(id, res);
+    markAdminOffline(id);
+    pushToUser(id, "support_presence", { online: false, lastActive: new Date().toISOString() });
+  });
+});
+
+router.post("/admin/support/:id/typing", requireAdmin, (req, res) => {
+  const id = parseInt(String(req.params.id));
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+  const { typing } = req.body as { typing?: boolean };
+  pushToUser(id, "support_typing", { typing: !!typing });
+  res.sendStatus(204);
 });
 
 router.get("/admin/withdrawals", requireAdmin, async (req, res) => {

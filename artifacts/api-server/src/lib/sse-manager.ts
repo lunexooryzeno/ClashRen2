@@ -48,6 +48,34 @@ export function connectionCount(userId: number): number {
   return clients.get(userId)?.size ?? 0;
 }
 
+// ── Admin support-chat SSE (admin watching a specific user's chat) ────────────
+
+const adminChatClients = new Map<number, Set<Response>>();
+
+/** Register an admin SSE connection for a specific user's support chat. */
+export function subscribeAdminChat(userId: number, res: Response): void {
+  if (!adminChatClients.has(userId)) adminChatClients.set(userId, new Set());
+  adminChatClients.get(userId)!.add(res);
+}
+
+/** Remove an admin SSE connection for a specific user's support chat. */
+export function unsubscribeAdminChat(userId: number, res: Response): void {
+  const set = adminChatClients.get(userId);
+  if (!set) return;
+  set.delete(res);
+  if (set.size === 0) adminChatClients.delete(userId);
+}
+
+/** Push a named SSE event to all admins watching a specific user's support chat. */
+export function pushToAdminChat(userId: number, event: string, data: unknown): void {
+  const set = adminChatClients.get(userId);
+  if (!set || set.size === 0) return;
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of [...set]) {
+    try { res.write(payload); } catch { /* disconnected */ }
+  }
+}
+
 // ── Per-match admin SSE ───────────────────────────────────────────────────────
 
 /** Register an admin SSE connection for a specific slot match. */

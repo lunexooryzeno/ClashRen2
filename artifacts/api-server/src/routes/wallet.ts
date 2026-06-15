@@ -75,7 +75,7 @@ router.post("/wallet/withdraw", requireAuth, withdrawalLimiter, async (req, res)
     return;
   }
   if (!upiId?.trim() || upiId.trim().length < 5) {
-    res.status(400).json({ error: "A valid UPI ID is required." });
+    res.status(400).json({ error: "A valid payout destination is required." });
     return;
   }
 
