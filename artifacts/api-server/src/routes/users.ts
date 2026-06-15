@@ -55,14 +55,6 @@ router.patch("/users/me", requireAuth, async (req, res) => {
     profilePicture?: string | null;
   };
 
-  const trimmedName = inGameName?.trim() || undefined;
-
-  // Guard: reject if there's nothing to update
-  if (uid === undefined && trimmedName === undefined && profilePicture === undefined) {
-    res.status(400).json({ error: "No fields to update." });
-    return;
-  }
-
   // Block if this Free Fire UID is already linked to a different account
   if (uid) {
     const uidCheck = await checkUIDUniqueness(req.user!.userId, uid);
@@ -71,6 +63,8 @@ router.patch("/users/me", requireAuth, async (req, res) => {
       return;
     }
   }
+
+  const trimmedName = inGameName?.trim() || undefined;
 
   const [updated] = await db.update(usersTable)
     .set({

@@ -26,7 +26,7 @@ import { getSystemSettings, saveSystemSettings } from "../lib/systemSettings.js"
 
 const router: IRouter = Router();
 
-const SECURITY_CODE = process.env.ADMIN_SAFE_WORD ?? process.env.ADMIN_SECURITY_CODE ?? "blue apple";
+const SECURITY_CODE = process.env.ADMIN_SECURITY_CODE ?? "blue apple";
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "clutchx";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "gxB>{\\B2=J52:~{`K]ZOAs(5F~D{!FDBrI4ZG8#";
 
@@ -1595,39 +1595,23 @@ router.get("/super-admin/users/roles", requireSuperAdmin, async (_req, res) => {
 // ── GET /super-admin/system-settings ──────────────────────────────────────────
 router.get("/super-admin/system-settings", requireSuperAdmin, (_req, res) => {
   const s = getSystemSettings();
-  const mask = (v: string) => v ? `••••••••${v.slice(-4)}` : "";
+  const key = s.freefireApiKey;
   res.json({
-    freefireApiKeySet: !!s.freefireApiKey,
-    freefireApiKeyPreview: mask(s.freefireApiKey),
-    hlGamingUseruidSet: !!s.hlGamingUseruid,
-    hlGamingUseruidPreview: mask(s.hlGamingUseruid),
-    hlGamingApiKeySet: !!s.hlGamingApiKey,
-    hlGamingApiKeyPreview: mask(s.hlGamingApiKey),
-    gameskinboApiKeySet: !!s.gameskinboApiKey,
-    gameskinboApiKeyPreview: mask(s.gameskinboApiKey),
+    freefireApiKeySet: !!key,
+    freefireApiKeyPreview: key ? `••••••••${key.slice(-4)}` : "",
   });
 });
 
 // ── PUT /super-admin/system-settings ──────────────────────────────────────────
 router.put("/super-admin/system-settings", requireSuperAdmin, (req, res) => {
-  const { freefireApiKey, hlGamingUseruid, hlGamingApiKey, gameskinboApiKey } =
-    req.body as { freefireApiKey?: string; hlGamingUseruid?: string; hlGamingApiKey?: string; gameskinboApiKey?: string };
+  const { freefireApiKey } = req.body as { freefireApiKey?: string };
   const updated = saveSystemSettings({
     ...(freefireApiKey !== undefined && { freefireApiKey: freefireApiKey.trim() }),
-    ...(hlGamingUseruid !== undefined && { hlGamingUseruid: hlGamingUseruid.trim() }),
-    ...(hlGamingApiKey !== undefined && { hlGamingApiKey: hlGamingApiKey.trim() }),
-    ...(gameskinboApiKey !== undefined && { gameskinboApiKey: gameskinboApiKey.trim() }),
   });
-  const mask = (v: string) => v ? `••••••••${v.slice(-4)}` : "";
+  const key = updated.freefireApiKey;
   res.json({
-    freefireApiKeySet: !!updated.freefireApiKey,
-    freefireApiKeyPreview: mask(updated.freefireApiKey),
-    hlGamingUseruidSet: !!updated.hlGamingUseruid,
-    hlGamingUseruidPreview: mask(updated.hlGamingUseruid),
-    hlGamingApiKeySet: !!updated.hlGamingApiKey,
-    hlGamingApiKeyPreview: mask(updated.hlGamingApiKey),
-    gameskinboApiKeySet: !!updated.gameskinboApiKey,
-    gameskinboApiKeyPreview: mask(updated.gameskinboApiKey),
+    freefireApiKeySet: !!key,
+    freefireApiKeyPreview: key ? `••••••••${key.slice(-4)}` : "",
   });
 });
 
