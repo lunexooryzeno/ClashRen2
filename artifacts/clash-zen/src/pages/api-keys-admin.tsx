@@ -40,7 +40,12 @@ async function apiFetch<T>(path: string, token: string, opts: RequestInit = {}):
   return res.json() as Promise<T>;
 }
 
-interface SystemSettings { freefireApiKeySet: boolean; freefireApiKeyPreview: string; }
+interface SystemSettings {
+  freefireApiKeySet: boolean; freefireApiKeyPreview: string;
+  hlGamingUseruidSet: boolean; hlGamingUseruidPreview: string;
+  hlGamingApiKeySet: boolean; hlGamingApiKeyPreview: string;
+  gameskinboApiKeySet: boolean; gameskinboApiKeyPreview: string;
+}
 interface PaymentSettings {
   upiId: string; upiName: string; ratePerDiamond: number;
   minTopup: number; minWithdrawal: number; isEnabled: boolean; withdrawalEnabled: boolean;
@@ -68,6 +73,16 @@ export default function ApiKeysAdminPage() {
   const [keyInput, setKeyInput] = useState("");
   const [keyVisible, setKeyVisible] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
+
+  const [hlUseruidInput, setHlUseruidInput] = useState("");
+  const [hlApiKeyInput, setHlApiKeyInput] = useState("");
+  const [hlUseruidVisible, setHlUseruidVisible] = useState(false);
+  const [hlApiKeyVisible, setHlApiKeyVisible] = useState(false);
+  const [savingHl, setSavingHl] = useState(false);
+
+  const [gameskinboInput, setGameskinboInput] = useState("");
+  const [gameskinboVisible, setGameskinboVisible] = useState(false);
+  const [savingGameskinbo, setSavingGameskinbo] = useState(false);
 
   const [paySettings, setPaySettings] = useState<PaymentSettings | null>(null);
   const [loadingPay, setLoadingPay] = useState(false);
@@ -143,6 +158,44 @@ export default function ApiKeysAdminPage() {
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) { handleAuthError(navigate); return; }
       toast({ title: "Failed to save key", variant: "destructive" });
     } finally { setSavingKey(false); }
+  };
+
+  const handleSaveHLGaming = async () => {
+    if ((!hlUseruidInput.trim() && !hlApiKeyInput.trim()) || savingHl || !token) return;
+    setSavingHl(true);
+    try {
+      const body: Record<string, string> = {};
+      if (hlUseruidInput.trim()) body.hlGamingUseruid = hlUseruidInput.trim();
+      if (hlApiKeyInput.trim()) body.hlGamingApiKey = hlApiKeyInput.trim();
+      const updated = await apiFetch<SystemSettings>("/super-admin/system-settings", token, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      setSysSettings(updated);
+      setHlUseruidInput("");
+      setHlApiKeyInput("");
+      toast({ title: "HL Gaming credentials saved!" });
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) { handleAuthError(navigate); return; }
+      toast({ title: "Failed to save HL Gaming credentials", variant: "destructive" });
+    } finally { setSavingHl(false); }
+  };
+
+  const handleSaveGameskinbo = async () => {
+    if (!gameskinboInput.trim() || savingGameskinbo || !token) return;
+    setSavingGameskinbo(true);
+    try {
+      const updated = await apiFetch<SystemSettings>("/super-admin/system-settings", token, {
+        method: "PUT",
+        body: JSON.stringify({ gameskinboApiKey: gameskinboInput.trim() }),
+      });
+      setSysSettings(updated);
+      setGameskinboInput("");
+      toast({ title: "Gameskinbo API key saved!" });
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) { handleAuthError(navigate); return; }
+      toast({ title: "Failed to save Gameskinbo key", variant: "destructive" });
+    } finally { setSavingGameskinbo(false); }
   };
 
   const handleSaveWebhook = async () => {
@@ -391,6 +444,159 @@ export default function ApiKeysAdminPage() {
                 style={{ background: "rgba(245,158,11,0.18)", border: "1px solid rgba(245,158,11,0.3)", color: "#fcd34d" }}
               >
                 {savingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Save Key</>}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── HL GAMING API ── */}
+        <div>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-[0.18em] font-bold mb-3 px-1">HL Gaming (Primary Source)</p>
+
+          {sysSettings && (
+            <div className={`rounded-2xl px-4 py-3 flex items-center gap-3 mb-3 ${
+              sysSettings.hlGamingApiKeySet && sysSettings.hlGamingUseruidSet
+                ? "bg-emerald-500/8 border border-emerald-500/20"
+                : "bg-zinc-800/60 border border-white/6"
+            }`}>
+              {sysSettings.hlGamingApiKeySet && sysSettings.hlGamingUseruidSet ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-emerald-300">HL Gaming active — primary source</span>
+                    <span className="text-[11px] text-zinc-500 font-mono truncate">UID: {sysSettings.hlGamingUseruidPreview} · Key: {sysSettings.hlGamingApiKeyPreview}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-yellow-300">HL Gaming not configured</span>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">Will fall back to Gameskinbo or manual entry.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(16,185,129,0.18)", backdropFilter: "blur(12px)" }}>
+            <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(16,185,129,0.06)" }}>
+              <KeyRound className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2} />
+              <span className="text-[10px] text-emerald-400/80 uppercase tracking-[0.15em] font-bold">HL Gaming Official API</span>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5 block">User UID (useruid)</label>
+                <div className="relative">
+                  <input
+                    type={hlUseruidVisible ? "text" : "password"}
+                    value={hlUseruidInput}
+                    onChange={e => setHlUseruidInput(e.target.value)}
+                    placeholder={sysSettings?.hlGamingUseruidSet ? "Replace existing useruid…" : "Enter your HL Gaming useruid…"}
+                    autoComplete="off"
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/8 px-3 pr-10 text-sm text-white font-mono outline-none focus:border-emerald-500/40 transition-colors"
+                  />
+                  <button type="button" onClick={() => setHlUseruidVisible(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                    {hlUseruidVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5 block">API Key (api)</label>
+                <div className="relative">
+                  <input
+                    type={hlApiKeyVisible ? "text" : "password"}
+                    value={hlApiKeyInput}
+                    onChange={e => setHlApiKeyInput(e.target.value)}
+                    placeholder={sysSettings?.hlGamingApiKeySet ? "Replace existing API key…" : "Enter your HL Gaming API key…"}
+                    autoComplete="off"
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/8 px-3 pr-10 text-sm text-white font-mono outline-none focus:border-emerald-500/40 transition-colors"
+                  />
+                  <button type="button" onClick={() => setHlApiKeyVisible(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                    {hlApiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-600 mt-1.5">
+                  Get from <span className="text-emerald-400/70 font-mono">proapis.hlgamingofficial.com</span>
+                </p>
+              </div>
+              <button
+                disabled={savingHl || (!hlUseruidInput.trim() && !hlApiKeyInput.trim())}
+                onClick={handleSaveHLGaming}
+                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-[0.98]"
+                style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#6ee7b7" }}
+              >
+                {savingHl ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Save HL Gaming Credentials</>}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── GAMESKINBO API ── */}
+        <div>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-[0.18em] font-bold mb-3 px-1">Gameskinbo (Secondary Source)</p>
+
+          {sysSettings && (
+            <div className={`rounded-2xl px-4 py-3 flex items-center gap-3 mb-3 ${
+              sysSettings.gameskinboApiKeySet
+                ? "bg-blue-500/8 border border-blue-500/20"
+                : "bg-zinc-800/60 border border-white/6"
+            }`}>
+              {sysSettings.gameskinboApiKeySet ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-blue-300">Gameskinbo active — secondary source</span>
+                    <span className="text-[11px] text-zinc-500 font-mono truncate">{sysSettings.gameskinboApiKeyPreview}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-yellow-300">Gameskinbo not configured</span>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">Will fall back to manual entry if HL Gaming also fails.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(59,130,246,0.18)", backdropFilter: "blur(12px)" }}>
+            <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(59,130,246,0.06)" }}>
+              <KeyRound className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />
+              <span className="text-[10px] text-blue-400/80 uppercase tracking-[0.15em] font-bold">Gameskinbo API Key</span>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5 block">
+                  {sysSettings?.gameskinboApiKeySet ? "Replace existing key" : "Set API key"}
+                </label>
+                <div className="relative">
+                  <input
+                    type={gameskinboVisible ? "text" : "password"}
+                    value={gameskinboInput}
+                    onChange={e => setGameskinboInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") handleSaveGameskinbo(); }}
+                    placeholder="Paste your Gameskinbo API key…"
+                    autoComplete="off"
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/8 px-3 pr-10 text-sm text-white font-mono outline-none focus:border-blue-500/40 transition-colors"
+                  />
+                  <button type="button" onClick={() => setGameskinboVisible(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                    {gameskinboVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-600 mt-1.5">
+                  Get from <span className="text-blue-400/70 font-mono">api.gameskinbo.com</span>
+                </p>
+              </div>
+              <button
+                disabled={savingGameskinbo || !gameskinboInput.trim()}
+                onClick={handleSaveGameskinbo}
+                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-[0.98]"
+                style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)", color: "#93c5fd" }}
+              >
+                {savingGameskinbo ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Save Gameskinbo Key</>}
               </button>
             </div>
           </div>

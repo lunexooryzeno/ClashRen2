@@ -5,10 +5,12 @@ import { ArrowLeft, Gem, ChevronRight, Zap, Star, ScrollText } from "lucide-reac
 import { haptic } from "@/lib/haptics";
 
 const PRESETS = [
-  { rupees: 50,  tag: null,      accent: "rgba(59,130,246,0.9)" },
-  { rupees: 100, tag: "Popular", accent: "rgba(234,88,12,0.9)" },
-  { rupees: 200, tag: null,      accent: "rgba(139,92,246,0.9)" },
-  { rupees: 500, tag: "Best Value", accent: "rgba(16,185,129,0.9)" },
+  { rupees: 10,  tag: null,         accent: "rgba(20,184,166,0.9)"  },
+  { rupees: 20,  tag: null,         accent: "rgba(99,102,241,0.9)"  },
+  { rupees: 50,  tag: null,         accent: "rgba(59,130,246,0.9)"  },
+  { rupees: 100, tag: "Popular",    accent: "rgba(234,88,12,0.9)"   },
+  { rupees: 200, tag: null,         accent: "rgba(139,92,246,0.9)"  },
+  { rupees: 500, tag: "Best Value", accent: "rgba(16,185,129,0.9)"  },
 ];
 
 const PARTICLES = [
@@ -76,7 +78,7 @@ export default function TopUpPage() {
   const [popKey, setPopKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [rate, setRate] = useState(0.5);
-  const [globalMinTopup, setGlobalMinTopup] = useState(20);
+  const [globalMinTopup, setGlobalMinTopup] = useState(10);
 
   // Per-user override takes priority; falls back to global setting
   const minTopup = user?.minTopup ?? globalMinTopup;
