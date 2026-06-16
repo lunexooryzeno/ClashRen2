@@ -6,10 +6,16 @@ const SETTINGS_FILE = join(DATA_DIR, "system-settings.json");
 
 export interface SystemSettings {
   freefireApiKey: string;
+  hlGamingUseruid: string;
+  hlGamingApiKey: string;
+  gameskinboApiKey: string;
 }
 
 const DEFAULTS: SystemSettings = {
   freefireApiKey: "",
+  hlGamingUseruid: "",
+  hlGamingApiKey: "",
+  gameskinboApiKey: "",
 };
 
 export function getSystemSettings(): SystemSettings {

@@ -1,12 +1,15 @@
 import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "next-themes";
 import { haptic } from "@/lib/haptics";
+import { apiPost } from "@/lib/api";
 import {
   Trophy, Gem, Shield, CheckCircle2,
   Users, Swords, Wallet, Zap, Clock,
-  ChevronRight,
+  ChevronRight, Palette, Check,
 } from "lucide-react";
+import { THEME_CATALOG } from "@/lib/themes";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
 
@@ -69,7 +72,6 @@ function JoinVisual({ accent }: { accent: string }) {
             boxShadow: `0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px ${accent}10 inset, 0 0 36px ${accent}18`,
           }}
         >
-          {/* Header */}
           <div className="px-4 pt-4 pb-3">
             <div className="flex items-center gap-2 mb-3">
               <Swords className="w-4 h-4" style={{ color: accent }} />
@@ -104,7 +106,7 @@ function JoinVisual({ accent }: { accent: string }) {
               style={{ background: `${accent}18`, border: `1px solid ${accent}35`, color: accent }}
             >
               <Zap className="w-4 h-4" />
-              JOIN ARENA · 20 💎
+              JOIN ARENA · 20 Diamonds
             </div>
           </div>
         </div>
@@ -125,7 +127,6 @@ function RewardsVisual({ accent }: { accent: string }) {
         <div className="w-72 h-72 rounded-full blur-3xl" style={{ background: `${accent}18` }} />
       </div>
 
-      {/* Falling gems */}
       {[0, 1, 2, 3, 4].map(i => (
         <div
           key={i}
@@ -141,7 +142,6 @@ function RewardsVisual({ accent }: { accent: string }) {
         </div>
       ))}
 
-      {/* Wallet card */}
       <div style={{ animation: "ob-float 3.6s ease-in-out infinite" }}>
         <div
           className="w-56 rounded-2xl px-5 pt-5 pb-4"
@@ -159,7 +159,7 @@ function RewardsVisual({ accent }: { accent: string }) {
             <span className="font-heading text-4xl font-bold text-white tabular-nums">+500</span>
           </div>
           <div className="text-center mb-4">
-            <span className="text-xs text-zinc-600">≈ ₹250.00</span>
+            <span className="text-xs text-zinc-600">Rs. 250.00</span>
           </div>
           <div
             className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm"
@@ -170,7 +170,6 @@ function RewardsVisual({ accent }: { accent: string }) {
           </div>
         </div>
 
-        {/* Credit toast */}
         <div
           className="mt-2.5 flex items-center gap-2.5 px-3 py-2.5 rounded-2xl"
           style={{
@@ -203,7 +202,6 @@ function SafetyVisual({ accent }: { accent: string }) {
       </div>
 
       <div className="flex flex-col items-center">
-        {/* Shield + rings */}
         <div className="relative" style={{ width: 96, height: 96 }}>
           {[0, 1, 2].map(i => (
             <div
@@ -240,7 +238,6 @@ function SafetyVisual({ accent }: { accent: string }) {
           </div>
         </div>
 
-        {/* Verification rows */}
         <div className="mt-10 space-y-2 w-56">
           {CHECKS.map((text, i) => (
             <div
@@ -258,6 +255,73 @@ function SafetyVisual({ accent }: { accent: string }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Visual: step 4 — Theme picker ───────────────────────────────────────────
+const POPULAR_THEMES = THEME_CATALOG.filter(t => t.popular && !t.isSystem).slice(0, 12);
+
+function ThemePickerStep({
+  selectedId,
+  onSelect,
+}: { selectedId: string; onSelect: (id: string) => void }) {
+  return (
+    <div className="flex flex-col items-center w-full px-2">
+      <div
+        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+        style={{ background: "rgba(99,102,241,0.14)", border: "1px solid rgba(99,102,241,0.28)" }}
+      >
+        <Palette className="w-7 h-7" style={{ color: "#818cf8" }} />
+      </div>
+      <div
+        className="grid gap-2 w-full"
+        style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+      >
+        {POPULAR_THEMES.map(t => {
+          const active = selectedId === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onSelect(t.id)}
+              className="relative rounded-xl overflow-hidden transition-all active:scale-95"
+              style={{
+                border: active ? "2px solid #818cf8" : "1.5px solid rgba(255,255,255,0.08)",
+                boxShadow: active ? "0 0 0 3px rgba(99,102,241,0.25)" : "none",
+              }}
+            >
+              <div className="h-10 relative" style={{ background: t.bg }}>
+                <div
+                  className="absolute inset-0"
+                  style={{ background: `linear-gradient(135deg,${t.accent}30 0%,transparent 60%)` }}
+                />
+                <div
+                  className="absolute bottom-1 left-1 w-3 h-3 rounded-sm"
+                  style={{ background: t.accent }}
+                />
+                <div
+                  className="absolute bottom-1 right-1 w-2.5 h-2.5 rounded-sm opacity-60"
+                  style={{ background: t.accent2 }}
+                />
+                {active && (
+                  <div
+                    className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                    style={{ background: "#818cf8" }}
+                  >
+                    <Check className="w-2 h-2 text-white" strokeWidth={3} />
+                  </div>
+                )}
+              </div>
+              <div
+                className="px-1.5 py-1"
+                style={{ background: active ? "rgba(99,102,241,0.10)" : "rgba(14,14,16,0.9)" }}
+              >
+                <p className="text-[8px] font-bold text-white leading-tight truncate">{t.name}</p>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -303,28 +367,38 @@ const ANIM_CSS = `
 }
 `;
 
+const TOTAL_STEPS = STEPS.length + 1; // 3 info steps + 1 theme step
+
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const { setTheme } = useTheme();
   const touchX = useRef(0);
+  const [pendingTheme, setPendingTheme] = useState("molten");
 
-  const finish = useCallback(() => {
+  const isThemeStep = step === STEPS.length;
+
+  const finish = useCallback((chosenTheme?: string) => {
     if (user?.id) {
       localStorage.setItem(`cz:onboarded:${user.id}`, "true");
       localStorage.setItem(`clash-ren:welcomed:${user.id}`, "true");
     }
+    if (chosenTheme) {
+      setTheme(chosenTheme);
+      apiPost("/users/theme", { theme: chosenTheme }).catch(() => {});
+    }
     const dest = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) || "/";
     sessionStorage.removeItem(POST_WELCOME_REDIRECT_KEY);
     navigate(dest);
-  }, [user, navigate]);
+  }, [user, navigate, setTheme]);
 
   const advance = useCallback(() => {
     haptic.softTap();
-    if (step < STEPS.length - 1) setStep(s => s + 1);
-    else finish();
-  }, [step, finish]);
+    if (step < TOTAL_STEPS - 1) setStep(s => s + 1);
+    else finish(pendingTheme);
+  }, [step, finish, pendingTheme]);
 
   const back = useCallback(() => {
     if (step > 0) {
@@ -338,13 +412,16 @@ export default function OnboardingPage() {
   }, []);
 
   const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (isThemeStep) return;
     const dx = e.changedTouches[0].clientX - touchX.current;
     if (Math.abs(dx) < 55) return;
     if (dx < 0) advance();
     else back();
-  }, [advance, back]);
+  }, [advance, back, isThemeStep]);
 
-  const cur = STEPS[step];
+  const cur = isThemeStep ? null : STEPS[step];
+  const accent = cur?.accent ?? "#818cf8";
+  const glow   = cur?.glow   ?? "rgba(99,102,241,0.30)";
 
   return (
     <div
@@ -361,14 +438,13 @@ export default function OnboardingPage() {
 
       {/* ── Progress bars ── */}
       <div className="flex gap-1.5 px-5 pt-4 pb-1 shrink-0">
-        {STEPS.map((_, i) => (
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <div key={i} className="flex-1 h-[3px] rounded-full overflow-hidden bg-white/8">
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{
-                width: i < step ? "100%" : i === step ? "100%" : "0%",
-                background: i <= step ? cur.accent : "transparent",
-                transitionDelay: i === step ? "0ms" : "0ms",
+                width: i <= step ? "100%" : "0%",
+                background: i <= step ? accent : "transparent",
               }}
             />
           </div>
@@ -385,66 +461,95 @@ export default function OnboardingPage() {
         </button>
       </div>
 
-      {/* ── Visual area ── */}
-      <div
-        key={`vis-${step}`}
-        className="shrink-0 px-4"
-        style={{ height: "38%", animation: "ob-vis-enter 0.4s ease-out both" }}
-      >
-        {step === 0 && <JoinVisual accent={cur.accent} />}
-        {step === 1 && <RewardsVisual accent={cur.accent} />}
-        {step === 2 && <SafetyVisual accent={cur.accent} />}
-      </div>
-
-      {/* ── Text area ── */}
-      <div
-        key={`txt-${step}`}
-        className="flex-1 flex flex-col px-6 pt-2 overflow-hidden"
-        style={{ animation: "ob-step-enter 0.38s ease-out both" }}
-      >
-        {/* Badge */}
-        <p
-          className="text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
-          style={{ color: cur.accent }}
+      {/* ── Theme selection step ── */}
+      {isThemeStep ? (
+        <div
+          key="theme-step"
+          className="flex-1 flex flex-col px-5 overflow-hidden"
+          style={{ animation: "ob-step-enter 0.38s ease-out both" }}
         >
-          {cur.badge}
-        </p>
-
-        {/* Title */}
-        <h2 className="font-heading font-bold text-white leading-[1.05] mb-3" style={{ fontSize: "clamp(2rem,9vw,2.6rem)", whiteSpace: "pre-line" }}>
-          {cur.title}
-        </h2>
-
-        {/* Body */}
-        <p className="text-sm text-zinc-500 leading-relaxed mb-4">
-          {cur.body}
-        </p>
-
-        {/* Bullets */}
-        <div className="space-y-2.5">
-          {cur.bullets.map(({ icon: Icon, text }, i) => (
-            <div
-              key={text}
-              className="flex items-center gap-3"
-              style={{ animation: `ob-step-enter 0.38s ${0.06 + i * 0.07}s both` }}
-            >
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${cur.accent}14`, border: `1px solid ${cur.accent}22` }}
-              >
-                <Icon className="w-4 h-4" style={{ color: cur.accent }} />
-              </div>
-              <span className="text-sm text-zinc-300 font-medium">{text}</span>
-            </div>
-          ))}
+          <p
+            className="text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
+            style={{ color: accent }}
+          >
+            ALMOST THERE  ·  4 OF 4
+          </p>
+          <h2
+            className="font-heading font-bold text-white leading-[1.05] mb-1"
+            style={{ fontSize: "clamp(1.8rem,8vw,2.4rem)", whiteSpace: "pre-line" }}
+          >
+            Pick your{"\n"}style.
+          </h2>
+          <p className="text-sm text-zinc-500 leading-relaxed mb-4">
+            Choose how the app looks. You can always change it later in your profile.
+          </p>
+          <div className="flex-1 overflow-y-auto pb-2">
+            <ThemePickerStep selectedId={pendingTheme} onSelect={id => { haptic.softTap(); setPendingTheme(id); }} />
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* ── Visual area ── */}
+          <div
+            key={`vis-${step}`}
+            className="shrink-0 px-4"
+            style={{ height: "38%", animation: "ob-vis-enter 0.4s ease-out both" }}
+          >
+            {step === 0 && <JoinVisual accent={cur!.accent} />}
+            {step === 1 && <RewardsVisual accent={cur!.accent} />}
+            {step === 2 && <SafetyVisual accent={cur!.accent} />}
+          </div>
+
+          {/* ── Text area ── */}
+          <div
+            key={`txt-${step}`}
+            className="flex-1 flex flex-col px-6 pt-2 overflow-hidden"
+            style={{ animation: "ob-step-enter 0.38s ease-out both" }}
+          >
+            <p
+              className="text-[10px] font-bold tracking-[0.18em] uppercase mb-2"
+              style={{ color: cur!.accent }}
+            >
+              {cur!.badge}
+            </p>
+
+            <h2
+              className="font-heading font-bold text-white leading-[1.05] mb-3"
+              style={{ fontSize: "clamp(2rem,9vw,2.6rem)", whiteSpace: "pre-line" }}
+            >
+              {cur!.title}
+            </h2>
+
+            <p className="text-sm text-zinc-500 leading-relaxed mb-4">
+              {cur!.body}
+            </p>
+
+            <div className="space-y-2.5">
+              {cur!.bullets.map(({ icon: Icon, text }, i) => (
+                <div
+                  key={text}
+                  className="flex items-center gap-3"
+                  style={{ animation: `ob-step-enter 0.38s ${0.06 + i * 0.07}s both` }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `${cur!.accent}14`, border: `1px solid ${cur!.accent}22` }}
+                  >
+                    <Icon className="w-4 h-4" style={{ color: cur!.accent }} />
+                  </div>
+                  <span className="text-sm text-zinc-300 font-medium">{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Footer ── */}
       <div className="shrink-0 px-5 pb-5 pt-4">
         {/* Dot indicators */}
         <div className="flex items-center justify-center gap-2 mb-4">
-          {STEPS.map((_, i) => (
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <button
               key={i}
               onClick={() => { haptic.softTap(); setStep(i); }}
@@ -452,7 +557,7 @@ export default function OnboardingPage() {
               style={{
                 width: i === step ? 22 : 6,
                 height: 6,
-                background: i === step ? cur.accent : "rgba(255,255,255,0.18)",
+                background: i === step ? accent : "rgba(255,255,255,0.18)",
               }}
             />
           ))}
@@ -460,14 +565,23 @@ export default function OnboardingPage() {
 
         {/* CTA */}
         <button
-          onClick={() => { haptic.mediumTap(); advance(); }}
+          onClick={() => {
+            haptic.mediumTap();
+            if (isThemeStep) finish(pendingTheme);
+            else advance();
+          }}
           className="w-full py-4 rounded-2xl font-heading font-bold text-lg tracking-wide text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
           style={{
-            background: cur.accent,
-            boxShadow: `0 4px 24px ${cur.glow}, 0 0 0 1px ${cur.accent}30 inset`,
+            background: accent,
+            boxShadow: `0 4px 24px ${glow}, 0 0 0 1px ${accent}30 inset`,
           }}
         >
-          {step < STEPS.length - 1 ? "Next" : "Start Playing"}
+          {isThemeStep
+            ? "Start Playing"
+            : step < STEPS.length - 1
+              ? "Next"
+              : "Choose Your Style"
+          }
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
