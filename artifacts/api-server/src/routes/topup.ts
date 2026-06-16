@@ -1,7 +1,13 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { topupRequestsTable, usersTable, walletTransactionsTable, balanceChangeLogsTable } from "@workspace/db";
-import { eq, sql, and, gt } from "drizzle-orm";
+import {
+  topupRequestsTable,
+  usersTable,
+  walletTransactionsTable,
+  balanceChangeLogsTable,
+  paymentSessionsTable,
+} from "@workspace/db";
+import { eq, sql, and, gt, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { topupLimiter } from "../middleware/rate-limiter.js";
 import { getPaymentSettings, savePaymentSettings } from "../lib/paymentSettings.js";
@@ -9,6 +15,8 @@ import { pushToUser } from "../lib/sse-manager.js";
 import { createHash } from "crypto";
 
 const router: IRouter = Router();
+
+const SESSION_DURATION_MS = 5 * 60 * 1_000; // 5 minutes
 
 function getWebhookSecret(): string {
   const settings = getPaymentSettings();
@@ -24,8 +32,174 @@ router.get("/topup/bp-config", requireAuth, (req, res) => {
   });
 });
 
+// ── POST /topup/session ────────────────────────────────────────────────────
+// Creates or restores a paisa-offset payment session for the user.
+// Each concurrent ₹X top-up gets a unique paisa offset (₹X.00, ₹X.01, …)
+// so that BharatPe auto-detection can identify which user paid.
+router.post("/topup/session", requireAuth, topupLimiter, async (req, res) => {
+  const { rupees, diamonds } = req.body as { rupees?: number; diamonds?: number };
+  const userId = req.user!.userId;
+
+  if (!rupees || rupees < 1 || !diamonds || diamonds < 1) {
+    res.status(400).json({ error: "Invalid amount." });
+    return;
+  }
+
+  const settings = getPaymentSettings();
+  const user = await db.query.usersTable.findFirst({
+    where: eq(usersTable.id, userId),
+    columns: { id: true, minTopup: true },
+  });
+
+  const effectiveMin = user?.minTopup ?? settings.minTopup;
+  if (rupees < effectiveMin) {
+    res.status(400).json({ error: `Minimum top-up amount is ₹${effectiveMin}.` });
+    return;
+  }
+
+  // Cancel any expired sessions for this user first
+  await db.update(paymentSessionsTable)
+    .set({ status: "expired" })
+    .where(and(
+      eq(paymentSessionsTable.userId, userId),
+      eq(paymentSessionsTable.status, "active"),
+      lte(paymentSessionsTable.expiresAt, new Date()),
+    ));
+
+  // Check if user already has an active session for this exact rupee amount
+  const existing = await db.query.paymentSessionsTable.findFirst({
+    where: and(
+      eq(paymentSessionsTable.userId, userId),
+      eq(paymentSessionsTable.baseRupees, rupees),
+      eq(paymentSessionsTable.status, "active"),
+      gt(paymentSessionsTable.expiresAt, new Date()),
+    ),
+  });
+
+  if (existing) {
+    const exactAmount = parseFloat((existing.baseRupees + existing.paisaOffset / 100).toFixed(2));
+    res.json({
+      sessionId: existing.id,
+      exactAmount,
+      paisaOffset: existing.paisaOffset,
+      expiresAt: existing.expiresAt.toISOString(),
+      diamonds: existing.diamonds,
+      restored: true,
+    });
+    return;
+  }
+
+  // Find next available paisa offset for this base rupee amount across all active sessions
+  const concurrentSessions = await db.query.paymentSessionsTable.findMany({
+    where: and(
+      eq(paymentSessionsTable.baseRupees, rupees),
+      eq(paymentSessionsTable.status, "active"),
+      gt(paymentSessionsTable.expiresAt, new Date()),
+    ),
+    columns: { paisaOffset: true },
+  });
+
+  const usedOffsets = new Set(concurrentSessions.map(s => s.paisaOffset));
+  let nextOffset = 0;
+  while (usedOffsets.has(nextOffset) && nextOffset < 100) nextOffset++;
+
+  if (nextOffset >= 100) {
+    res.status(503).json({ error: "Too many concurrent sessions for this amount. Please try again in a few minutes." });
+    return;
+  }
+
+  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+
+  const [session] = await db.insert(paymentSessionsTable).values({
+    userId,
+    baseRupees: rupees,
+    paisaOffset: nextOffset,
+    diamonds,
+    status: "active",
+    expiresAt,
+  }).returning();
+
+  const exactAmount = parseFloat((rupees + nextOffset / 100).toFixed(2));
+
+  res.json({
+    sessionId: session.id,
+    exactAmount,
+    paisaOffset: nextOffset,
+    expiresAt: expiresAt.toISOString(),
+    diamonds,
+    restored: false,
+  });
+});
+
+// ── GET /topup/session/:id ─────────────────────────────────────────────────
+router.get("/topup/session/:id", requireAuth, async (req, res) => {
+  const sessionId = parseInt(req.params.id);
+  const userId = req.user!.userId;
+
+  if (isNaN(sessionId)) {
+    res.status(400).json({ error: "Invalid session ID." });
+    return;
+  }
+
+  const session = await db.query.paymentSessionsTable.findFirst({
+    where: and(
+      eq(paymentSessionsTable.id, sessionId),
+      eq(paymentSessionsTable.userId, userId),
+    ),
+  });
+
+  if (!session) {
+    res.status(404).json({ error: "Session not found." });
+    return;
+  }
+
+  const now = new Date();
+  const isExpired = session.status === "active" && session.expiresAt <= now;
+
+  // Lazily expire if missed by poller
+  if (isExpired) {
+    await db.update(paymentSessionsTable)
+      .set({ status: "expired" })
+      .where(eq(paymentSessionsTable.id, session.id));
+    session.status = "expired";
+  }
+
+  res.json({
+    sessionId: session.id,
+    status: session.status,
+    baseRupees: session.baseRupees,
+    paisaOffset: session.paisaOffset,
+    exactAmount: parseFloat((session.baseRupees + session.paisaOffset / 100).toFixed(2)),
+    diamonds: session.diamonds,
+    expiresAt: session.expiresAt.toISOString(),
+    topupRequestId: session.topupRequestId,
+    matchedAmount: session.matchedAmount,
+  });
+});
+
+// ── DELETE /topup/session/:id ──────────────────────────────────────────────
+router.delete("/topup/session/:id", requireAuth, async (req, res) => {
+  const sessionId = parseInt(req.params.id);
+  const userId = req.user!.userId;
+
+  if (isNaN(sessionId)) {
+    res.status(400).json({ error: "Invalid session ID." });
+    return;
+  }
+
+  await db.update(paymentSessionsTable)
+    .set({ status: "cancelled" })
+    .where(and(
+      eq(paymentSessionsTable.id, sessionId),
+      eq(paymentSessionsTable.userId, userId),
+      eq(paymentSessionsTable.status, "active"),
+    ));
+
+  res.json({ ok: true });
+});
+
 // ── POST /topup/submit ─────────────────────────────────────────────────────
-// Creates a pending topup, forwards to external webhook, returns topupId
+// Legacy: Creates a pending topup with UTR (fallback for manual verification)
 router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
   const { utr, rupees, diamonds } = req.body as {
     utr?: string; rupees?: number; diamonds?: number;
@@ -43,7 +217,6 @@ router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
 
   const cleanUtr = utr.trim();
 
-  // Block duplicate UTR only if a verified top-up already used it
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const existing = await db.query.topupRequestsTable.findFirst({
     where: and(
@@ -57,7 +230,6 @@ router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
     return;
   }
 
-  // Get user's phone and hash it with MD5
   const user = await db.query.usersTable.findFirst({
     where: eq(usersTable.id, userId),
     columns: { id: true, phone: true, diamondBalance: true, minTopup: true },
@@ -67,7 +239,6 @@ router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
     return;
   }
 
-  // Enforce effective minimum top-up (per-user override > global)
   const settings = getPaymentSettings();
   const effectiveMin = user.minTopup ?? settings.minTopup;
   if (rupees < effectiveMin) {
@@ -76,7 +247,6 @@ router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
   }
   const phoneHash = createHash("md5").update(user.phone).digest("hex");
 
-  // Create pending topup record
   const [request] = await db.insert(topupRequestsTable).values({
     userId,
     rupees,
@@ -86,7 +256,6 @@ router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
     bharatpeData: { phoneHash },
   }).returning();
 
-  // Build the MacroDroid verification URL and return it so the browser fires it
   let verifyUrl: string | null = null;
   if (settings.webhookUrl) {
     const base = settings.webhookUrl.replace(/\/+$/, "");
@@ -98,7 +267,6 @@ router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
 });
 
 // ── GET /topup/status/:id ──────────────────────────────────────────────────
-// Frontend polls this to know when diamonds are credited
 router.get("/topup/status/:id", requireAuth, async (req, res) => {
   const topupId = parseInt(req.params.id);
   const userId = req.user!.userId;
@@ -129,14 +297,11 @@ router.get("/topup/status/:id", requireAuth, async (req, res) => {
 });
 
 // ── POST /webhook/payment ──────────────────────────────────────────────────
-// Called by external payment processor to approve or reject a topup
-// Body: { topupId, action: "approve" | "reject", secret, reason? }
 router.post("/webhook/payment", async (req, res) => {
   const { utr, action, secret, reason } = req.body as {
     utr?: string; action?: "approve" | "reject"; secret?: string; reason?: string;
   };
 
-  // Validate secret
   if (!secret || secret !== getWebhookSecret()) {
     res.status(401).json({ error: "Invalid webhook secret." });
     return;
@@ -147,7 +312,6 @@ router.post("/webhook/payment", async (req, res) => {
     return;
   }
 
-  // Find the most recent pending topup matching this UTR
   const topup = await db.query.topupRequestsTable.findFirst({
     where: and(eq(topupRequestsTable.utr, utr.trim()), eq(topupRequestsTable.status, "pending")),
   });
@@ -166,7 +330,6 @@ router.post("/webhook/payment", async (req, res) => {
     return;
   }
 
-  // Approve — credit diamonds
   const userRow = await db.query.usersTable.findFirst({
     where: eq(usersTable.id, topup.userId),
     columns: { id: true, diamondBalance: true },
@@ -197,8 +360,6 @@ router.post("/webhook/payment", async (req, res) => {
     label: `Top-up ₹${topup.rupees} · UTR ${topup.utr}`,
   });
 
-  // Push instant SSE notification so the user sees a confirmation immediately,
-  // even if they navigated away from the waiting screen.
   pushToUser(topup.userId, "topup_verified", {
     topupId: topup.id,
     diamonds: topup.diamonds,

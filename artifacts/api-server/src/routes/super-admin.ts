@@ -416,13 +416,14 @@ router.put("/super-admin/payment-settings", requireSuperAdmin, async (req, res) 
     upiId, upiName, ratePerDiamond, minTopup, minWithdrawal, isEnabled,
     withdrawalEnabled, withdrawalPaused, withdrawalPauseMessage,
     withdrawalWindowEnabled, withdrawalWindowStart, withdrawalWindowEnd, withdrawalProcessingNote,
-    xsrfToken, bharatpeSession, gatewayAlert, webhookUrl, webhookSecret,
+    xsrfToken, bharatpeSession, bharatpeToken, bharatpeMerchantId,
+    gatewayAlert, webhookUrl, webhookSecret,
   } = req.body as {
     upiId?: string; upiName?: string; ratePerDiamond?: number;
     minTopup?: number; minWithdrawal?: number; isEnabled?: boolean;
     withdrawalEnabled?: boolean; withdrawalPaused?: boolean; withdrawalPauseMessage?: string;
     withdrawalWindowEnabled?: boolean; withdrawalWindowStart?: string; withdrawalWindowEnd?: string; withdrawalProcessingNote?: string;
-    xsrfToken?: string; bharatpeSession?: string;
+    xsrfToken?: string; bharatpeSession?: string; bharatpeToken?: string; bharatpeMerchantId?: string;
     gatewayAlert?: { message: string; at: string } | null;
     webhookUrl?: string; webhookSecret?: string;
   };
@@ -431,7 +432,8 @@ router.put("/super-admin/payment-settings", requireSuperAdmin, async (req, res) 
     upiId, upiName, ratePerDiamond, minTopup, minWithdrawal, isEnabled,
     withdrawalEnabled, withdrawalPaused, withdrawalPauseMessage,
     withdrawalWindowEnabled, withdrawalWindowStart, withdrawalWindowEnd, withdrawalProcessingNote,
-    xsrfToken, bharatpeSession, gatewayAlert, webhookUrl, webhookSecret,
+    xsrfToken, bharatpeSession, bharatpeToken, bharatpeMerchantId,
+    gatewayAlert, webhookUrl, webhookSecret,
   });
 
   // If BharatPe credentials were included in the save, forward them to MacroDroid

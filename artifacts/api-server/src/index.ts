@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startBharatpePoller } from "./lib/bharatpePoller.js";
 import { db } from "@workspace/db";
 import {
   scheduledRewardsTable,
@@ -88,6 +89,9 @@ app.listen(port, (err) => {
 
   setInterval(processScheduledRewards, 60_000);
   processScheduledRewards();
+
+  // BharatPe auto-detection poller
+  startBharatpePoller();
 
   // Seed default Gameskinbo API key if none exist
   db.select({ n: count() }).from(freefireApiKeysTable).then(([row]) => {
