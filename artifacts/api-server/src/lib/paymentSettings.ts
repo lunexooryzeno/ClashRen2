@@ -26,8 +26,6 @@ export interface PaymentSettings {
   withdrawalProcessingNote: string;
   xsrfToken: string;
   bharatpeSession: string;
-  bharatpeToken: string;
-  bharatpeMerchantId: string;
   gatewayAlert: GatewayAlert | null;
   webhookUrl: string;
   webhookSecret: string;
@@ -50,8 +48,6 @@ const DEFAULTS: PaymentSettings = {
   withdrawalProcessingNote: "Most withdrawals are processed within 30 minutes · max 12 hours.",
   xsrfToken: "",
   bharatpeSession: "",
-  bharatpeToken: "",
-  bharatpeMerchantId: "69893818",
   gatewayAlert: null,
   webhookUrl: "https://trigger.macrodroid.com/9fa326ec-2426-42fa-9ad1-5aeaa12c27cd",
   webhookSecret: process.env.WEBHOOK_SECRET ?? "",
@@ -67,9 +63,9 @@ export function getPaymentSettings(): PaymentSettings {
   }
 }
 
-export function getPublicPaymentSettings(): Omit<PaymentSettings, "xsrfToken" | "bharatpeSession" | "bharatpeToken"> {
+export function getPublicPaymentSettings(): Omit<PaymentSettings, "xsrfToken" | "bharatpeSession"> {
   const s = getPaymentSettings();
-  const { xsrfToken: _x, bharatpeSession: _b, bharatpeToken: _t, ...pub } = s;
+  const { xsrfToken: _x, bharatpeSession: _b, ...pub } = s;
   return pub;
 }
 

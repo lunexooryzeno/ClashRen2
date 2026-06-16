@@ -1,6 +1,5 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { startBharatpePoller } from "./lib/bharatpePoller.js";
 import { db } from "@workspace/db";
 import {
   scheduledRewardsTable,
@@ -10,9 +9,8 @@ import {
   tournamentParticipantsTable,
   balanceChangeLogsTable,
   tournamentsTable,
-  freefireApiKeysTable,
 } from "@workspace/db";
-import { eq, sql, count } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
@@ -89,20 +87,6 @@ app.listen(port, (err) => {
 
   setInterval(processScheduledRewards, 60_000);
   processScheduledRewards();
-
-  // BharatPe auto-detection poller
-  startBharatpePoller();
-
-  // Seed default Gameskinbo API key if none exist
-  db.select({ n: count() }).from(freefireApiKeysTable).then(([row]) => {
-    if ((row?.n ?? 0) === 0) {
-      db.insert(freefireApiKeysTable)
-        .values({ key: "EriMWHsMRHXfx-cTvlepqW0k8fSaypfee5YzC38B7Jw", label: "Initial Key" })
-        .onConflictDoNothing()
-        .then(() => logger.info("Seeded default Gameskinbo API key"))
-        .catch(e => logger.error({ err: e }, "Failed to seed Gameskinbo API key"));
-    }
-  }).catch(() => {});
 
   // Auto-release room credentials every 30 seconds
   setInterval(processAutoReleases, 30_000);
