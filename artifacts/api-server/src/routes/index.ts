@@ -22,6 +22,7 @@ import bannerUploadRouter from "./banner-upload.js";
 import avatarUploadRouter from "./avatar-upload.js";
 import tournamentUploadRouter from "./tournament-upload.js";
 import slotMatchesRouter from "./slot-matches.js";
+import paymentSessionsRouter from "./payment-sessions.js";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(bannerUploadRouter);
 router.use(avatarUploadRouter);
 router.use(tournamentUploadRouter);
 router.use(slotMatchesRouter);
+router.use(paymentSessionsRouter);
 
 export default router;

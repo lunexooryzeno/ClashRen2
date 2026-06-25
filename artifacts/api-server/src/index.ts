@@ -10,8 +10,9 @@ import {
   balanceChangeLogsTable,
   tournamentsTable,
   freefireApiKeysTable,
+  paymentSessionsTable,
 } from "@workspace/db";
-import { eq, sql, count } from "drizzle-orm";
+import { eq, sql, count, and, lt } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
@@ -103,4 +104,20 @@ app.listen(port, (err) => {
   // Auto-release room credentials every 30 seconds
   setInterval(processAutoReleases, 30_000);
   processAutoReleases();
+
+  // Expire stale payment sessions every 30 seconds
+  async function expirePaymentSessions() {
+    try {
+      await db.update(paymentSessionsTable)
+        .set({ status: "expired" })
+        .where(and(
+          eq(paymentSessionsTable.status, "pending"),
+          lt(paymentSessionsTable.expiresAt, new Date())
+        ));
+    } catch (e) {
+      logger.error({ err: e }, "Error expiring payment sessions");
+    }
+  }
+  setInterval(expirePaymentSessions, 30_000);
+  expirePaymentSessions();
 });

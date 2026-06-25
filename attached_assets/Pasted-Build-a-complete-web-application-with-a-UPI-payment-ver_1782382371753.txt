@@ -1,0 +1,46 @@
+Build a complete web application with a UPI payment verification system using a static BharatPe Merchant QR code. To identify which user made a payment without a dedicated gateway API, we will use a "Dynamic Paisa Pool" mechanism. When multiple users request the same base amount within a 5-minute window, the system increments the request by ₹0.01 (1 paisa) to uniquely map the incoming transaction to the specific user.
+
+Please implement the following architecture, database models, and logic:
+
+### 1. Database Schema
+Implement these key models using the project's preferred database (e.g., SQLite/PostgreSQL):
+- **User**: `id`, `username`, `balance`
+- **PaymentSession**:
+  - `id` (Unique ID)
+  - `user_id` (Foreign Key referencing User)
+  - `base_amount` (Decimal, e.g., 10.00)
+  - `final_amount` (Decimal, e.g., 10.02)
+  - `status` (Enum: PENDING, COMPLETED, EXPIRED, CANCELLED)
+  - `created_at` (Timestamp)
+  - `expires_at` (Timestamp: created_at + 5 minutes)
+
+### 2. Core Payment Logic & Workflow
+
+#### Step A: Requesting a Top-Up
+When a user requests a top-up of a base amount (e.g., ₹10):
+1. Check the database for any active `PENDING` sessions where `expires_at > now()` AND `base_amount == requested_amount`.
+2. **If no active sessions exist**: Assign `final_amount = base_amount` (₹10.00).
+3. **If active sessions exist**: Find the highest `final_amount` currently active in that specific pool and add ₹0.01. (e.g., If active sessions exist for ₹10.00 and ₹10.01, this new user gets ₹10.02).
+4. Save the `PaymentSession` record and redirect the user to the payment page with a 5-minute visual countdown timer.
+
+#### Step B: Frontend UI & QR Generation
+On the payment page:
+1. Generate a dynamic UPI string and render it as a QR code using this format:
+   `upi://pay?pa=YOUR_BHARATPE_VPA@ybl&pn=MERCHANT_NAME&am=FINAL_AMOUNT&cu=INR`
+2. If `final_amount` is greater than `base_amount`, display this prominent message:
+   "This additional charge of X paisa is the transaction charge. Please pay the exact amount shown, or your top-up will fail."
+
+### 3. Session Interruption & Re-entry Logic
+If a user closes the payment tab/page, navigates away, or tries to initiate another top-up:
+1. Check if they have an active `PENDING` session (`expires_at > now()`).
+2. **If active**: Do not let them generate a new amount. Block the creation screen and show a modal saying: "Don’t close the page — your payment session is still active. Please complete your payment of ₹FINAL_AMOUNT."
+3. Provide two buttons in the modal:
+   - **"View Active QR"**: Restores the payment page and countdown screen.
+   - **"Cancel Payment"**: Changes the session status to `CANCELLED`, immediately releasing that specific paisa amount back into the available pool for other users.
+
+### 4. Background Workers / Expiry Logic
+Implement a background worker or cron task that runs every 30 seconds:
+- Query all `PENDING` sessions where `expires_at < now()`.
+- Update their status to `EXPIRED` so their unique paisa offset is freed up for future users.
+
+Please build out the frontend pages, backend API routes, and database tracking according to this specification.
