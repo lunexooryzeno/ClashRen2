@@ -3,8 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import {
   ArrowLeft, Gem, ChevronRight, Zap, Star,
-  AlertTriangle, X, Eye, Shield, Loader2,
-  CheckCircle2, XCircle, Clock,
+  AlertTriangle, X, Eye, Shield, Clock, Loader2,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { haptic } from "@/lib/haptics";
@@ -12,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_UPI_ID   = "BHARATPE2V0D0M2C0A10930@unitype";
 const DEFAULT_UPI_NAME = "BharatPe Merchant";
-const POLL_INTERVAL_MS = 2000;
 const SESSION_MINS     = 5;
 
 const PRESETS = [
@@ -33,7 +31,7 @@ const PARTICLES = [
   { left: "91%", delay: "1.1s", dur: "3.3s", size: 9  },
 ];
 
-type Step = "select" | "qr" | "waiting" | "expired";
+type Step = "select" | "qr" | "expired";
 
 interface PaymentSettings {
   upiId: string; upiName: string;
@@ -289,10 +287,10 @@ function StepSelect({
 
 // ── Step 2: QR code ───────────────────────────────────────────────────────────
 function StepQR({
-  session, upiId, upiName, countdown, onPaid, onBack,
+  session, upiId, upiName, countdown, onBack,
 }: {
   session: SessionData; upiId: string; upiName: string;
-  countdown: number; onPaid: () => void; onBack: () => void;
+  countdown: number; onBack: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t); }, []);
@@ -409,7 +407,7 @@ function StepQR({
                   "Open any UPI app (GPay, PhonePe, Paytm, BHIM…)",
                   "Tap Scan QR and scan the code above",
                   `Enter the exact amount ₹${finalAmount.toFixed(2)} if not pre-filled`,
-                  "Complete the payment, then tap the button below",
+                  "Complete the payment — diamonds will be credited automatically",
                 ].map((step, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-orange-400 mt-px"
@@ -423,114 +421,10 @@ function StepQR({
         </div>
 
         {/* Security badge */}
-        <div className="flex items-center justify-center gap-2 py-1">
+        <div className="flex items-center justify-center gap-2 py-2 pb-6">
           <Shield className="w-3.5 h-3.5 text-violet-400" />
           <span className="text-[11px] text-zinc-500">Payments verified automatically · secured &amp; encrypted</span>
         </div>
-      </div>
-
-      {/* Sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-4"
-        style={{ background: "linear-gradient(to top, rgba(2,2,6,0.98) 60%, transparent 100%)" }}>
-        <button onClick={() => { haptic.mediumTap(); onPaid(); }}
-          className="w-full h-14 rounded-2xl text-white font-bold text-base btn-primary-gradient flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          style={{ boxShadow: "0 0 32px rgba(234,88,12,0.4)" }}>
-          I've Paid — Confirm Now
-        </button>
-      </div>
-    </>
-  );
-}
-
-// ── Step 3: Waiting for confirmation ─────────────────────────────────────────
-function StepWaiting({
-  session, pollElapsed, verified, failed, onNewTopup,
-}: {
-  session: SessionData; pollElapsed: number;
-  verified: boolean; failed: boolean;
-  onNewTopup: () => void;
-}) {
-  const [, navigate] = useLocation();
-  const mins = Math.floor(pollElapsed / 60);
-  const secs = pollElapsed % 60;
-  const elapsed = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-  const finalAmount = parseFloat(session.finalAmount);
-
-  return (
-    <>
-      <div className="h-[2px] w-full btn-primary-gradient opacity-80" />
-      <div className="absolute top-0 right-0 w-[260px] h-[260px] pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)" }} />
-
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-6 py-16">
-
-        {!verified && !failed && (
-          <>
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(234,88,12,0.1)", border: "1px solid rgba(234,88,12,0.25)" }}>
-                <Loader2 className="w-9 h-9 text-orange-400 animate-spin" />
-              </div>
-              <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-                style={{ background: "rgba(234,88,12,0.3)" }} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white mb-1.5">Waiting for Payment</h2>
-              <p className="text-[13px] text-zinc-400 leading-relaxed max-w-[260px]">
-                We'll automatically detect your payment of{" "}
-                <span className="text-white font-bold">₹{finalAmount.toFixed(2)}</span> and
-                credit your diamonds instantly.
-              </p>
-            </div>
-
-            {/* Amount reminder */}
-            <div className="w-full rounded-2xl px-4 py-3"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <p className="text-[10px] text-zinc-600 uppercase tracking-widest mb-1">You paid</p>
-              <p className="text-[22px] font-extrabold text-white tabular-nums">₹{finalAmount.toFixed(2)}</p>
-              <p className="text-[11px] text-zinc-500 mt-1">for {session.diamonds.toLocaleString()} 💎 diamonds</p>
-            </div>
-
-            <p className="text-[11px] text-zinc-600">Checking for {elapsed}…</p>
-          </>
-        )}
-
-        {verified && (
-          <>
-            <div className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)" }}>
-              <CheckCircle2 className="w-9 h-9 text-emerald-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white mb-1.5">Payment Confirmed! 🎉</h2>
-              <p className="text-[13px] text-zinc-400">
-                <span className="text-blue-300 font-bold">{session.diamonds.toLocaleString()} diamonds</span> added. Redirecting to wallet…
-              </p>
-            </div>
-          </>
-        )}
-
-        {failed && !verified && (
-          <>
-            <div className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}>
-              <XCircle className="w-9 h-9 text-red-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white mb-1.5">Verification Timed Out</h2>
-              <p className="text-[13px] text-zinc-400 leading-relaxed">
-                We couldn't detect your payment automatically. If you paid, contact support with your transaction details.
-              </p>
-            </div>
-            <button onClick={() => navigate("/support")}
-              className="w-full h-12 rounded-2xl text-white font-bold text-sm btn-primary-gradient active:scale-[0.98] transition-transform">
-              Contact Support
-            </button>
-            <button onClick={onNewTopup} className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors">
-              Start a new top-up
-            </button>
-          </>
-        )}
       </div>
     </>
   );
@@ -643,7 +537,7 @@ function ActiveSessionModal({
 
 // ── Root page ─────────────────────────────────────────────────────────────────
 export default function TopUpPage() {
-  const { user, invalidateUser } = useAuth();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -665,15 +559,7 @@ export default function TopUpPage() {
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [isCancellingSession, setIsCancellingSession] = useState(false);
 
-  // polling (waiting step)
-  const [pollElapsed, setPollElapsed] = useState(0);
-  const [verified, setVerified]       = useState(false);
-  const [failed, setFailed]           = useState(false);
-
-  const pollTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hardTimeoutRef = useRef<ReturnType<typeof setTimeout>  | null>(null);
-  const countdownRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const minTopup       = user?.minTopup ?? globalMinTopup;
   const customRupees   = parseInt(custom) || 0;
@@ -706,7 +592,7 @@ export default function TopUpPage() {
       })
       .catch(() => {});
 
-    return () => stopAll();
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
   // countdown ticker while on QR step
@@ -726,46 +612,6 @@ export default function TopUpPage() {
     }, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [step, session?.id]);
-
-  function stopAll() {
-    if (pollTimerRef.current)   { clearInterval(pollTimerRef.current);   pollTimerRef.current   = null; }
-    if (elapsedRef.current)     { clearInterval(elapsedRef.current);      elapsedRef.current     = null; }
-    if (hardTimeoutRef.current) { clearTimeout(hardTimeoutRef.current);   hardTimeoutRef.current = null; }
-    if (countdownRef.current)   { clearInterval(countdownRef.current);    countdownRef.current   = null; }
-  }
-
-  // poll session status until "completed"
-  function startPolling(sess: SessionData) {
-    setPollElapsed(0); setVerified(false); setFailed(false);
-    const t0 = Date.now();
-
-    elapsedRef.current = setInterval(() => {
-      setPollElapsed(Math.floor((Date.now() - t0) / 1000));
-    }, 1000);
-
-    // give up after 10 minutes
-    hardTimeoutRef.current = setTimeout(() => {
-      stopAll(); setFailed(true);
-    }, 10 * 60 * 1000);
-
-    const poll = async () => {
-      try {
-        const r = await fetch(`/api/payment-sessions/${sess.id}`, { credentials: "include" });
-        if (!r.ok) return;
-        const data = await r.json() as SessionData;
-        if (data.status === "completed") {
-          stopAll(); setVerified(true); haptic.successTap(); invalidateUser();
-          toast({ title: "Payment confirmed! 🎉", description: `${sess.diamonds.toLocaleString()} diamonds added to your wallet.` });
-          setTimeout(() => navigate("/wallet"), 2000);
-        } else if (data.status === "expired" || data.status === "cancelled") {
-          stopAll(); setFailed(true);
-        }
-      } catch { /* ignore blips */ }
-    };
-
-    poll();
-    pollTimerRef.current = setInterval(poll, POLL_INTERVAL_MS);
-  }
 
   async function handleContinue() {
     if (activeRupees === null || activeDiamonds === null || isCreatingSession) return;
@@ -797,13 +643,6 @@ export default function TopUpPage() {
     }
   }
 
-  function handlePaid() {
-    if (!session) return;
-    setStep("waiting");
-    window.scrollTo({ top: 0, behavior: "instant" });
-    startPolling(session);
-  }
-
   async function handleCancelSession() {
     if (!activeSession) return;
     setIsCancellingSession(true);
@@ -820,9 +659,8 @@ export default function TopUpPage() {
   }
 
   function resetToSelect() {
-    stopAll(); setStep("select"); setSession(null);
-    setVerified(false); setFailed(false); setPollElapsed(0);
-    setSelected(null); setCustom("");
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    setStep("select"); setSession(null); setSelected(null); setCustom("");
   }
 
   return (
@@ -854,18 +692,7 @@ export default function TopUpPage() {
         <StepQR
           session={session} upiId={upiId} upiName={upiName}
           countdown={countdown}
-          onPaid={handlePaid}
           onBack={resetToSelect}
-        />
-      )}
-
-      {step === "waiting" && session && (
-        <StepWaiting
-          session={session}
-          pollElapsed={pollElapsed}
-          verified={verified}
-          failed={failed}
-          onNewTopup={resetToSelect}
         />
       )}
 
