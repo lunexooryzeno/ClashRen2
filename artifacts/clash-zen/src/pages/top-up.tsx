@@ -14,12 +14,12 @@ const DEFAULT_UPI_NAME = "BharatPe Merchant";
 const SESSION_MINS     = 5;
 
 const PRESETS = [
-  { rupees: 10,  tag: null,         accent: "rgba(20,184,166,0.9)"  },
-  { rupees: 20,  tag: null,         accent: "rgba(99,102,241,0.9)"  },
-  { rupees: 50,  tag: null,         accent: "rgba(59,130,246,0.9)"  },
-  { rupees: 100, tag: "Popular",    accent: "rgba(234,88,12,0.9)"   },
-  { rupees: 200, tag: null,         accent: "rgba(139,92,246,0.9)"  },
-  { rupees: 500, tag: "Best Value", accent: "rgba(16,185,129,0.9)"  },
+  { rupees: 10,   tag: null,         accent: "rgba(20,184,166,0.9)"  },
+  { rupees: 50,   tag: null,         accent: "rgba(59,130,246,0.9)"  },
+  { rupees: 100,  tag: "Popular",    accent: "rgba(234,88,12,0.9)"   },
+  { rupees: 200,  tag: null,         accent: "rgba(139,92,246,0.9)"  },
+  { rupees: 500,  tag: "Best Value", accent: "rgba(16,185,129,0.9)"  },
+  { rupees: 1000, tag: null,         accent: "rgba(245,158,11,0.9)"  },
 ];
 
 const PARTICLES = [
@@ -139,10 +139,45 @@ function StepSelect({
         </div>
       </div>
 
-      {/* Packages grid */}
+      {/* Custom amount — shown first */}
       <div className="px-4 pt-4 relative z-10">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mb-3 px-1">Choose a Package</p>
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mb-3 px-1">Custom Amount</p>
+        <div className="rounded-2xl relative transition-all duration-300 mb-4"
+          style={{
+            background: custom && customRupees > 0 ? "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.08))" : "hsl(var(--card))",
+            border: custom && customRupees > 0 ? "1.5px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
+            animation: mounted ? "topup-card-in 0.4s 0.05s ease both" : "none",
+          }}>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <span className="text-3xl font-extrabold text-zinc-500 shrink-0">₹</span>
+            <input type="number" min={minTopup} value={custom}
+              onChange={e => { setCustom(e.target.value); setSelected(null); }}
+              placeholder="Enter amount"
+              className="flex-1 min-w-0 bg-transparent text-3xl font-extrabold text-white placeholder:text-zinc-700 outline-none" />
+            {custom && (
+              <button onClick={() => { setCustom(""); setSelected(null); }}
+                className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-zinc-500 active:scale-90"
+                style={{ background: "rgba(255,255,255,0.06)" }}>
+                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="px-4 pb-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <p className="text-[11px] pt-2">
+              {custom && customRupees > 0 && !customValid
+                ? <span className="font-semibold text-red-400">Minimum top-up is ₹{minTopup}</span>
+                : <span className="text-zinc-600">Min. ₹{minTopup} · Enter any amount above</span>}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Packages grid */}
+      <div className="px-4 relative z-10">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mb-3 px-1">Quick Packages</p>
+        <div className="grid grid-cols-2 gap-3">
           {PRESETS.map((pkg, idx) => {
             const diamonds   = Math.floor(pkg.rupees / rate);
             const isActive   = selected === pkg.rupees && !custom;
@@ -156,7 +191,7 @@ function StepSelect({
                   background: isActive ? "linear-gradient(135deg, rgba(139,92,246,0.2), rgba(59,130,246,0.12))" : "hsl(var(--card))",
                   border: isActive ? "1.5px solid rgba(139,92,246,0.6)" : "1px solid rgba(255,255,255,0.08)",
                   boxShadow: isActive ? "0 0 24px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.08)" : "0 2px 12px rgba(0,0,0,0.3)",
-                  animation: mounted ? `topup-card-in 0.4s ${0.1 + idx * 0.08}s ease both` : "none",
+                  animation: mounted ? `topup-card-in 0.4s ${0.12 + idx * 0.07}s ease both` : "none",
                   transform: isActive ? "scale(1.02)" : "scale(1)",
                 }}>
                 {isActive && (
@@ -194,44 +229,6 @@ function StepSelect({
               </button>
             );
           })}
-        </div>
-
-        {/* Custom amount */}
-        <div className="rounded-2xl relative transition-all duration-300"
-          style={{
-            background: custom && customRupees > 0 ? "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.08))" : "hsl(var(--card))",
-            border: custom && customRupees > 0 ? "1.5px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.08)",
-            animation: mounted ? "topup-card-in 0.4s 0.28s ease both" : "none",
-          }}>
-          <div className="flex items-center gap-1.5 px-4 pt-3.5 pb-2">
-            <div className="w-5 h-5 rounded-md flex items-center justify-center"
-              style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.25)" }}>
-              <Zap className="w-3 h-3 text-violet-400" />
-            </div>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-bold">Custom Amount</span>
-          </div>
-          <div className="flex items-center gap-3 px-4 pt-3 pb-2"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <span className="text-3xl font-extrabold text-zinc-500 shrink-0">₹</span>
-            <input type="number" min={minTopup} value={custom}
-              onChange={e => { setCustom(e.target.value); setSelected(null); }}
-              placeholder="0"
-              className="flex-1 min-w-0 bg-transparent text-3xl font-extrabold text-white placeholder:text-zinc-800 outline-none" />
-            {custom && (
-              <button onClick={() => { setCustom(""); setSelected(null); }}
-                className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-zinc-500 active:scale-90"
-                style={{ background: "rgba(255,255,255,0.06)" }}>
-                <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className="px-4 pb-3">
-            {custom && customRupees > 0 && !customValid
-              ? <p className="text-[11px] font-semibold text-red-400">Minimum top-up is ₹{minTopup}</p>
-              : <p className="text-[11px] text-zinc-600">Min. ₹{minTopup} per top-up</p>}
-          </div>
         </div>
       </div>
 
