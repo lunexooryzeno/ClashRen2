@@ -1,0 +1,30 @@
+### System Requirement: Dual-Tier User Authentication & Exploration Flow
+
+I want to update our application onboarding, registration, and route guarding logic to allow a frictionless onboarding process. The goal is to let users explore the platform immediately using Google Auth, but restrict core actions until they link a valid phone number.
+
+#### 1. Page Update: `/#/get-started`
+- Add a highly visible, styled "Continue with Google" button.
+- Clicking this button should initiate the Google OAuth flow.
+- This initial login must instantly grant them access to browse the app dashboards, view active tournament listings, check leaderboards, and view profile stubs.
+
+#### 2. Database Schema Modifications (User Table)
+Ensure the User model supports the following fields to handle the dual-tier registration states:
+- `googleId` (String, unique)
+- `email` (String, unique)
+- `displayName` (String)
+- `avatarUrl` (String, nullable)
+- `phoneNumber` (String, unique, nullable) -> This must remain nullable initially to allow exploratory browsing.
+- `isProfileComplete` (Boolean, default: false) -> Becomes true only after a valid phone number is linked.
+
+#### 3. Core Action Restrictions & "Phone Verification Guard"
+Any user who has ONLY authenticated via Google is in an "Exploratory State". Create a middleware/route guard to enforce that the following critical actions are blocked unless `phoneNumber` is present and validated:
+- Joining/Registering for a match or custom room slot.
+- Depositing money through the Paisa Pool Payment System.
+- Triggering any wallet-related withdrawals.
+
+#### 4. Frontend Action Intercept & Verification Modal
+- If an exploratory user clicks "Join Match", "Add Cash", or "Withdraw", do not redirect them back to a hard login page. 
+- Instead, intercept the action and display a sleek pop-up Modal overlay right over their current screen stating: "Complete your profile to participate. Enter a valid 10-digit phone number to unlock wallets and matches."
+- Provide a clean input field with client-side validation (10 digits only). When submitted, update the user account backend via an API patch (`/api/user/complete-profile`), update their state dynamically in the app layout, and allow them to proceed with their original action.
+
+Please generate the required database updates, backend route updates, custom middleware, and updated frontend components for `/#/get-started` to achieve this cleanly.

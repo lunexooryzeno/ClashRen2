@@ -30,7 +30,12 @@ export interface VerifyOtpBody {
 
 export interface User {
   id: number;
-  phone: string;
+  phone?: string | null;
+  googleId?: string | null;
+  email?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  isProfileComplete: boolean;
   inGameName?: string | null;
   uid?: string | null;
   profilePicture?: string | null;

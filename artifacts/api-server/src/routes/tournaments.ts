@@ -11,7 +11,7 @@ import {
   tournamentCredentialViewsTable,
 } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { requireAuth, getTokenPayload } from "../middlewares/auth.js";
+import { requireAuth, requireFullProfile, getTokenPayload } from "../middlewares/auth.js";
 import { tournamentJoinLimiter } from "../middleware/rate-limiter.js";
 import { checkTournamentBan, checkNewAccountSpend, checkWinPattern } from "../middleware/suspicious-activity.js";
 import { sendPushToUser } from "../lib/push.js";
@@ -178,7 +178,7 @@ router.get("/tournaments/:id", async (req, res) => {
   res.json(formatTournament(tournament, isJoined, isAdmin, participant));
 });
 
-router.post("/tournaments/:id/join", requireAuth, tournamentJoinLimiter, async (req, res) => {
+router.post("/tournaments/:id/join", requireAuth, requireFullProfile, tournamentJoinLimiter, async (req, res) => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 

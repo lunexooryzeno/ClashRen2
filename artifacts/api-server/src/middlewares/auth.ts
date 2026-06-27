@@ -50,7 +50,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  // Live DB check — reject deleted/blocked users and stale sessions (single-device enforcement)
   db.query.usersTable.findFirst({
     where: eq(usersTable.id, payload.userId),
     columns: { id: true, status: true, isAdmin: true, sessionVersion: true, adminRole: true, blockedReason: true, blockedUntil: true, deleteReason: true },
@@ -80,7 +79,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
         }
         return;
       }
-      // If sv is in the token and doesn't match DB, the user logged in elsewhere
       if (payload.sv !== undefined && user.sessionVersion !== payload.sv) {
         res.status(401).json({ error: "Session expired. You have been logged in on another device.", code: "SESSION_SUPERSEDED" });
         return;
@@ -93,15 +91,42 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     });
 }
 
+/**
+ * requireFullProfile — blocks exploratory (Google-only) users from core actions.
+ * Must be placed AFTER requireAuth in the middleware chain.
+ * Returns 403 with code "PHONE_REQUIRED" if the user has not linked a phone number.
+ */
+export function requireFullProfile(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  db.query.usersTable.findFirst({
+    where: eq(usersTable.id, req.user.userId),
+    columns: { isProfileComplete: true },
+  })
+    .then(user => {
+      if (!user?.isProfileComplete) {
+        res.status(403).json({
+          error: "Complete your profile to perform this action. Enter a valid 10-digit phone number to unlock wallets and matches.",
+          code: "PHONE_REQUIRED",
+        });
+        return;
+      }
+      next();
+    })
+    .catch(() => {
+      res.status(500).json({ error: "Profile check failed" });
+    });
+}
+
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  // Super admin token takes priority — bypasses user account check
   const superToken = req.headers["x-super-admin-token"];
   if (superToken && typeof superToken === "string" && verifySuperAdminToken(superToken)) {
     req.user = { userId: -1, isAdmin: true, adminRole: "admin" };
     return next();
   }
 
-  // Fall back to regular auth — any user with a recognized admin role passes
   requireAuth(req, res, () => {
     if (!req.user?.isAdmin && !req.user?.adminRole) {
       res.status(403).json({ error: "Admin access required" });
@@ -121,13 +146,7 @@ export function requireSuperAdmin(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-/**
- * requireFinanceAdmin — gates wallet/prize mutation endpoints.
- * Only users with adminRole === "admin" (or super admin) may execute financial operations.
- * Moderators, Support, and Tournament Admins are blocked.
- */
 export function requireFinanceAdmin(req: Request, res: Response, next: NextFunction): void {
-  // Super admin (userId -1) always passes
   if (req.user?.userId === -1) return next();
   if (req.user?.adminRole !== "admin") {
     res.status(403).json({

@@ -4,7 +4,12 @@ import { z } from "zod/v4";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
-  phone: text("phone").notNull().unique(),
+  phone: text("phone").unique(),
+  googleId: text("google_id").unique(),
+  email: text("email").unique(),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  isProfileComplete: boolean("is_profile_complete").notNull().default(false),
   inGameName: text("in_game_name"),
   uid: text("uid"),
   profilePicture: text("profile_picture"),

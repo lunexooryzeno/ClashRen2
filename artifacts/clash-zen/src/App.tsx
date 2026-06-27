@@ -12,6 +12,7 @@ import { AuthProvider } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { OfflineBanner } from "@/components/offline-banner";
 import { MatchVerifyNotifier } from "@/components/MatchVerifyNotifier";
+import { PhoneGuardProvider } from "@/context/phone-guard";
 
 class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null };
@@ -140,6 +141,14 @@ const queryClient = new QueryClient({
       staleTime: 30 * 1000,
       gcTime: 24 * 60 * 60 * 1000,
       throwOnError: false,
+    },
+    mutations: {
+      onError: (error: unknown) => {
+        const e = error as { status?: number; data?: { code?: string } };
+        if (e?.status === 403 && e?.data?.code === "PHONE_REQUIRED") {
+          window.dispatchEvent(new CustomEvent("phone-required"));
+        }
+      },
     },
   },
 });
@@ -307,14 +316,16 @@ function App() {
       }}
     >
       <AuthProvider>
-        <TooltipProvider>
-          <WouterRouter hook={useHashLocation}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-          <OfflineBanner />
-          <MatchVerifyNotifier />
-        </TooltipProvider>
+        <PhoneGuardProvider>
+          <TooltipProvider>
+            <WouterRouter hook={useHashLocation}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+            <OfflineBanner />
+            <MatchVerifyNotifier />
+          </TooltipProvider>
+        </PhoneGuardProvider>
       </AuthProvider>
     </PersistQueryClientProvider>
   );

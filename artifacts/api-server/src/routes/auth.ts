@@ -187,6 +187,7 @@ router.post("/auth/verify-otp", async (req, res) => {
       phone: fullPhone,
       diamondBalance: 0,
       isAdmin: false,
+      isProfileComplete: true,
       platformId,
     }).returning();
     user = newUser;
@@ -206,6 +207,10 @@ router.post("/auth/verify-otp", async (req, res) => {
       res.status(403).json({ error: `Your account has been blocked${untilText}${reason}` });
       return;
     }
+  }
+
+  if (!user.isProfileComplete) {
+    await db.update(usersTable).set({ isProfileComplete: true }).where(eq(usersTable.id, user.id));
   }
 
   const newSv = (user.sessionVersion ?? 1) + 1;
@@ -401,6 +406,129 @@ router.post("/auth/complete-login", async (req, res) => {
 router.post("/auth/logout", (_req, res) => {
   res.clearCookie(COOKIE_NAME, { path: "/" });
   res.json({ message: "Logged out successfully" });
+});
+
+// ── Google OAuth ───────────────────────────────────────────────────────────
+import { OAuth2Client } from "google-auth-library";
+
+function getGoogleClient(redirectUri: string) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set.");
+  }
+  return new OAuth2Client(clientId, clientSecret, redirectUri);
+}
+
+function getRedirectUri(req: import("express").Request): string {
+  const custom = process.env.GOOGLE_REDIRECT_URI;
+  if (custom) return custom;
+  const proto = req.headers["x-forwarded-proto"] ?? req.protocol ?? "https";
+  const host = req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost";
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+
+router.get("/auth/google", (req, res) => {
+  try {
+    const redirectUri = getRedirectUri(req);
+    const client = getGoogleClient(redirectUri);
+    const url = client.generateAuthUrl({
+      access_type: "offline",
+      scope: ["openid", "email", "profile"],
+      prompt: "select_account",
+      state: (req.query.redirect as string) ?? "/",
+    });
+    res.redirect(url);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Google OAuth not configured.";
+    res.status(503).send(`<html><body style="font-family:sans-serif;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;"><div style="text-align:center"><h2>Google Sign-In Unavailable</h2><p style="color:#888">${msg}</p><a href="/#/get-started" style="color:#8b5cf6">← Back to login</a></div></body></html>`);
+  }
+});
+
+router.get("/auth/google/callback", async (req, res) => {
+  const { code, state } = req.query as { code?: string; state?: string };
+
+  if (!code) {
+    res.redirect("/#/get-started?error=google_denied");
+    return;
+  }
+
+  try {
+    const redirectUri = getRedirectUri(req);
+    const client = getGoogleClient(redirectUri);
+
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
+
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token!,
+      audience: process.env.GOOGLE_CLIENT_ID!,
+    });
+    const googlePayload = ticket.getPayload();
+    if (!googlePayload?.sub) {
+      res.redirect("/#/get-started?error=google_failed");
+      return;
+    }
+
+    const googleId = googlePayload.sub;
+    const email = googlePayload.email ?? null;
+    const displayName = googlePayload.name ?? null;
+    const avatarUrl = googlePayload.picture ?? null;
+
+    let user = await db.query.usersTable.findFirst({
+      where: eq(usersTable.googleId, googleId),
+    });
+
+    if (!user && email) {
+      user = await db.query.usersTable.findFirst({
+        where: eq(usersTable.email, email),
+      });
+    }
+
+    if (!user) {
+      const platformId = await getUniquePlatformId();
+      const [newUser] = await db.insert(usersTable).values({
+        googleId,
+        email,
+        displayName,
+        avatarUrl,
+        diamondBalance: 0,
+        isAdmin: false,
+        isProfileComplete: false,
+        platformId,
+      }).returning();
+      user = newUser;
+    } else {
+      await db.update(usersTable)
+        .set({
+          googleId: user.googleId ?? googleId,
+          email: user.email ?? email,
+          displayName: user.displayName ?? displayName,
+          avatarUrl: user.avatarUrl ?? avatarUrl,
+        })
+        .where(eq(usersTable.id, user.id));
+      user = { ...user, googleId: user.googleId ?? googleId };
+    }
+
+    if (user.status === "blocked" || user.status === "deleted") {
+      res.redirect(`/#/get-started?error=suspended&status=${user.status}`);
+      return;
+    }
+
+    const newSv = (user.sessionVersion ?? 1) + 1;
+    await db.update(usersTable).set({ sessionVersion: newSv }).where(eq(usersTable.id, user.id));
+
+    const token = signToken({ userId: user.id, phone: user.phone ?? null, isAdmin: user.isAdmin, sv: newSv });
+    setSessionCookie(res, token);
+
+    void sendLoginAlert(user.id, req.headers["user-agent"] as string ?? null, null, "google", false);
+
+    const dest = state && state.startsWith("/") ? state : "/";
+    res.redirect(`/?gt=${encodeURIComponent(token)}#${dest}`);
+  } catch (e) {
+    console.error("[auth/google/callback]", e);
+    res.redirect("/#/get-started?error=google_failed");
+  }
 });
 
 export default router;

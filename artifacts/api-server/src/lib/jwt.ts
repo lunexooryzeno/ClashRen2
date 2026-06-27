@@ -1,8 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
-// In production, JWT_SECRET must be set via the Replit Secrets panel.
-// In development, a random ephemeral secret is generated per process.
 const JWT_SECRET: string =
   process.env.JWT_SECRET ??
   (() => {
@@ -20,7 +18,7 @@ const JWT_SECRET: string =
 
 export interface JWTPayload {
   userId: number;
-  phone: string;
+  phone?: string | null;
   isAdmin: boolean;
   sv: number;
 }

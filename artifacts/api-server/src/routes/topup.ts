@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { topupRequestsTable, usersTable, walletTransactionsTable, balanceChangeLogsTable } from "@workspace/db";
 import { eq, sql, and, gt } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireFullProfile } from "../middlewares/auth.js";
 import { topupLimiter } from "../middleware/rate-limiter.js";
 import { getPaymentSettings, savePaymentSettings } from "../lib/paymentSettings.js";
 import { pushToUser } from "../lib/sse-manager.js";
@@ -26,7 +26,7 @@ router.get("/topup/bp-config", requireAuth, (req, res) => {
 
 // ── POST /topup/submit ─────────────────────────────────────────────────────
 // Creates a pending topup, forwards to external webhook, returns topupId
-router.post("/topup/submit", requireAuth, topupLimiter, async (req, res) => {
+router.post("/topup/submit", requireAuth, requireFullProfile, topupLimiter, async (req, res) => {
   const { utr, rupees, diamonds } = req.body as {
     utr?: string; rupees?: number; diamonds?: number;
   };

@@ -30,7 +30,12 @@ router.get("/users/me", requireAuth, async (req, res) => {
   }
   res.json({
     id: user.id,
-    phone: user.phone,
+    phone: user.phone ?? null,
+    googleId: user.googleId ?? null,
+    email: user.email ?? null,
+    displayName: user.displayName ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+    isProfileComplete: user.isProfileComplete,
     inGameName: user.inGameName,
     uid: user.uid,
     profilePicture: user.profilePicture ?? null,
@@ -498,6 +503,90 @@ router.get("/users/sse", requireAuth, (req, res) => {
   req.on("close", () => {
     clearInterval(ping);
     unsubscribe(userId, res);
+  });
+});
+
+// ── PATCH /users/complete-profile ─────────────────────────────────────────
+// Links a verified phone number to an exploratory (Google-only) account.
+// Accepts { phone, browserToken } where browserToken was issued by /auth/send-otp.
+import { otpSessionsTable } from "@workspace/db";
+import { gt, and as andOp } from "drizzle-orm";
+import { signToken } from "../lib/jwt.js";
+
+const COMPLETE_PROFILE_COOKIE = "clash_zen_session";
+const COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function setCompleteCookie(res: import("express").Response, token: string) {
+  res.cookie(COMPLETE_PROFILE_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE_MS,
+    path: "/",
+  });
+}
+
+router.patch("/users/complete-profile", requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const { phone, browserToken } = req.body as { phone?: string; browserToken?: string };
+
+  if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
+    res.status(400).json({ error: "Enter a valid 10-digit Indian mobile number (starts with 6–9)." });
+    return;
+  }
+  if (!browserToken) {
+    res.status(400).json({ error: "Missing OTP session token. Please request a new OTP." });
+    return;
+  }
+
+  const fullPhone = `+91${phone}`;
+  const now = new Date();
+
+  const session = await db.query.otpSessionsTable.findFirst({
+    where: andOp(
+      eq(otpSessionsTable.phone, fullPhone),
+      eq(otpSessionsTable.otpCode, browserToken),
+      gt(otpSessionsTable.expiresAt, now),
+    ),
+  });
+
+  if (!session) {
+    res.status(400).json({ error: "OTP session expired or invalid. Please request a new OTP." });
+    return;
+  }
+  if (session.verified) {
+    res.status(400).json({ error: "Session already used. Please request a new OTP." });
+    return;
+  }
+
+  const existing = await db.query.usersTable.findFirst({
+    where: eq(usersTable.phone, fullPhone),
+    columns: { id: true },
+  });
+  if (existing && existing.id !== userId) {
+    res.status(409).json({ error: "This phone number is already linked to another account." });
+    return;
+  }
+
+  await db.update(otpSessionsTable).set({ verified: 1 }).where(eq(otpSessionsTable.id, session.id));
+
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+  if (!user) {
+    res.status(404).json({ error: "User not found." });
+    return;
+  }
+
+  const newSv = (user.sessionVersion ?? 1) + 1;
+  await db.update(usersTable)
+    .set({ phone: fullPhone, isProfileComplete: true, sessionVersion: newSv })
+    .where(eq(usersTable.id, userId));
+
+  const token = signToken({ userId: user.id, phone: fullPhone, isAdmin: user.isAdmin, sv: newSv });
+  setCompleteCookie(res, token);
+
+  res.json({
+    token,
+    user: { id: user.id, phone: fullPhone, isProfileComplete: true },
   });
 });
 

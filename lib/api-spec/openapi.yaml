@@ -725,6 +725,21 @@ components:
           type: integer
         phone:
           type: string
+          nullable: true
+        googleId:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        isProfileComplete:
+          type: boolean
         inGameName:
           type: string
           nullable: true
@@ -742,7 +757,7 @@ components:
           type: string
       required:
         - id
-        - phone
+        - isProfileComplete
         - diamondBalance
         - isAdmin
         - createdAt

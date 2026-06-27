@@ -5,7 +5,7 @@ import {
   balanceChangeLogsTable, securityFlagsTable,
 } from "@workspace/db";
 import { eq, desc, sql, and, gte } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireFullProfile } from "../middlewares/auth.js";
 import { withdrawalLimiter } from "../middleware/rate-limiter.js";
 import { getPaymentSettings } from "../lib/paymentSettings.js";
 
@@ -48,7 +48,7 @@ const WITHDRAWAL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 // 2FA passcode change cooldown (24 hours)
 const TWO_FA_BLOCK_MS = 24 * 60 * 60 * 1000;
 
-router.post("/wallet/withdraw", requireAuth, withdrawalLimiter, async (req, res) => {
+router.post("/wallet/withdraw", requireAuth, requireFullProfile, withdrawalLimiter, async (req, res) => {
   const userId = req.user!.userId;
   const { rupees, upiId } = req.body as { rupees?: number; upiId?: string };
 

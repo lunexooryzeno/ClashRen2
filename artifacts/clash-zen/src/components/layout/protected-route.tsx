@@ -5,10 +5,9 @@ import SetupProfileScreen from "@/pages/setup-profile";
 import { AppLayout } from "./app-layout";
 
 export function ProtectedRoute({ component: Component, ...props }: { component: React.ElementType, path?: string }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isExplorer } = useAuth();
   const [location, setLocation] = useLocation();
 
-  // Pages that should never be saved as the post-login redirect destination
   const SKIP_SAVE_REDIRECT = ["/setup-profile", "/landing", "/get-started", "/onboarding"];
 
   useEffect(() => {
@@ -18,12 +17,11 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
           sessionStorage.setItem("redirectAfterLogin", location);
         }
         setLocation("/landing");
-      } else if (user && (!user.inGameName || !user.uid)) {
+      } else if (!isExplorer && user && (!user.inGameName || !user.uid)) {
         if (location !== "/setup-profile") {
           setLocation("/setup-profile");
         }
-      } else if (user?.id && user.inGameName && user.uid) {
-        // Profile complete — bounce away from setup-profile if they somehow land here
+      } else if (!isExplorer && user?.id && user.inGameName && user.uid) {
         if (location === "/setup-profile") {
           setLocation("/");
           return;
@@ -36,7 +34,7 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
         }
       }
     }
-  }, [user, isAuthenticated, isLoading, location, setLocation]);
+  }, [user, isAuthenticated, isLoading, isExplorer, location, setLocation]);
 
   if (isLoading) {
     return (
@@ -55,11 +53,11 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
     );
   }
 
-  if (!user?.inGameName || !user?.uid) {
+  if (!isExplorer && (!user?.inGameName || !user?.uid)) {
     return <SetupProfileScreen />;
   }
 
-  const needsOnboarding = user?.id
+  const needsOnboarding = !isExplorer && user?.id
     ? localStorage.getItem(`cz:onboarded:${user.id}`) !== "true" &&
       localStorage.getItem(`clash-ren:welcomed:${user.id}`) !== "true"
     : false;

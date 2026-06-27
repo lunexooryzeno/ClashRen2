@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isExplorer: boolean;
   invalidateUser: () => void;
   logout: () => void;
 }
@@ -81,6 +82,21 @@ async function sendHeartbeat(
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+
+  // Relay Google OAuth token: after Google callback, /?gt=<token>#/ is loaded.
+  // Extract the token, persist it, clean the URL, then invalidate the auth cache.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gt = params.get("gt");
+    if (gt) {
+      try { localStorage.setItem("clash_ren_token", gt); } catch { /* ignore */ }
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, "", cleanUrl);
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      queryClient.refetchQueries({ queryKey: getGetMeQueryKey() });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const redirectToSuspendedRef = useRef(redirectToSuspended);
 
@@ -209,12 +225,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { localStorage.removeItem("clash_ren_token"); } catch { /* ignore */ }
   };
 
+  const isExplorer = !!user && !user.isProfileComplete;
+
   return (
     <AuthContext.Provider
       value={{
         user: user ?? null,
         isLoading,
         isAuthenticated: !!user,
+        isExplorer,
         invalidateUser,
         logout,
       }}
