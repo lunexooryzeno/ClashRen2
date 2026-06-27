@@ -577,10 +577,7 @@ export default function GetStartedPage() {
                                 className="px-4 flex items-center select-none shrink-0 border-r"
                                 style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}
                               >
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-base">🇮🇳</span>
-                                  <span className="text-sm font-bold text-zinc-300">+91</span>
-                                </div>
+                                <span className="text-sm font-bold text-zinc-300">+91</span>
                               </div>
                               <Input
                                 ref={field.ref} name={field.name} onBlur={field.onBlur}
@@ -617,12 +614,9 @@ export default function GetStartedPage() {
                 </Form>
 
                 {/* Trust row */}
-                <div className="flex items-center justify-center gap-4 pt-1">
-                  {[["🏆", "500+ Tournaments"], ["⚡", "Instant Payouts"], ["🔒", "100% Secure"]].map(([icon, label]) => (
-                    <div key={label} className="flex items-center gap-1">
-                      <span className="text-[11px]">{icon}</span>
-                      <span className="text-[10px] text-zinc-600 font-medium">{label}</span>
-                    </div>
+                <div className="flex items-center justify-center gap-5 pt-1">
+                  {["Instant Payouts", "100% Secure", "Free to Join"].map((label) => (
+                    <span key={label} className="text-[10px] text-zinc-600 font-medium">{label}</span>
                   ))}
                 </div>
               </motion.div>
