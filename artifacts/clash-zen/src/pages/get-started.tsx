@@ -520,94 +520,110 @@ export default function GetStartedPage() {
                 key="phone"
                 variants={slideVariants} initial="enter" animate="center" exit="exit"
                 transition={{ duration: 0.3 }}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-5"
               >
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_28px_rgba(139,92,246,0.25)]">
-                    <Phone className="w-6 h-6 text-primary" />
+                {/* Logo + branding */}
+                <div className="flex flex-col items-center gap-3 pb-1">
+                  <img src={LOGO_URL} alt="Clash Ren" className="w-14 h-14 rounded-2xl object-cover shadow-[0_0_32px_rgba(0,0,0,0.6)]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  <div className="text-center">
+                    <h1 className="font-heading text-2xl font-bold tracking-tight text-white leading-tight">
+                      Play. Compete. Win.
+                    </h1>
+                    <p className="text-[13px] text-zinc-500 mt-1">
+                      India's Free Fire tournament platform
+                    </p>
                   </div>
-                  <h1 className="font-heading text-3xl font-bold tracking-tight text-white mb-2">
-                    Enter Your Number
-                  </h1>
-                  <p className="text-sm text-zinc-500">
-                    Login or sign up using your mobile number
-                  </p>
                 </div>
 
                 {/* Google sign-in — coming soon */}
                 <div
                   className="relative w-full flex items-center gap-3 rounded-2xl cursor-not-allowed select-none overflow-hidden"
-                  style={{ height: 52, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+                  style={{ height: 50, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
                 >
-                  <div className="absolute inset-0 pointer-events-none" style={{ background: "repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(255,255,255,0.015) 6px, rgba(255,255,255,0.015) 12px)" }} />
+                  <div className="absolute inset-0 pointer-events-none" style={{ background: "repeating-linear-gradient(135deg, transparent, transparent 8px, rgba(255,255,255,0.012) 8px, rgba(255,255,255,0.012) 16px)" }} />
                   <div className="relative flex items-center gap-3 w-full px-4">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0 opacity-40 grayscale" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0 opacity-35 grayscale" xmlns="http://www.w3.org/2000/svg">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                       <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    <span className="text-sm font-semibold text-zinc-500">Continue with Google</span>
-                    <span className="ml-auto text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-lg" style={{ background: "rgba(251,191,36,0.12)", color: "rgba(251,191,36,0.7)", border: "1px solid rgba(251,191,36,0.2)" }}>COMING SOON</span>
+                    <span className="text-[13px] font-medium text-zinc-600">Continue with Google</span>
+                    <span className="ml-auto text-[9px] font-bold tracking-widest px-2 py-0.5 rounded-md" style={{ background: "rgba(251,191,36,0.1)", color: "rgba(251,191,36,0.6)", border: "1px solid rgba(251,191,36,0.15)" }}>COMING SOON</span>
                   </div>
                 </div>
 
+                {/* Divider */}
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-                  <span className="text-[11px] text-zinc-600 font-medium uppercase tracking-widest">or login with phone</span>
-                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+                  <span className="text-[10px] text-zinc-700 font-semibold uppercase tracking-[0.15em]">Login with phone</span>
+                  <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
                 </div>
 
-                <div
-                  className="rounded-2xl p-5"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
-                >
-                  <Form {...phoneForm}>
-                    <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-3">
-                      <FormField
-                        control={phoneForm.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="flex rounded-xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/50"
-                                style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                                <div className="px-4 flex items-center select-none shrink-0 border-r" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)" }}>
-                                  <span className="text-base font-bold text-zinc-300">+91</span>
+                {/* Phone input + CTA */}
+                <Form {...phoneForm}>
+                  <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="flex flex-col gap-3">
+                    <FormField
+                      control={phoneForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div
+                              className="flex rounded-2xl overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/60"
+                              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+                            >
+                              <div
+                                className="px-4 flex items-center select-none shrink-0 border-r"
+                                style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-base">🇮🇳</span>
+                                  <span className="text-sm font-bold text-zinc-300">+91</span>
                                 </div>
-                                <Input
-                                  ref={field.ref} name={field.name} onBlur={field.onBlur}
-                                  type="tel" inputMode="numeric" placeholder="Enter Phone Number"
-                                  className="border-0 bg-transparent focus-visible:ring-0 rounded-none text-lg tracking-wider font-medium placeholder:text-zinc-600"
-                                  style={{ height: 52 }} maxLength={12} value={displayPhone}
-                                  onChange={(e) => {
-                                    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                    setDisplayPhone(formatPhoneDisplay(digits));
-                                    field.onChange(digits);
-                                  }}
-                                  data-testid="input-phone"
-                                />
                               </div>
-                            </FormControl>
-                            <FormMessage className="text-xs pl-1 mt-1.5" />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="submit"
-                        className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-base font-heading tracking-wider active:scale-[0.98] transition-all"
-                        style={{ height: 52, boxShadow: "0 4px 24px rgba(139,92,246,0.4)" }}
-                        disabled={isSending}
-                        data-testid="btn-send-otp"
-                      >
-                        {isSending ? "Sending…" : "Get OTP"}
-                      </Button>
-                      <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
-                        onChange={e => { honeypotRef.current = e.target.value; }}
-                        style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
-                      />
-                    </form>
-                  </Form>
+                              <Input
+                                ref={field.ref} name={field.name} onBlur={field.onBlur}
+                                type="tel" inputMode="numeric" placeholder="10-digit mobile number"
+                                className="border-0 bg-transparent focus-visible:ring-0 rounded-none text-base font-medium placeholder:text-zinc-600 text-white"
+                                style={{ height: 54 }} maxLength={12} value={displayPhone}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                  setDisplayPhone(formatPhoneDisplay(digits));
+                                  field.onChange(digits);
+                                }}
+                                data-testid="input-phone"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-xs pl-1 mt-1" />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full rounded-2xl text-white font-bold text-[15px] font-heading tracking-wide active:scale-[0.98] transition-all"
+                      style={{ height: 54, background: "hsl(23 90% 48%)", boxShadow: "0 4px 20px rgba(230,110,20,0.45)" }}
+                      disabled={isSending}
+                      data-testid="btn-send-otp"
+                    >
+                      {isSending ? "Sending OTP…" : "Send OTP →"}
+                    </Button>
+                    <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
+                      onChange={e => { honeypotRef.current = e.target.value; }}
+                      style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0, pointerEvents: "none" }}
+                    />
+                  </form>
+                </Form>
+
+                {/* Trust row */}
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  {[["🏆", "500+ Tournaments"], ["⚡", "Instant Payouts"], ["🔒", "100% Secure"]].map(([icon, label]) => (
+                    <div key={label} className="flex items-center gap-1">
+                      <span className="text-[11px]">{icon}</span>
+                      <span className="text-[10px] text-zinc-600 font-medium">{label}</span>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
 
