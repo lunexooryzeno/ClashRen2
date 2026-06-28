@@ -139,6 +139,16 @@ function StepSelect({
         </div>
       </div>
 
+      {/* ── Scan with any UPI app banner ── */}
+      <div className="px-4 pt-2 relative z-10"
+        style={{ animation: mounted ? "topup-slide-up 0.4s 0.04s ease both" : "none" }}>
+        <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-2.5"
+          style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12))", border: "1px solid rgba(139,92,246,0.35)" }}>
+          <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
+          <span className="text-[13px] font-bold text-violet-200 tracking-wide">Pay via UPI · Diamonds credited instantly</span>
+        </div>
+      </div>
+
       {/* Custom amount — shown first */}
       <div className="px-4 pt-4 relative z-10">
         <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mb-3 px-1">Custom Amount</p>
