@@ -232,37 +232,6 @@ function StepSelect({
         </div>
       </div>
 
-      {/* Diamonds preview banner */}
-      {activeDiamonds !== null && (
-        <div className="px-4 pt-3 pb-2 relative z-10" style={{ animation: "topup-slide-up 0.3s ease both" }}>
-          <div className="rounded-2xl px-5 py-3.5 flex items-center gap-4"
-            style={{
-              background: "linear-gradient(135deg, rgba(139,92,246,0.18), rgba(59,130,246,0.1))",
-              border: "1px solid rgba(139,92,246,0.3)",
-              boxShadow: "0 4px 24px rgba(139,92,246,0.12)",
-            }}>
-            <div className="relative">
-              {[0, 1].map(i => (
-                <div key={i} className="absolute inset-0 rounded-full"
-                  style={{ border: "1px solid rgba(59,130,246,0.4)", animation: `topup-pulse-ring 1.8s ${i * 0.9}s infinite ease-out` }} />
-              ))}
-              <Gem className="w-8 h-8 text-blue-300 relative z-10" strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">You will receive</p>
-              <p className="text-2xl font-extrabold font-heading text-white leading-none"
-                key={`${popKey}-banner`} style={{ animation: "topup-count-in 0.3s ease both" }}>
-                <AnimatedCounter value={activeDiamonds} />
-              </p>
-            </div>
-            <div className="ml-auto text-right">
-              <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Value</p>
-              <p className="text-sm font-bold text-emerald-400">₹{(activeDiamonds * rate).toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex-1" style={{ minHeight: 100 }} />
 
       {/* Sticky CTA */}
