@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import {
   ArrowLeft, Gem, ChevronRight, Zap, Star,
-  AlertTriangle, X, Eye, Shield, Clock, Loader2, Smartphone,
+  AlertTriangle, X, Eye, Shield, Clock, Loader2, Smartphone, Home,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { haptic } from "@/lib/haptics";
@@ -585,70 +585,140 @@ function ActiveSessionModal({
 }
 
 // ── Step: Success ─────────────────────────────────────────────────────────────
-function StepSuccess({ session, onDone }: { session: SessionData; onDone: () => void }) {
-  const [mounted, setMounted] = useState(false);
+const AUTO_REDIRECT_SECS = 7;
+
+function StepSuccess({ session, onGoHome, onGoWallet }: {
+  session: SessionData; onGoHome: () => void; onGoWallet: () => void;
+}) {
+  const [mounted, setMounted]     = useState(false);
+  const [countdown, setCountdown] = useState(AUTO_REDIRECT_SECS);
+
+  const diamonds   = session.diamonds;
+  const paidRupees = parseFloat(session.finalAmount);
+
   useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t); }, []);
 
+  // Auto-redirect to home after countdown
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setCountdown(s => {
+        if (s <= 1) { clearInterval(iv); onGoHome(); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const pct = (countdown / AUTO_REDIRECT_SECS) * 100;
+
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-5 relative overflow-hidden profile-page-bg">
+    <div className="min-h-[100dvh] flex flex-col relative overflow-hidden profile-page-bg">
       <FloatingParticles />
 
-      {/* Glow burst */}
+      {/* Ambient green glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div style={{ width: 340, height: 340, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(16,185,129,0.06) 40%, transparent 70%)",
-          animation: mounted ? "pay-scale-in 0.6s ease both" : "none" }} />
+        <div style={{ width: 400, height: 400, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(52,211,153,0.15) 0%, rgba(16,185,129,0.05) 45%, transparent 70%)",
+          animation: mounted ? "pay-scale-in 0.7s ease both" : "none" }} />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center gap-5 w-full max-w-xs">
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-5 py-8 gap-6">
 
-        {/* Icon ring */}
+        {/* Success badge */}
         <div style={{ animation: mounted ? "pay-scale-in 0.5s 0.05s ease both" : "none", opacity: mounted ? 1 : 0 }}>
-          <div className="w-24 h-24 rounded-[30px] flex items-center justify-center relative"
-            style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.22), rgba(16,185,129,0.12))",
-              border: "1.5px solid rgba(52,211,153,0.5)",
-              boxShadow: "0 0 48px rgba(52,211,153,0.3), inset 0 1px 0 rgba(255,255,255,0.12)" }}>
-            <div className="w-16 h-16 rounded-[20px] flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.3), rgba(16,185,129,0.18))" }}>
-              <Gem className="w-9 h-9 text-emerald-300" strokeWidth={1.5} />
+          <div className="relative">
+            <div className="w-28 h-28 rounded-[32px] flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.1))",
+                border: "2px solid rgba(52,211,153,0.5)",
+                boxShadow: "0 0 60px rgba(52,211,153,0.25), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+              <Gem className="w-12 h-12 text-emerald-300" strokeWidth={1.5} />
+            </div>
+            {/* Check badge */}
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgb(52,211,153), rgb(16,185,129))", boxShadow: "0 2px 12px rgba(52,211,153,0.5)" }}>
+              <svg viewBox="0 0 12 12" fill="none" className="w-4 h-4">
+                <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
           </div>
         </div>
 
-        {/* Title */}
-        <div className="text-center" style={{ animation: mounted ? "pay-slide-up 0.45s 0.1s ease both" : "none", opacity: mounted ? 1 : 0 }}>
-          <p className="text-[11px] text-emerald-400 uppercase tracking-[0.22em] font-bold mb-1">Payment Successful</p>
-          <h1 className="text-3xl font-black text-white leading-tight">Diamonds Credited!</h1>
+        {/* Headline */}
+        <div className="text-center"
+          style={{ animation: mounted ? "pay-slide-up 0.45s 0.1s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <p className="text-[11px] text-emerald-400 uppercase tracking-[0.25em] font-bold mb-1.5">Payment Successful</p>
+          <h1 className="text-[28px] font-black text-white leading-tight">Diamonds Credited!</h1>
         </div>
 
-        {/* Diamond count card */}
+        {/* Main credit card */}
         <div className="w-full rounded-3xl overflow-hidden"
-          style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.1), rgba(16,185,129,0.05))",
+          style={{ background: "linear-gradient(160deg, rgba(52,211,153,0.1) 0%, rgba(16,185,129,0.04) 100%)",
             border: "1px solid rgba(52,211,153,0.3)",
+            boxShadow: "0 8px 40px rgba(52,211,153,0.1)",
             animation: mounted ? "pay-slide-up 0.45s 0.15s ease both" : "none", opacity: mounted ? 1 : 0 }}>
-          <div className="flex flex-col items-center py-5 gap-1">
-            <div className="flex items-center gap-2">
-              <Gem className="w-7 h-7 text-blue-400" strokeWidth={1.5} />
-              <span className="text-4xl font-black text-white tabular-nums">+{session.diamonds.toLocaleString()}</span>
+
+          {/* Diamond amount */}
+          <div className="flex flex-col items-center pt-6 pb-4 px-5">
+            <div className="flex items-center gap-2.5 mb-1">
+              <Gem className="w-8 h-8 text-blue-400" strokeWidth={1.5} />
+              <span className="text-5xl font-black text-white tabular-nums leading-none">+{diamonds.toLocaleString()}</span>
             </div>
-            <p className="text-[12px] text-emerald-400 font-semibold">Diamonds added to your wallet</p>
+            <p className="text-[13px] text-emerald-400 font-semibold">Diamonds added to your wallet</p>
           </div>
-          <div className="flex items-center justify-between px-5 py-3"
-            style={{ borderTop: "1px solid rgba(52,211,153,0.12)", background: "rgba(0,0,0,0.15)" }}>
-            <span className="text-[11px] text-zinc-500 uppercase tracking-widest">Amount Paid</span>
-            <span className="text-sm font-bold text-white">₹{parseFloat(session.finalAmount).toFixed(2)}</span>
+
+          {/* Summary row */}
+          <div className="mx-4 mb-4 rounded-2xl px-4 py-3 flex items-center justify-between"
+            style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">You Paid</span>
+              <span className="text-lg font-extrabold text-white">₹{paidRupees.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl"
+              style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}>
+              <Gem className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />
+              <span className="text-[13px] font-bold text-emerald-300">{diamonds.toLocaleString()} diamonds</span>
+            </div>
+          </div>
+
+          {/* Human-readable summary */}
+          <div className="px-4 pb-4">
+            <p className="text-center text-[13px] text-zinc-400 leading-relaxed">
+              You paid <span className="text-white font-bold">₹{paidRupees.toFixed(0)}</span> and received{" "}
+              <span className="text-blue-300 font-bold">💎 {diamonds.toLocaleString()} diamonds</span> in your wallet.
+            </p>
           </div>
         </div>
 
-        {/* CTA */}
-        <button onClick={onDone}
-          className="w-full py-4 rounded-2xl font-bold text-[15px] text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          style={{ background: "linear-gradient(135deg, rgb(52,211,153), rgb(16,185,129))",
-            boxShadow: "0 8px 32px rgba(52,211,153,0.35)",
-            animation: mounted ? "pay-slide-up 0.45s 0.22s ease both" : "none", opacity: mounted ? 1 : 0 }}>
-          <Gem className="w-5 h-5" strokeWidth={2} />
-          Go to Wallet
-        </button>
+        {/* Buttons */}
+        <div className="w-full flex flex-col gap-3"
+          style={{ animation: mounted ? "pay-slide-up 0.45s 0.22s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <button onClick={onGoWallet}
+            className="w-full py-4 rounded-2xl font-bold text-[15px] text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            style={{ background: "linear-gradient(135deg, rgb(52,211,153), rgb(16,185,129))", boxShadow: "0 8px 28px rgba(52,211,153,0.3)" }}>
+            <Gem className="w-5 h-5" strokeWidth={2} />
+            Go to Wallet
+          </button>
+          <button onClick={onGoHome}
+            className="w-full py-3.5 rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
+            <Home className="w-4 h-4" strokeWidth={2} />
+            Go to Home
+          </button>
+        </div>
+
+        {/* Auto-redirect countdown */}
+        <div className="w-full"
+          style={{ animation: mounted ? "pay-slide-up 0.45s 0.28s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <div className="w-full h-1 rounded-full overflow-hidden mb-2"
+            style={{ background: "rgba(255,255,255,0.06)" }}>
+            <div className="h-full rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${pct}%`, background: "linear-gradient(90deg, rgba(52,211,153,0.5), rgba(52,211,153,0.8))" }} />
+          </div>
+          <p className="text-center text-[11px] text-zinc-600">
+            Redirecting to home in <span className="text-zinc-400 font-semibold">{countdown}s</span>…
+          </p>
+        </div>
+
       </div>
     </div>
   );
@@ -845,7 +915,7 @@ export default function TopUpPage() {
       )}
 
       {step === "success" && session && (
-        <StepSuccess session={session} onDone={() => navigate("/wallet")} />
+        <StepSuccess session={session} onGoHome={() => navigate("/")} onGoWallet={() => navigate("/wallet")} />
       )}
     </div>
   );
