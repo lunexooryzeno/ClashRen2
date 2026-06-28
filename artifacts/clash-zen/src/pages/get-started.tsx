@@ -527,7 +527,7 @@ export default function GetStartedPage() {
                   <img src={LOGO_URL} alt="Clash Ren" className="w-14 h-14 rounded-2xl object-cover shadow-[0_0_32px_rgba(0,0,0,0.6)]" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   <div className="text-center">
                     <h1 className="font-heading text-2xl font-bold tracking-tight text-white leading-tight">
-                      Play. Compete. Win.
+                      ClashRen
                     </h1>
                     <p className="text-[13px] text-zinc-500 mt-1">
                       India's Free Fire tournament platform
