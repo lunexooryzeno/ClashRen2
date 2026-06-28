@@ -29,6 +29,25 @@ app.use(compression());
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'sha256-IgxNdGg8gU8Ya9ZMQcDd4Wn0MuuWvZOuHCmCtheLEgg='",
+          "'sha256-xwUwNXK7JH7zyunG5iFJaVSXy9FOuBi92hb3WGVBK0w='",
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        connectSrc: ["'self'", "https:", "wss:"],
+        workerSrc: ["'self'", "blob:"],
+        manifestSrc: ["'self'"],
+        mediaSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.pike.replit.dev"],
+      },
+    },
   })
 );
 
