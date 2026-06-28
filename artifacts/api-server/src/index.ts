@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, sql, count, and, lt } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
+import { pollBharatPePayments } from "./lib/bharatpe-poller.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
 
@@ -104,6 +105,10 @@ app.listen(port, (err) => {
   // Auto-release room credentials every 30 seconds
   setInterval(processAutoReleases, 30_000);
   processAutoReleases();
+
+  // BharatPe auto-detect: poll every 5 seconds for matching payments
+  setInterval(pollBharatPePayments, 5_000);
+  pollBharatPePayments();
 
   // Expire stale payment sessions every 30 seconds
   async function expirePaymentSessions() {

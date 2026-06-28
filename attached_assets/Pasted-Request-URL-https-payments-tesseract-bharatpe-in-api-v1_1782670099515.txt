@@ -1,0 +1,66 @@
+Request URL
+https://payments-tesseract.bharatpe.in/api/v1/merchant/transactions?module=PAYMENT_QR&merchantId=69893818&sDate=1782585000000&eDate=1782671399000&pageSize=10&pageCount=0&isFromOtDashboard=1
+Request Method
+GET
+Status Code
+200 OK
+Remote Address
+104.18.22.83:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-origin
+*
+apigw-requestid
+fruXDjLxhcwEPLg=
+cf-cache-status
+DYNAMIC
+cf-ray
+a12e81b78fff198e-DEL
+content-encoding
+br
+content-security-policy-report-only
+script-src 'unsafe-inline' 'unsafe-eval'; connect-src 'none'; report-uri https://csp-reporting.cloudflare.com/cdn-cgi/script_monitor/report?m=5CtfKcGd9o2NEjl91V0ALJd4SEIlGMYsY435IW92hGs-1782668742.3255985-1.0.1.1-uwia98XYGLSK8mLTeA9kSb793q09t4VFFj.Md7hcAyklbvYPq2Lsvjc4PEMVFHlzfMDWf_85eBBuEztwWW9n5bcvm0vzmn.FMxVgfDJ7m_BIyNdkFfxx9_R_CE2LOvh.s.nSEGtCh3gcs379KjimoMHZM676cj4bPlsE4PNoeNG14yKTQTw3k3F4HOq0ExXJ; report-to cf-csp-endpoint
+content-type
+application/json;charset=UTF-8
+date
+Sun, 28 Jun 2026 17:45:42 GMT
+report-to
+{"group":"cf-csp-endpoint","max_age":86400,"endpoints":[{"url":"https://csp-reporting.cloudflare.com/cdn-cgi/script_monitor/report?m=5CtfKcGd9o2NEjl91V0ALJd4SEIlGMYsY435IW92hGs-1782668742.3255985-1.0.1.1-uwia98XYGLSK8mLTeA9kSb793q09t4VFFj.Md7hcAyklbvYPq2Lsvjc4PEMVFHlzfMDWf_85eBBuEztwWW9n5bcvm0vzmn.FMxVgfDJ7m_BIyNdkFfxx9_R_CE2LOvh.s.nSEGtCh3gcs379KjimoMHZM676cj4bPlsE4PNoeNG14yKTQTw3k3F4HOq0ExXJ"}]}
+server
+cloudflare
+:authority
+payments-tesseract.bharatpe.in
+:method
+GET
+:path
+/api/v1/merchant/transactions?module=PAYMENT_QR&merchantId=69893818&sDate=1782585000000&eDate=1782671399000&pageSize=10&pageCount=0&isFromOtDashboard=1
+:scheme
+https
+accept
+application/json, text/javascript, */*; q=0.01
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-US,en;q=0.9
+origin
+https://enterprise.bharatpe.in
+priority
+u=1, i
+referer
+https://enterprise.bharatpe.in/
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?0
+sec-ch-ua-platform
+"Windows"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-site
+token
+fbe4df978a644ddea389a2b2c8407968
+user-agent
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36

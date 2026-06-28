@@ -46,6 +46,7 @@ interface PaymentSettings {
   withdrawalWindowEnabled: boolean; withdrawalWindowStart: string; withdrawalWindowEnd: string;
   withdrawalProcessingNote: string;
   xsrfToken: string; bharatpeSession: string;
+  bharatpeToken: string; bharatpeMerchantId: string;
   gatewayAlert: GatewayAlert | null;
   webhookUrl: string;
   webhookSecret: string;
@@ -761,6 +762,7 @@ function SettingsView({ toast }: { toast: ReturnType<typeof useToast>["toast"] }
     withdrawalWindowEnabled: false, withdrawalWindowStart: "10:00", withdrawalWindowEnd: "22:00",
     withdrawalProcessingNote: "",
     xsrfToken: "", bharatpeSession: "",
+    bharatpeToken: "", bharatpeMerchantId: "69893818",
     gatewayAlert: null, webhookUrl: "", webhookSecret: "",
   };
   const [form, setForm] = useState<PaymentSettings>(emptyForm);
@@ -1036,6 +1038,54 @@ function SettingsView({ toast }: { toast: ReturnType<typeof useToast>["toast"] }
               placeholder="Most withdrawals are processed within 30 minutes · max 12 hours."
               className="w-full h-10 rounded-xl px-3 text-sm text-white outline-none"
               style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)" }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── BharatPe Auto-Detect card ── */}
+      <div className="rounded-3xl overflow-hidden"
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(16,185,129,0.2)", backdropFilter: "blur(12px)", animation: "pay-slide-up 0.4s 0.1s ease both", opacity: 0 }}>
+        <div className="px-4 py-3 flex items-center gap-2.5"
+          style={{ background: "rgba(16,185,129,0.07)", borderBottom: "1px solid rgba(16,185,129,0.12)" }}>
+          <div className="w-7 h-7 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.28)" }}>
+            <span className="text-sm">⚡</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-white">BharatPe Auto-Detect</p>
+            <p className="text-[9px] text-zinc-500">Server polls every 5s and credits diamonds automatically</p>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full"
+            style={{ background: form.bharatpeToken ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.06)", border: form.bharatpeToken ? "1px solid rgba(16,185,129,0.35)" : "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: form.bharatpeToken ? "rgb(16,185,129)" : "rgb(113,113,122)" }} />
+            <span className="text-[9px] font-bold" style={{ color: form.bharatpeToken ? "rgb(52,211,153)" : "rgb(113,113,122)" }}>
+              {form.bharatpeToken ? "ACTIVE" : "NOT SET"}
+            </span>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col gap-3.5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">Merchant ID</label>
+            <input type="text" value={form.bharatpeMerchantId}
+              onChange={e => setForm(f => ({ ...f, bharatpeMerchantId: e.target.value }))}
+              placeholder="e.g. 69893818"
+              className={inputCls + " font-mono text-xs"} style={inputStyle} />
+            <p className="text-[9px] text-zinc-600 px-0.5">Your BharatPe merchant ID from the dashboard URL</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] text-zinc-500 uppercase tracking-[0.15em] font-bold">API Token</label>
+            <input type="password" value={form.bharatpeToken}
+              onChange={e => setForm(f => ({ ...f, bharatpeToken: e.target.value }))}
+              placeholder="Paste your BharatPe token header value"
+              className={inputCls + " font-mono text-xs"} style={inputStyle} />
+            <p className="text-[9px] text-zinc-600 px-0.5">From the <code className="text-zinc-400">token</code> request header when logged into enterprise.bharatpe.in</p>
+          </div>
+          <div className="rounded-xl px-3 py-2.5 flex items-start gap-2"
+            style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.12)" }}>
+            <span className="text-emerald-400 text-sm mt-px">ℹ</span>
+            <p className="text-[10px] text-zinc-500 leading-relaxed">
+              Once set, the server automatically detects payments by matching the exact rupee amount (including paisa) against your BharatPe transaction history every 5 seconds. No UTR entry needed from users.
+            </p>
           </div>
         </div>
       </div>
