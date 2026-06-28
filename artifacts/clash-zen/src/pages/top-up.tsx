@@ -355,9 +355,31 @@ function StepQR({
           <span className="text-[13px] font-bold text-violet-200 tracking-wide">Scan with any UPI app</span>
         </div>
 
+        {/* ── QR card ── */}
+        <div className="rounded-3xl relative overflow-hidden"
+          style={{
+            background: "linear-gradient(160deg, hsl(var(--card)) 0%, rgba(139,92,246,0.07) 100%)",
+            border: "1px solid rgba(139,92,246,0.25)",
+            boxShadow: "0 8px 40px rgba(139,92,246,0.12)",
+            animation: mounted ? "pay-scale-in 0.45s 0.08s ease both" : "none",
+          }}>
+          <div className="flex flex-col items-center px-5 pt-5 pb-5 relative z-10">
+            <div className="bg-white p-3 rounded-2xl mb-4" style={{ boxShadow: "0 4px 24px rgba(139,92,246,0.2)" }}>
+              <QRCodeSVG value={upiUrl} size={200} />
+            </div>
+            <div className="w-full rounded-2xl px-4 py-3 flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.18)" }}>
+              <div className="text-center">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">Pay this exact amount</p>
+                <p className="text-[26px] font-extrabold text-white tabular-nums">₹{finalAmount.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ── Order summary ── */}
         <div className="rounded-2xl overflow-hidden"
-          style={{ background: "hsl(var(--card))", border: "1px solid rgba(139,92,246,0.2)", animation: mounted ? "pay-slide-up 0.4s 0.08s ease both" : "none" }}>
+          style={{ background: "hsl(var(--card))", border: "1px solid rgba(139,92,246,0.2)", animation: mounted ? "pay-slide-up 0.4s 0.12s ease both" : "none" }}>
           <div className="px-4 py-2 flex items-center gap-2"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(139,92,246,0.06)" }}>
             <Gem className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
@@ -382,7 +404,7 @@ function StepQR({
         {/* ── Paisa notice ── */}
         {hasPaisa && (
           <div className="rounded-2xl px-4 py-3 flex items-start gap-3"
-            style={{ background: "rgba(234,88,12,0.07)", border: "1px solid rgba(234,88,12,0.3)", animation: mounted ? "pay-slide-up 0.4s 0.12s ease both" : "none" }}>
+            style={{ background: "rgba(234,88,12,0.07)", border: "1px solid rgba(234,88,12,0.3)", animation: mounted ? "pay-slide-up 0.4s 0.15s ease both" : "none" }}>
             <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5 shrink-0" />
             <p className="text-[12px] text-orange-200 leading-relaxed">
               Pay{" "}
@@ -391,31 +413,6 @@ function StepQR({
             </p>
           </div>
         )}
-
-        {/* ── QR card ── */}
-        <div className="rounded-3xl relative overflow-hidden"
-          style={{
-            background: "linear-gradient(160deg, hsl(var(--card)) 0%, rgba(139,92,246,0.07) 100%)",
-            border: "1px solid rgba(139,92,246,0.25)",
-            boxShadow: "0 8px 40px rgba(139,92,246,0.12)",
-            animation: mounted ? "pay-scale-in 0.45s 0.15s ease both" : "none",
-          }}>
-          <div className="flex flex-col items-center px-5 pt-5 pb-5 relative z-10">
-            <p className="text-[10px] text-violet-400/80 uppercase tracking-[0.18em] font-bold mb-4">
-              Scan with any UPI app
-            </p>
-            <div className="bg-white p-3 rounded-2xl mb-4" style={{ boxShadow: "0 4px 24px rgba(139,92,246,0.2)" }}>
-              <QRCodeSVG value={upiUrl} size={200} />
-            </div>
-            <div className="w-full rounded-2xl px-4 py-3 flex items-center justify-center"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.18)" }}>
-              <div className="text-center">
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">Pay this exact amount</p>
-                <p className="text-[26px] font-extrabold text-white tabular-nums">₹{finalAmount.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* ── How to pay ── */}
         <div className="rounded-xl px-4 py-3"
