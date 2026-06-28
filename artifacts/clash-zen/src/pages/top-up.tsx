@@ -315,39 +315,6 @@ function StepQR({
 
       <div className="px-4 flex flex-col gap-3 relative z-10 pb-44">
 
-        {/* ── Prominent Timer ── */}
-        <div className="flex flex-col items-center py-3"
-          style={{ animation: mounted ? "pay-slide-up 0.4s 0.04s ease both" : "none" }}>
-          <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
-            {/* Ring background */}
-            <svg width="96" height="96" className="absolute inset-0" style={{ transform: "rotate(-90deg)" }}>
-              <circle cx="48" cy="48" r="36" fill="none"
-                stroke={isUrgent ? "rgba(239,68,68,0.15)" : "rgba(139,92,246,0.15)"}
-                strokeWidth="6" />
-              <circle cx="48" cy="48" r="36" fill="none"
-                stroke={isUrgent ? "rgb(239,68,68)" : "rgb(139,92,246)"}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={circumference * (1 - progress)}
-                style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
-              />
-            </svg>
-            {/* Clock icon + time */}
-            <div className="flex flex-col items-center">
-              <Clock className="w-3 h-3 mb-0.5" style={{ color: isUrgent ? "rgb(239,68,68)" : "rgb(139,92,246)" }} />
-              <span className="text-[18px] font-black tabular-nums leading-none"
-                style={{ color: isUrgent ? "rgb(239,68,68)" : "white" }}>
-                {countdownMins}:{String(countdownSecs).padStart(2, "0")}
-              </span>
-            </div>
-          </div>
-          <p className="text-[11px] mt-1.5 font-semibold"
-            style={{ color: isUrgent ? "rgb(248,113,113)" : "rgb(161,161,170)" }}>
-            {isUrgent ? "⚠ Expiring soon!" : "Session time remaining"}
-          </p>
-        </div>
-
         {/* ── Scan with any UPI app banner ── */}
         <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-2.5"
           style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12))", border: "1px solid rgba(139,92,246,0.35)", animation: mounted ? "pay-slide-up 0.4s 0.06s ease both" : "none" }}>
@@ -372,6 +339,40 @@ function StepQR({
               <div className="text-center">
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">Pay this exact amount</p>
                 <p className="text-[26px] font-extrabold text-white tabular-nums">₹{finalAmount.toFixed(2)}</p>
+              </div>
+            </div>
+
+            {/* ── Improved Timer ── */}
+            <div className="w-full mt-3 rounded-2xl px-4 py-3"
+              style={{
+                background: isUrgent ? "rgba(239,68,68,0.06)" : "rgba(139,92,246,0.06)",
+                border: `1px solid ${isUrgent ? "rgba(239,68,68,0.25)" : "rgba(139,92,246,0.2)"}`,
+              }}>
+              {/* Time + label row */}
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: isUrgent ? "rgb(239,68,68)" : "rgb(139,92,246)" }} />
+                  <span className="text-[11px] font-semibold" style={{ color: isUrgent ? "rgb(248,113,113)" : "rgb(161,161,170)" }}>
+                    {isUrgent ? "⚠ Expiring soon!" : "Session time remaining"}
+                  </span>
+                </div>
+                <span className="text-[20px] font-black tabular-nums leading-none"
+                  style={{ color: isUrgent ? "rgb(239,68,68)" : "white", fontVariantNumeric: "tabular-nums" }}>
+                  {countdownMins}:{String(countdownSecs).padStart(2, "0")}
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full h-1.5 rounded-full overflow-hidden"
+                style={{ background: isUrgent ? "rgba(239,68,68,0.15)" : "rgba(139,92,246,0.15)" }}>
+                <div className="h-full rounded-full"
+                  style={{
+                    width: `${progress * 100}%`,
+                    background: isUrgent
+                      ? "linear-gradient(90deg, rgb(239,68,68), rgb(248,113,113))"
+                      : "linear-gradient(90deg, rgb(99,102,241), rgb(139,92,246))",
+                    transition: "width 1s linear, background 0.5s ease",
+                    boxShadow: isUrgent ? "0 0 8px rgba(239,68,68,0.6)" : "0 0 8px rgba(139,92,246,0.6)",
+                  }} />
               </div>
             </div>
           </div>
