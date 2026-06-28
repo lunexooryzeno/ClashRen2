@@ -348,6 +348,13 @@ function StepQR({
           </p>
         </div>
 
+        {/* ── Scan with any UPI app banner ── */}
+        <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-2.5"
+          style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12))", border: "1px solid rgba(139,92,246,0.35)", animation: mounted ? "pay-slide-up 0.4s 0.06s ease both" : "none" }}>
+          <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
+          <span className="text-[13px] font-bold text-violet-200 tracking-wide">Scan with any UPI app</span>
+        </div>
+
         {/* ── Order summary ── */}
         <div className="rounded-2xl overflow-hidden"
           style={{ background: "hsl(var(--card))", border: "1px solid rgba(139,92,246,0.2)", animation: mounted ? "pay-slide-up 0.4s 0.08s ease both" : "none" }}>
@@ -440,23 +447,25 @@ function StepQR({
       {/* ── Fixed bottom bar ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-3 flex flex-col gap-2.5"
         style={{ background: "linear-gradient(to top, rgba(2,2,6,1) 70%, transparent 100%)" }}>
-        {/* Open in UPI App */}
-        <button onClick={openUpiApp}
-          className="w-full h-14 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform"
-          style={{
-            background: "linear-gradient(135deg, rgba(99,102,241,0.9), rgba(139,92,246,0.9))",
-            boxShadow: "0 4px 24px rgba(139,92,246,0.4)",
-          }}>
-          <Smartphone className="w-5 h-5" />
-          Open in UPI App
-        </button>
-        {/* Cancel */}
-        <button onClick={onCancel} disabled={isCancelling}
-          className="w-full h-11 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
-          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "rgb(248,113,113)" }}>
-          <X className="w-4 h-4" />
-          {isCancelling ? "Cancelling…" : "Cancel Payment"}
-        </button>
+        <div className="flex gap-2.5">
+          {/* Open in UPI App */}
+          <button onClick={openUpiApp}
+            className="flex-1 h-14 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            style={{
+              background: "linear-gradient(135deg, rgba(99,102,241,0.9), rgba(139,92,246,0.9))",
+              boxShadow: "0 4px 24px rgba(139,92,246,0.4)",
+            }}>
+            <Smartphone className="w-4 h-4" />
+            Open in UPI App
+          </button>
+          {/* Cancel */}
+          <button onClick={onCancel} disabled={isCancelling}
+            className="flex-1 h-14 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "rgb(248,113,113)" }}>
+            <X className="w-4 h-4" />
+            {isCancelling ? "Cancelling…" : "Cancel Payment"}
+          </button>
+        </div>
       </div>
     </>
   );
