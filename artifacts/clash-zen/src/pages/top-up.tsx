@@ -14,7 +14,7 @@ const DEFAULT_UPI_NAME = "BharatPe Merchant";
 const SESSION_MINS     = 5;
 
 const PRESETS = [
-  { rupees: 10,   tag: null,         accent: "rgba(20,184,166,0.9)"  },
+  { rupees: 20,   tag: null,         accent: "rgba(20,184,166,0.9)"  },
   { rupees: 50,   tag: null,         accent: "rgba(59,130,246,0.9)"  },
   { rupees: 100,  tag: "Popular",    accent: "rgba(234,88,12,0.9)"   },
   { rupees: 200,  tag: null,         accent: "rgba(139,92,246,0.9)"  },
