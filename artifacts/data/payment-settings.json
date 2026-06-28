@@ -15,6 +15,8 @@
   "withdrawalProcessingNote": "Most withdrawals are processed within 30 minutes · max 12 hours.",
   "xsrfToken": "eyJpdiI6InFwaVl3RlRQOGVhMnp4S2lIK3NMcHc9PSIsInZhbHVlIjoiM1lIWWdXME5pQUVPTVE4RWlKTjVcL3lybERURnU5c2NVTnV5VHFXQ1wvWEFRNHVtNHBMOWhmU0lvdHl2RFdRS1hxUkpyTXZxZXY3TDR0SzVVOEZRbjh0T2hYbSt5N0tIQTlEakljNjlPS0VoaDAzV1hIb0dpd0t2bVFjVlpKekxLbyIsIm1hYyI6ImRlMGQxODUzMjQ4OWM1Y2Q2YTIyMjcwOTYxMDUyZjIzYjc0YjY2MzY5MTkzMmRjNzBjY2NjOTk0YmY0YmE3NmIifQ%3D%3D",
   "bharatpeSession": "eyJpdiI6IjVRMFBPK1E3TFVEbG43Um9walRRbHc9PSIsInZhbHVlIjoid0NjV3BoME1uTHlLWDA2QlhGQ2JMeGNDSmQ5ZEluV1hSenczTmpwT1FvbDhPWWE3b2FIdUl4TWtOeklqODh4eEw1UnlZaEN1dldhZjNkYWFCR0NLT2RzRW9LcjhzcnUzbjg4YVhuNnVFTElhcVB0aUlFTElaWTZ4Z2NCTnRGVHAiLCJtYWMiOiIxY2Y4ZDhhYTVkYmRiN2U1ZjQ4NzhkNTdhZDY1ZjhiY2IzZTczNzY1M2Y5MTcwMTE1MDA2OGY3MjNiYjEzMzA2In0%3D",
+  "bharatpeToken": "fbe4df978a644ddea389a2b2c8407968",
+  "bharatpeMerchantId": "69893818",
   "gatewayAlert": null,
   "webhookUrl": "https://trigger.macrodroid.com/9fa326ec-2426-42fa-9ad1-5aeaa12c27cd",
   "webhookSecret": "83213a2645688ddc621786e67b76636eb1bef1df7a766fa5e4d040ef4ff3c72f"
