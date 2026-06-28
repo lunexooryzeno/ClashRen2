@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import {
   ArrowLeft, Gem, ChevronRight, Zap, Star,
-  AlertTriangle, X, Eye, Shield, Clock, Loader2,
+  AlertTriangle, X, Eye, Shield, Clock, Loader2, Smartphone,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { haptic } from "@/lib/haptics";
@@ -253,27 +253,54 @@ function StepSelect({
 
 // ── Step 2: QR code ───────────────────────────────────────────────────────────
 function StepQR({
-  session, upiId, upiName, countdown, onBack,
+  session, upiId, upiName, countdown, onBack, onCancel, isCancelling,
 }: {
   session: SessionData; upiId: string; upiName: string;
   countdown: number; onBack: () => void;
+  onCancel: () => void; isCancelling: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
+  const openingUpi = useRef(false);
+
   useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t); }, []);
 
-  const finalAmount = parseFloat(session.finalAmount);
-  const baseAmount  = parseFloat(session.baseAmount);
-  const paisaExtra  = Math.round((finalAmount - baseAmount) * 100);
-  const hasPaisa    = paisaExtra > 0;
-  const upiUrl      = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&cu=INR&tn=${encodeURIComponent("Pay To BharatPe Merchant")}&am=${finalAmount.toFixed(2)}`;
+  // Prevent accidental page close while payment is pending
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (openingUpi.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  const finalAmount   = parseFloat(session.finalAmount);
+  const baseAmount    = parseFloat(session.baseAmount);
+  const paisaExtra    = Math.round((finalAmount - baseAmount) * 100);
+  const hasPaisa      = paisaExtra > 0;
+  const upiUrl        = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&cu=INR&tn=${encodeURIComponent("Pay To BharatPe Merchant")}&am=${finalAmount.toFixed(2)}`;
+  const totalSecs     = SESSION_MINS * 60;
   const countdownMins = Math.floor(countdown / 60);
   const countdownSecs = countdown % 60;
+  const isUrgent      = countdown < 60;
+  const progress      = countdown / totalSecs; // 1→0
+  const circumference = 2 * Math.PI * 36;
+
+  function openUpiApp() {
+    openingUpi.current = true;
+    haptic.mediumTap();
+    window.location.href = upiUrl;
+    setTimeout(() => { openingUpi.current = false; }, 3000);
+  }
 
   return (
     <>
       <div className="h-[2px] w-full btn-primary-gradient opacity-80" />
-      <div className="absolute top-0 right-0 w-[260px] h-[260px] pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)" }} />
+
+      {/* Ambient glow */}
+      <div className="absolute top-0 right-0 w-[300px] h-[300px] pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)" }} />
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-5 pb-3 relative z-10"
@@ -283,24 +310,47 @@ function StepQR({
           <ArrowLeft className="w-4 h-4 text-foreground" />
         </button>
         <span className="text-[11px] text-muted-foreground uppercase tracking-[0.2em] font-bold">Scan &amp; Pay</span>
-        {/* Countdown */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
-          style={{
-            background: countdown < 60 ? "rgba(239,68,68,0.12)" : "rgba(16,185,129,0.08)",
-            border: `1px solid ${countdown < 60 ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.2)"}`,
-          }}>
-          <Clock className="w-3 h-3" style={{ color: countdown < 60 ? "rgb(248,113,113)" : "rgb(52,211,153)" }} />
-          <span className="text-[12px] font-bold tabular-nums"
-            style={{ color: countdown < 60 ? "rgb(248,113,113)" : "rgb(52,211,153)" }}>
-            {countdownMins}:{String(countdownSecs).padStart(2, "0")}
-          </span>
-        </div>
+        <div className="w-9 h-9" />
       </div>
 
-      <div className="px-4 flex flex-col gap-3 relative z-10 pb-32">
-        {/* Order summary */}
+      <div className="px-4 flex flex-col gap-3 relative z-10 pb-44">
+
+        {/* ── Prominent Timer ── */}
+        <div className="flex flex-col items-center py-3"
+          style={{ animation: mounted ? "pay-slide-up 0.4s 0.04s ease both" : "none" }}>
+          <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
+            {/* Ring background */}
+            <svg width="96" height="96" className="absolute inset-0" style={{ transform: "rotate(-90deg)" }}>
+              <circle cx="48" cy="48" r="36" fill="none"
+                stroke={isUrgent ? "rgba(239,68,68,0.15)" : "rgba(139,92,246,0.15)"}
+                strokeWidth="6" />
+              <circle cx="48" cy="48" r="36" fill="none"
+                stroke={isUrgent ? "rgb(239,68,68)" : "rgb(139,92,246)"}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference * (1 - progress)}
+                style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
+              />
+            </svg>
+            {/* Clock icon + time */}
+            <div className="flex flex-col items-center">
+              <Clock className="w-3 h-3 mb-0.5" style={{ color: isUrgent ? "rgb(239,68,68)" : "rgb(139,92,246)" }} />
+              <span className="text-[18px] font-black tabular-nums leading-none"
+                style={{ color: isUrgent ? "rgb(239,68,68)" : "white" }}>
+                {countdownMins}:{String(countdownSecs).padStart(2, "0")}
+              </span>
+            </div>
+          </div>
+          <p className="text-[11px] mt-1.5 font-semibold"
+            style={{ color: isUrgent ? "rgb(248,113,113)" : "rgb(161,161,170)" }}>
+            {isUrgent ? "⚠ Expiring soon!" : "Session time remaining"}
+          </p>
+        </div>
+
+        {/* ── Order summary ── */}
         <div className="rounded-2xl overflow-hidden"
-          style={{ background: "hsl(var(--card))", border: "1px solid rgba(139,92,246,0.2)", animation: mounted ? "pay-slide-up 0.4s 0.06s ease both" : "none" }}>
+          style={{ background: "hsl(var(--card))", border: "1px solid rgba(139,92,246,0.2)", animation: mounted ? "pay-slide-up 0.4s 0.08s ease both" : "none" }}>
           <div className="px-4 py-2 flex items-center gap-2"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(139,92,246,0.06)" }}>
             <Gem className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
@@ -322,75 +372,91 @@ function StepQR({
           </div>
         </div>
 
-        {/* Paisa offset notice */}
+        {/* ── Paisa notice ── */}
         {hasPaisa && (
           <div className="rounded-2xl px-4 py-3 flex items-start gap-3"
-            style={{ background: "rgba(234,88,12,0.07)", border: "1px solid rgba(234,88,12,0.3)", animation: mounted ? "pay-slide-up 0.4s 0.1s ease both" : "none" }}>
+            style={{ background: "rgba(234,88,12,0.07)", border: "1px solid rgba(234,88,12,0.3)", animation: mounted ? "pay-slide-up 0.4s 0.12s ease both" : "none" }}>
             <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5 shrink-0" />
             <p className="text-[12px] text-orange-200 leading-relaxed">
-              This additional charge of{" "}
-              <span className="font-bold text-orange-300">{paisaExtra} paisa</span>{" "}
-              is the transaction charge. Pay the{" "}
-              <span className="font-bold text-white">exact amount ₹{finalAmount.toFixed(2)}</span>,
-              or your top-up cannot be verified.
+              Pay{" "}
+              <span className="font-bold text-white">₹{finalAmount.toFixed(2)}</span> exactly — the extra{" "}
+              <span className="font-bold text-orange-300">{paisaExtra} paisa</span> is the transaction ID.
             </p>
           </div>
         )}
 
-        {/* QR card */}
+        {/* ── QR card ── */}
         <div className="rounded-3xl relative overflow-hidden"
           style={{
             background: "linear-gradient(160deg, hsl(var(--card)) 0%, rgba(139,92,246,0.07) 100%)",
             border: "1px solid rgba(139,92,246,0.25)",
             boxShadow: "0 8px 40px rgba(139,92,246,0.12)",
-            animation: mounted ? "pay-scale-in 0.45s 0.12s ease both" : "none",
+            animation: mounted ? "pay-scale-in 0.45s 0.15s ease both" : "none",
           }}>
           <div className="flex flex-col items-center px-5 pt-5 pb-5 relative z-10">
             <p className="text-[10px] text-violet-400/80 uppercase tracking-[0.18em] font-bold mb-4">
               Scan with any UPI app
             </p>
-
-            {/* QR code */}
             <div className="bg-white p-3 rounded-2xl mb-4" style={{ boxShadow: "0 4px 24px rgba(139,92,246,0.2)" }}>
-              <QRCodeSVG value={upiUrl} size={190} />
+              <QRCodeSVG value={upiUrl} size={200} />
             </div>
-
-            {/* Amount chip */}
             <div className="w-full rounded-2xl px-4 py-3 flex items-center justify-center"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(139,92,246,0.18)" }}>
               <div className="text-center">
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">Pay this exact amount</p>
-                <p className="text-[22px] font-extrabold text-white tabular-nums">₹{finalAmount.toFixed(2)}</p>
+                <p className="text-[26px] font-extrabold text-white tabular-nums">₹{finalAmount.toFixed(2)}</p>
               </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="mt-3 w-full rounded-xl px-3 py-2.5"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">How to pay</p>
-              <ul className="flex flex-col gap-1.5">
-                {[
-                  "Open any UPI app (GPay, PhonePe, Paytm, BHIM…)",
-                  "Tap Scan QR and scan the code above",
-                  `Enter the exact amount ₹${finalAmount.toFixed(2)} if not pre-filled`,
-                  "Complete the payment — diamonds will be credited automatically",
-                ].map((step, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-orange-400 mt-px"
-                      style={{ background: "rgba(234,88,12,0.12)" }}>{i + 1}</span>
-                    <span className="text-[11px] text-zinc-500 leading-relaxed">{step}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
           </div>
         </div>
 
-        {/* Security badge */}
-        <div className="flex items-center justify-center gap-2 py-2 pb-6">
-          <Shield className="w-3.5 h-3.5 text-violet-400" />
-          <span className="text-[11px] text-zinc-500">Payments verified automatically · secured &amp; encrypted</span>
+        {/* ── How to pay ── */}
+        <div className="rounded-xl px-4 py-3"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", animation: mounted ? "pay-slide-up 0.4s 0.2s ease both" : "none" }}>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">How to pay</p>
+          <ul className="flex flex-col gap-2">
+            {[
+              "Open GPay, PhonePe, Paytm, or BHIM",
+              "Tap Scan QR and scan the code above",
+              `Enter ₹${finalAmount.toFixed(2)} exactly if not pre-filled`,
+              "Diamonds are credited automatically after payment",
+            ].map((s, i) => (
+              <li key={i} className="flex items-start gap-2.5">
+                <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-orange-400 mt-px"
+                  style={{ background: "rgba(234,88,12,0.12)" }}>{i + 1}</span>
+                <span className="text-[11px] text-zinc-500 leading-relaxed">{s}</span>
+              </li>
+            ))}
+          </ul>
         </div>
+
+        {/* ── Security badge ── */}
+        <div className="flex items-center justify-center gap-2 py-1">
+          <Shield className="w-3.5 h-3.5 text-violet-400" />
+          <span className="text-[11px] text-zinc-500">Verified automatically · secured &amp; encrypted</span>
+        </div>
+      </div>
+
+      {/* ── Fixed bottom bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-3 flex flex-col gap-2.5"
+        style={{ background: "linear-gradient(to top, rgba(2,2,6,1) 70%, transparent 100%)" }}>
+        {/* Open in UPI App */}
+        <button onClick={openUpiApp}
+          className="w-full h-14 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2.5 active:scale-[0.98] transition-transform"
+          style={{
+            background: "linear-gradient(135deg, rgba(99,102,241,0.9), rgba(139,92,246,0.9))",
+            boxShadow: "0 4px 24px rgba(139,92,246,0.4)",
+          }}>
+          <Smartphone className="w-5 h-5" />
+          Open in UPI App
+        </button>
+        {/* Cancel */}
+        <button onClick={onCancel} disabled={isCancelling}
+          className="w-full h-11 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "rgb(248,113,113)" }}>
+          <X className="w-4 h-4" />
+          {isCancelling ? "Cancelling…" : "Cancel Payment"}
+        </button>
       </div>
     </>
   );
@@ -659,6 +725,8 @@ export default function TopUpPage() {
           session={session} upiId={upiId} upiName={upiName}
           countdown={countdown}
           onBack={resetToSelect}
+          onCancel={handleCancelSession}
+          isCancelling={isCancellingSession}
         />
       )}
 
