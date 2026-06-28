@@ -31,7 +31,7 @@ const PARTICLES = [
   { left: "91%", delay: "1.1s", dur: "3.3s", size: 9  },
 ];
 
-type Step = "select" | "qr" | "expired";
+type Step = "select" | "qr" | "expired" | "success";
 
 interface PaymentSettings {
   upiId: string; upiName: string;
@@ -584,9 +584,79 @@ function ActiveSessionModal({
   );
 }
 
+// ── Step: Success ─────────────────────────────────────────────────────────────
+function StepSuccess({ session, onDone }: { session: SessionData; onDone: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 40); return () => clearTimeout(t); }, []);
+
+  return (
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-5 relative overflow-hidden profile-page-bg">
+      <FloatingParticles />
+
+      {/* Glow burst */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div style={{ width: 340, height: 340, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(52,211,153,0.18) 0%, rgba(16,185,129,0.06) 40%, transparent 70%)",
+          animation: mounted ? "pay-scale-in 0.6s ease both" : "none" }} />
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center gap-5 w-full max-w-xs">
+
+        {/* Icon ring */}
+        <div style={{ animation: mounted ? "pay-scale-in 0.5s 0.05s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <div className="w-24 h-24 rounded-[30px] flex items-center justify-center relative"
+            style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.22), rgba(16,185,129,0.12))",
+              border: "1.5px solid rgba(52,211,153,0.5)",
+              boxShadow: "0 0 48px rgba(52,211,153,0.3), inset 0 1px 0 rgba(255,255,255,0.12)" }}>
+            <div className="w-16 h-16 rounded-[20px] flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.3), rgba(16,185,129,0.18))" }}>
+              <Gem className="w-9 h-9 text-emerald-300" strokeWidth={1.5} />
+            </div>
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="text-center" style={{ animation: mounted ? "pay-slide-up 0.45s 0.1s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <p className="text-[11px] text-emerald-400 uppercase tracking-[0.22em] font-bold mb-1">Payment Successful</p>
+          <h1 className="text-3xl font-black text-white leading-tight">Diamonds Credited!</h1>
+        </div>
+
+        {/* Diamond count card */}
+        <div className="w-full rounded-3xl overflow-hidden"
+          style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.1), rgba(16,185,129,0.05))",
+            border: "1px solid rgba(52,211,153,0.3)",
+            animation: mounted ? "pay-slide-up 0.45s 0.15s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <div className="flex flex-col items-center py-5 gap-1">
+            <div className="flex items-center gap-2">
+              <Gem className="w-7 h-7 text-blue-400" strokeWidth={1.5} />
+              <span className="text-4xl font-black text-white tabular-nums">+{session.diamonds.toLocaleString()}</span>
+            </div>
+            <p className="text-[12px] text-emerald-400 font-semibold">Diamonds added to your wallet</p>
+          </div>
+          <div className="flex items-center justify-between px-5 py-3"
+            style={{ borderTop: "1px solid rgba(52,211,153,0.12)", background: "rgba(0,0,0,0.15)" }}>
+            <span className="text-[11px] text-zinc-500 uppercase tracking-widest">Amount Paid</span>
+            <span className="text-sm font-bold text-white">₹{parseFloat(session.finalAmount).toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <button onClick={onDone}
+          className="w-full py-4 rounded-2xl font-bold text-[15px] text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          style={{ background: "linear-gradient(135deg, rgb(52,211,153), rgb(16,185,129))",
+            boxShadow: "0 8px 32px rgba(52,211,153,0.35)",
+            animation: mounted ? "pay-slide-up 0.45s 0.22s ease both" : "none", opacity: mounted ? 1 : 0 }}>
+          <Gem className="w-5 h-5" strokeWidth={2} />
+          Go to Wallet
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Root page ─────────────────────────────────────────────────────────────────
 export default function TopUpPage() {
-  const { user } = useAuth();
+  const { user, invalidateUser } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -609,6 +679,7 @@ export default function TopUpPage() {
   const [isCancellingSession, setIsCancellingSession] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const minTopup       = user?.minTopup ?? globalMinTopup;
   const customRupees   = parseInt(custom) || 0;
@@ -660,6 +731,28 @@ export default function TopUpPage() {
       });
     }, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [step, session?.id]);
+
+  // Poll session status every 3s while on QR step — detect auto-credit
+  useEffect(() => {
+    if (step !== "qr" || !session) {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
+    }
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/payment-sessions/${session.id}`, { credentials: "include" });
+        if (!r.ok) return;
+        const data = await r.json() as SessionData;
+        if (data.status === "completed") {
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+          invalidateUser();
+          setStep("success");
+        }
+      } catch { /* ignore network errors */ }
+    }, 3000);
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [step, session?.id]);
 
   async function handleContinue() {
@@ -749,6 +842,10 @@ export default function TopUpPage() {
 
       {step === "expired" && (
         <StepExpired onRestart={resetToSelect} />
+      )}
+
+      {step === "success" && session && (
+        <StepSuccess session={session} onDone={() => navigate("/wallet")} />
       )}
     </div>
   );
