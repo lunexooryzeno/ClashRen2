@@ -604,7 +604,7 @@ export default function GetStartedPage() {
                       disabled={isSending}
                       data-testid="btn-send-otp"
                     >
-                      {isSending ? "Sending OTP…" : "Send OTP →"}
+                      {isSending ? "Sending OTP…" : "Send OTP"}
                     </Button>
                     <input type="text" name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
                       onChange={e => { honeypotRef.current = e.target.value; }}
@@ -615,7 +615,7 @@ export default function GetStartedPage() {
 
                 {/* Trust row */}
                 <div className="flex items-center justify-center gap-5 pt-1">
-                  {["Instant Payouts", "100% Secure", "Free to Join"].map((label) => (
+                  {["Instant Payouts", "100% Secure", "Fast Match Results"].map((label) => (
                     <span key={label} className="text-[10px] text-zinc-600 font-medium">{label}</span>
                   ))}
                 </div>
@@ -682,7 +682,7 @@ export default function GetStartedPage() {
       {step !== "suspended" && (
         <p className="pb-8 text-[11px] text-zinc-700 text-center px-6">
           {step === "phone"
-            ? "By continuing, you agree to Clash Ren's Terms & Privacy Policy."
+            ? "By continuing, you agree to ClashRen's Terms & Privacy Policy."
             : step === "2fa"
             ? "Your account is protected with a 6-digit security passcode."
             : "OTP delivered via SMS · Standard rates apply"}
