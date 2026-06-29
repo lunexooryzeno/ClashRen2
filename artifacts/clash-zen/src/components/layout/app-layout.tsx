@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Home, Trophy, CalendarDays, Clock, User, Shield, Gem, Plus, Bell, KeyRound } from "lucide-react";
+import { Home, Trophy, CalendarDays, Clock, User, Shield, Plus, Bell, KeyRound } from "lucide-react";
 import { PushPrompt } from "@/components/push-prompt";
 import { BackgroundMotion } from "@/components/background-motion";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,51 @@ import { useState, useLayoutEffect, useEffect, useRef, useCallback, memo } from 
 import { getUnreadCount } from "@/lib/notifications";
 import { haptic } from "@/lib/haptics";
 import { Link } from "wouter";
+
+/* ── 3D Faceted Diamond Gem icon ─────────────────────────────────────────── */
+function DiamondGem3D({ size = 22, flash = false }: { size?: number; flash?: boolean }) {
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 24 24" fill="none"
+      style={flash ? { animation: "wallet-gem-burst 0.65s ease-out both", willChange: "transform,filter" } : undefined}
+    >
+      <defs>
+        <linearGradient id="dg-crown" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#e0f2fe" />
+          <stop offset="60%" stopColor="#60a5fa" />
+          <stop offset="100%" stopColor="#3b82f6" />
+        </linearGradient>
+        <linearGradient id="dg-left" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2563eb" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+        <linearGradient id="dg-right" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+        <linearGradient id="dg-bot" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#1d4ed8" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+      </defs>
+      {/* Crown / top face */}
+      <polygon points="12,2 5,8 12,6.5 19,8" fill="url(#dg-crown)" />
+      {/* Left girdle */}
+      <polygon points="5,8 12,6.5 9,14" fill="url(#dg-left)" opacity="0.95" />
+      {/* Right girdle */}
+      <polygon points="19,8 12,6.5 15,14" fill="url(#dg-right)" opacity="0.9" />
+      {/* Left pavilion */}
+      <polygon points="5,8 9,14 12,22" fill="url(#dg-left)" opacity="0.8" />
+      {/* Right pavilion */}
+      <polygon points="19,8 15,14 12,22" fill="url(#dg-right)" opacity="0.75" />
+      {/* Center bottom kite */}
+      <polygon points="9,14 15,14 12,22" fill="url(#dg-bot)" />
+      {/* Shine highlight */}
+      <polygon points="7,8.5 10,7.2 9.2,10" fill="white" opacity="0.45" />
+      <polygon points="10,7.2 12.5,6.8 11.5,9" fill="white" opacity="0.2" />
+    </svg>
+  );
+}
 
 const NAV_ROUTES = ["/", "/matches", "/leaderboard", "/history", "/profile"];
 
@@ -45,7 +90,6 @@ export const TopBar = memo(function TopBar() {
     return () => clearInterval(interval);
   }, []);
 
-  // Animate when diamond balance increases (reward received)
   useEffect(() => {
     const balance = user?.diamondBalance ?? 0;
     if (prevBalanceRef.current !== null && balance > prevBalanceRef.current) {
@@ -65,102 +109,120 @@ export const TopBar = memo(function TopBar() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-50 flex items-end justify-between px-4"
+      className="fixed top-0 left-0 right-0 z-50 flex items-end justify-center px-3"
       style={{
-        height: "calc(4rem + env(safe-area-inset-top))",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "0.5rem",
-        background: "var(--nav-bg)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        height: "calc(4.25rem + env(safe-area-inset-top))",
+        paddingTop: "calc(env(safe-area-inset-top) + 0.4rem)",
+        paddingBottom: "0.45rem",
+        background: "transparent",
+        pointerEvents: "none",
       }}
     >
-      <div className="flex items-center gap-2.5">
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-red-600/30 blur-[8px]" />
-          <img
-            src="/icons/logo.png"
-            alt="Clash Ren Logo"
-            className="relative w-8 h-8 rounded-lg object-contain"
-            loading="eager"
-            fetchPriority="high"
-            decoding="sync"
-          />
-        </div>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontStyle: "italic", fontSize: "1.2rem", letterSpacing: "0.04em" }}>
-          <span style={{ background: "linear-gradient(180deg,#fff 0%,#aaa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>CLASH </span><span style={{ color: "#e01010" }}>REN</span>
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {user?.isAdmin && (
-          <Link href="/#/286c81443d1fb388d1b9a8e3b280824c/manage-keys">
-            <button className="p-2 rounded-xl bg-white/5 border border-white/8 hover:bg-white/10 transition-colors" title="Manage API Keys">
-              <KeyRound className="w-4 h-4 text-amber-400" />
-            </button>
-          </Link>
-        )}
-        {user?.isAdmin && (
-          <Link href="/admin">
-            <button className="p-2 rounded-xl bg-white/5 border border-white/8 hover:bg-white/10 transition-colors" data-testid="link-admin">
-              <Shield className="w-4 h-4 text-primary" />
-            </button>
-          </Link>
-        )}
-
-        <Link href="/notifications">
-          <button className="relative w-9 h-9 rounded-xl bg-white/5 border border-white/8 hover:bg-white/10 transition-colors flex items-center justify-center" data-testid="link-notifications">
-            <Bell className="w-4 h-4 text-zinc-400" strokeWidth={1.8} />
-            {unread > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-primary flex items-center justify-center px-0.5 text-[9px] font-bold text-white shadow-[0_0_8px_hsl(var(--primary)/0.7)]">
-                {unread > 9 ? "9+" : unread}
-              </span>
-            )}
-          </button>
-        </Link>
-
-        <Link href="/top-up">
-          <div
-            className="flex items-center rounded-xl overflow-hidden cursor-pointer transition-colors"
+      {/* Pill container */}
+      <div
+        className="w-full flex items-center justify-between gap-2"
+        style={{
+          maxWidth: 520,
+          padding: "0.45rem 0.65rem 0.45rem 0.75rem",
+          borderRadius: 20,
+          background: "rgba(6,6,10,0.82)",
+          backdropFilter: "blur(28px)",
+          WebkitBackdropFilter: "blur(28px)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          boxShadow: "0 4px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)",
+          pointerEvents: "auto",
+        }}
+      >
+        {/* ── Left: Logo + Brand ── */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-lg bg-red-600/20 blur-[6px]" />
+            <img
+              src="/icons/logo.png"
+              alt="CR"
+              className="relative w-7 h-7 object-contain"
+              loading="eager"
+              fetchPriority="high"
+              decoding="sync"
+            />
+          </div>
+          <span
             style={{
-              background: walletFlash ? "rgba(30,40,60,0.95)" : "rgba(10,10,10,0.9)",
-              border: walletFlash
-                ? "1px solid rgba(96,165,250,0.55)"
-                : "1px solid rgba(96,165,250,0.25)",
-              boxShadow: walletFlash
-                ? "0 0 16px rgba(96,165,250,0.35)"
-                : "none",
-              transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 800,
+              fontStyle: "italic",
+              fontSize: "1.1rem",
+              letterSpacing: "0.06em",
+              lineHeight: 1,
             }}
-            data-testid="display-diamond-balance"
           >
-            <div className="flex items-center gap-1.5 px-3 py-1.5 relative">
-              <Gem
-                className="w-3.5 h-3.5 text-blue-400"
-                strokeWidth={2}
-                style={walletFlash ? {
-                  animation: "wallet-gem-burst 0.65s ease-out both",
-                  willChange: "transform, filter",
-                } : undefined}
-              />
+            <span style={{ color: "#fff" }}>CLASH </span>
+            <span style={{ color: "#e01010" }}>REN</span>
+          </span>
+        </div>
+
+        {/* ── Right: Wallet + Bell ── */}
+        <div className="flex items-center gap-2 shrink-0">
+
+          {/* Admin buttons — compact icon-only */}
+          {user?.isAdmin && (
+            <Link href="/#/286c81443d1fb388d1b9a8e3b280824c/manage-keys">
+              <button
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors active:scale-90"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                title="Manage API Keys"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              </button>
+            </Link>
+          )}
+          {user?.isAdmin && (
+            <Link href="/admin">
+              <button
+                className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors active:scale-90"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+                data-testid="link-admin"
+              >
+                <Shield className="w-3.5 h-3.5 text-primary" />
+              </button>
+            </Link>
+          )}
+
+          {/* Balance pill */}
+          <Link href="/top-up">
+            <div
+              className="flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: 999,
+                background: walletFlash
+                  ? "rgba(30,50,90,0.95)"
+                  : "rgba(14,20,40,0.9)",
+                border: walletFlash
+                  ? "1px solid rgba(96,165,250,0.5)"
+                  : "1px solid rgba(96,165,250,0.22)",
+                boxShadow: walletFlash
+                  ? "0 0 18px rgba(96,165,250,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                  : "inset 0 1px 0 rgba(255,255,255,0.06)",
+                transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
+                position: "relative",
+              }}
+              data-testid="display-diamond-balance"
+            >
+              <DiamondGem3D size={20} flash={walletFlash} />
               <span
-                className="text-sm font-bold text-white tabular-nums"
-                style={walletFlash ? {
-                  animation: "wallet-num-pop 0.65s ease-out both",
-                  willChange: "transform",
-                } : undefined}
+                className="text-[14px] font-extrabold text-white tabular-nums ml-1"
+                style={walletFlash ? { animation: "wallet-num-pop 0.65s ease-out both" } : undefined}
               >
                 {user?.diamondBalance ?? 0}
               </span>
 
-              {/* Floating "+X" delta indicator */}
+              {/* Floating delta */}
               {walletDelta !== null && (
                 <span
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-300 whitespace-nowrap pointer-events-none"
+                  className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-300 whitespace-nowrap pointer-events-none"
                   style={{
                     animation: "wallet-delta-up 0.85s ease-out both",
-                    willChange: "transform, opacity",
                     textShadow: "0 0 8px rgba(96,165,250,0.8)",
                   }}
                 >
@@ -168,12 +230,48 @@ export const TopBar = memo(function TopBar() {
                 </span>
               )}
             </div>
-            <div className="w-px h-5 bg-blue-500/20" />
-            <div className="px-2.5 py-1.5 flex items-center justify-center">
-              <Plus className="w-3.5 h-3.5 text-blue-400" strokeWidth={2.5} />
-            </div>
-          </div>
-        </Link>
+          </Link>
+
+          {/* Orange + button */}
+          <Link href="/top-up">
+            <button
+              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              style={{
+                background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
+                boxShadow: "0 2px 12px rgba(249,115,22,0.45), inset 0 1px 0 rgba(255,255,255,0.2)",
+              }}
+            >
+              <Plus className="w-4 h-4 text-white" strokeWidth={2.8} />
+            </button>
+          </Link>
+
+          {/* Bell */}
+          <Link href="/notifications">
+            <button
+              className="relative w-9 h-9 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+              style={{
+                background: "rgba(20,22,35,0.9)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+              }}
+              data-testid="link-notifications"
+            >
+              <Bell className="w-4 h-4 text-zinc-300" strokeWidth={1.8} />
+              {unread > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] rounded-full flex items-center justify-center px-0.5 text-[9px] font-extrabold text-white"
+                  style={{
+                    background: "#e01010",
+                    boxShadow: "0 0 6px rgba(224,16,16,0.7)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );
