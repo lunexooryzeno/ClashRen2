@@ -416,7 +416,7 @@ export default function HistoryMatchesPage() {
   /* ── Fetch user's joined tournaments and expand multi-slot bookings ── */
   const fetchTournaments = useCallback(() => {
     setApiLoading(true);
-    authFetch("/tournaments")
+    authFetch("/tournaments", { cache: "no-cache" })
       .then(r => r.json())
       .then((list: any[]) => {
         const joined = (list || []).filter(t => t.isJoined);
