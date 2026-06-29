@@ -29,7 +29,7 @@ import { requireAdmin, requireFinanceAdmin, getSuperSecret } from "../middleware
 import { getSupportSettings, saveSupportSettings } from "../lib/supportSettings.js";
 import { getSystemSettings, saveSystemSettings } from "../lib/systemSettings.js";
 import { sendPushToUser, sendPushToAll } from "../lib/push.js";
-import { pushToUser, subscribeAdminChat, unsubscribeAdminChat } from "../lib/sse-manager.js";
+import { pushToUser, pushBroadcast, subscribeAdminChat, unsubscribeAdminChat } from "../lib/sse-manager.js";
 import { markAdminOnline, markAdminOffline } from "../lib/chat-presence.js";
 import jwt from "jsonwebtoken";
 
@@ -183,6 +183,8 @@ router.post("/admin/tournaments", requireAdmin, async (req, res) => {
     roomDirectLink: body.roomDirectLink ?? null,
     credentialUnlockMinutes: body.credentialUnlockMinutes ?? null,
   }).returning();
+  // Broadcast to all connected users so they can show a "new match" banner
+  pushBroadcast("tournament_new", { id: tournament.id, gameMode: tournament.gameMode, title: tournament.title });
   res.status(201).json(formatTournament(tournament));
 });
 

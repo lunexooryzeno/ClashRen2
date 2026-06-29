@@ -199,7 +199,7 @@ export function BottomNav() {
     <div
         id="bottom-nav"
         className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
-        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))", transition: "transform 0.32s cubic-bezier(0.4,0,0.2,1)", willChange: "transform" }}
       >
       <div
         className="absolute inset-x-0 bottom-0 pointer-events-none"

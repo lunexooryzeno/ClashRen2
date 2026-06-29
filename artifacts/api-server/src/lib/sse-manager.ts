@@ -48,6 +48,19 @@ export function connectionCount(userId: number): number {
   return clients.get(userId)?.size ?? 0;
 }
 
+/**
+ * Push a named SSE event to ALL connected users (broadcast).
+ * Use for global events like new tournament creation.
+ */
+export function pushBroadcast(event: string, data: unknown): void {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const [, set] of clients) {
+    for (const res of [...set]) {
+      try { res.write(payload); } catch { /* disconnected */ }
+    }
+  }
+}
+
 // ── Admin support-chat SSE (admin watching a specific user's chat) ────────────
 
 const adminChatClients = new Map<number, Set<Response>>();
