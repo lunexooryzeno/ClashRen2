@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Search, SlidersHorizontal, X, Trophy, Swords,
   Gem, Clock, CheckCircle2, AlertCircle, Hourglass,
-  ChevronDown, Check, ChevronRight, Flame, ScrollText,
+  ChevronDown, Check, ChevronRight, Flame, ScrollText, RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -497,7 +497,10 @@ export default function HistoryMatchesPage() {
   useEffect(() => {
     if (location === "/matches/my_matches" && sessionStorage.getItem("cz_history_needs_refresh")) {
       sessionStorage.removeItem("cz_history_needs_refresh");
+      // Fetch immediately, then again after 1.2s to catch any DB propagation delay
       fetchTournaments();
+      const t = setTimeout(() => fetchTournaments(), 1200);
+      return () => clearTimeout(t);
     }
   }, [location, fetchTournaments]);
 
@@ -566,6 +569,15 @@ export default function HistoryMatchesPage() {
                 <span className="text-[11px] font-bold">History</span>
               </button>
             )}
+            <button
+              onClick={() => { fetchTournaments(); triggerAutoVerify(); }}
+              disabled={apiLoading}
+              className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all active:scale-95 disabled:opacity-40"
+              style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.09)" }}
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 text-zinc-400 ${apiLoading ? "animate-spin" : ""}`} />
+            </button>
             <button
               onClick={() => navigate("/history/matches/terms")}
               className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 transition-all active:scale-95"

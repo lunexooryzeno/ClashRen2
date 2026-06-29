@@ -525,7 +525,7 @@ export default function MyMatchDetailPage() {
         )}
 
         {/* Countdown — only when admin has confirmed a start time and it hasn't passed yet */}
-        {countdown && isUpcoming && confirmedStartTime && (
+        {countdown && isUpcoming && confirmedStartTime ? (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl p-5 mb-4"
@@ -558,7 +558,23 @@ export default function MyMatchDetailPage() {
               </div>
             </div>
           </motion.div>
-        )}
+        ) : isUpcoming && !confirmedStartTime ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl px-4 py-4 mb-4 flex items-start gap-3"
+            style={{ background: "linear-gradient(135deg,rgba(245,158,11,0.08),rgba(0,0,0,0.3))", border: "1px solid rgba(245,158,11,0.2)" }}
+          >
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
+              <Hourglass className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[12px] font-bold text-amber-300 mb-0.5">Match Timing Pending</p>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                You'll get your match start timing once the Clash Ren team confirms your match. We'll notify you as soon as it's set!
+              </p>
+            </div>
+          </motion.div>
+        ) : null}
 
         {/* Info strip */}
         <div className="rounded-2xl overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
