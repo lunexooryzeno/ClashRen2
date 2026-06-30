@@ -130,6 +130,11 @@ export default function QuickMatchHub() {
               style={{ animation: "live-pulse 1.4s ease-in-out infinite" }}
             />
             <span className="text-[11px] font-extrabold tracking-widest text-red-400 uppercase">Live</span>
+            {stats !== null && (
+              <span className="text-[11px] font-extrabold tabular-nums text-red-300">
+                · {stats.cs.total + stats.br.total} online
+              </span>
+            )}
           </div>
         </div>
 
