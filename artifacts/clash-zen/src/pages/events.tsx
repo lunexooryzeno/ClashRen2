@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { User, Users, Shield, ArrowRight, Clock, Trophy, Flame, Zap } from "lucide-react";
+import bgImage from "@assets/1782801646557_1782801792030.png";
 
 const MODES = [
   {
@@ -195,7 +196,15 @@ export default function Events() {
   }, []);
 
   return (
-    <div className="flex-1 overflow-y-auto pb-10" style={{ background: "hsl(var(--background))" }}>
+    <div
+      className="flex-1 overflow-y-auto pb-10 relative"
+      style={{
+        backgroundImage: `linear-gradient(rgba(5,5,12,0.82), rgba(5,5,12,0.88)), url(${bgImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "scroll",
+      }}
+    >
       <div className="px-4 pt-5 pb-2 flex flex-col gap-4">
 
         {/* Header */}
