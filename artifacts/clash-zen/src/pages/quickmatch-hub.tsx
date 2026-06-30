@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Zap } from "lucide-react";
+import { ArrowLeft, Zap, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const GAME_TYPES = [
@@ -44,13 +44,49 @@ const GAME_TYPES = [
   },
 ];
 
+interface QuickMatchStats {
+  cs: { total: number; modes: Record<string, number> };
+  br: { total: number; modes: Record<string, number> };
+}
+
+function SearchingBadge({ count, accent }: { count: number | null; accent: string }) {
+  if (count === null) return null;
+  return (
+    <div
+      className="flex items-center gap-1 px-2 py-1 rounded-full"
+      style={{
+        background: `${accent}18`,
+        border: `1px solid ${accent}40`,
+      }}
+    >
+      <Users className="w-3 h-3" style={{ color: accent }} strokeWidth={2} />
+      <span className="text-[10px] font-extrabold tabular-nums" style={{ color: accent }}>
+        {count === 0 ? "Be the first!" : `${count} searching`}
+      </span>
+    </div>
+  );
+}
+
 export default function QuickMatchHub() {
   const [, navigate] = useLocation();
   const [visible, setVisible] = useState(false);
+  const [stats, setStats] = useState<QuickMatchStats | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/quickmatch/stats");
+        if (res.ok) setStats(await res.json());
+      } catch {}
+    }
+    fetchStats();
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -122,87 +158,93 @@ export default function QuickMatchHub() {
 
       {/* Game type tiles */}
       <div className="flex-1 px-4 pb-8 flex flex-col gap-4 pt-2">
-        {GAME_TYPES.map((type, idx) => (
-          <button
-            key={type.id}
-            onClick={() => navigate(`/quickmatch/${type.id}`)}
-            className="relative overflow-hidden rounded-3xl text-left active:scale-[0.975] transition-transform w-full"
-            style={{
-              background: type.bg,
-              border: `1.5px solid ${type.border}`,
-              boxShadow: `0 8px 40px ${type.glow.replace("0.45", "0.2")}`,
-              minHeight: 168,
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(28px)",
-              transition: `opacity 0.4s ease ${idx * 120}ms, transform 0.4s ease ${idx * 120}ms, scale 0.15s ease`,
-            }}
-          >
-            {/* Glow orb */}
-            <div
-              className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none"
-              style={{ background: `radial-gradient(circle, ${type.glow} 0%, transparent 65%)` }}
-            />
+        {GAME_TYPES.map((type, idx) => {
+          const typeStats = stats ? stats[type.id as "cs" | "br"] : null;
+          const total = typeStats?.total ?? null;
 
-            {/* Top accent bar */}
-            <div className="absolute top-0 left-0 right-0 h-[2px]"
-              style={{ background: `linear-gradient(90deg, ${type.accent}, ${type.accent}40)` }} />
+          return (
+            <button
+              key={type.id}
+              onClick={() => navigate(`/quickmatch/${type.id}`)}
+              className="relative overflow-hidden rounded-3xl text-left active:scale-[0.975] transition-transform w-full"
+              style={{
+                background: type.bg,
+                border: `1.5px solid ${type.border}`,
+                boxShadow: `0 8px 40px ${type.glow.replace("0.45", "0.2")}`,
+                minHeight: 168,
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(28px)",
+                transition: `opacity 0.4s ease ${idx * 120}ms, transform 0.4s ease ${idx * 120}ms, scale 0.15s ease`,
+              }}
+            >
+              {/* Glow orb */}
+              <div
+                className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none"
+                style={{ background: `radial-gradient(circle, ${type.glow} 0%, transparent 65%)` }}
+              />
 
-            <div className="relative z-10 p-5 flex flex-col h-full">
-              {/* Top row */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
+              {/* Top accent bar */}
+              <div className="absolute top-0 left-0 right-0 h-[2px]"
+                style={{ background: `linear-gradient(90deg, ${type.accent}, ${type.accent}40)` }} />
+
+              <div className="relative z-10 p-5 flex flex-col h-full">
+                {/* Top row */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex flex-col gap-2">
+                    <span
+                      className="text-[10px] font-black tracking-[0.22em] uppercase px-2.5 py-1 rounded-full"
+                      style={{
+                        background: `${type.accent}20`,
+                        color: type.accent,
+                        border: `1px solid ${type.accent}45`,
+                      }}
+                    >
+                      {type.short}
+                    </span>
+                    <SearchingBadge count={total} accent={type.accent} />
+                  </div>
+                  <div style={{ opacity: 0.7 }}>{type.icon}</div>
+                </div>
+
+                {/* Title */}
+                <h2
+                  className="font-heading text-2xl font-black text-white tracking-tight leading-none mb-1"
+                  style={{ textShadow: `0 0 24px ${type.glow}` }}
+                >
+                  {type.label}
+                </h2>
+                <p className="text-[12px] mb-4" style={{ color: `${type.accent}bb` }}>{type.tagline}</p>
+
+                {/* Mode pills */}
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {type.modes.map(m => (
+                    <span
+                      key={m}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+
+                {/* CTA */}
+                <div className="flex items-center gap-2 mt-auto">
                   <span
-                    className="text-[10px] font-black tracking-[0.22em] uppercase px-2.5 py-1 rounded-full"
+                    className="text-[13px] font-extrabold px-5 py-2.5 rounded-xl"
                     style={{
-                      background: `${type.accent}20`,
-                      color: type.accent,
-                      border: `1px solid ${type.accent}45`,
+                      background: `linear-gradient(135deg, ${type.accent}, ${type.accent}cc)`,
+                      color: "#fff",
+                      boxShadow: `0 4px 16px ${type.glow}`,
                     }}
                   >
-                    {type.short}
+                    Select Mode →
                   </span>
                 </div>
-                <div style={{ opacity: 0.7 }}>{type.icon}</div>
               </div>
-
-              {/* Title */}
-              <h2
-                className="font-heading text-2xl font-black text-white tracking-tight leading-none mb-1"
-                style={{ textShadow: `0 0 24px ${type.glow}` }}
-              >
-                {type.label}
-              </h2>
-              <p className="text-[12px] mb-4" style={{ color: `${type.accent}bb` }}>{type.tagline}</p>
-
-              {/* Mode pills */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {type.modes.map(m => (
-                  <span
-                    key={m}
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
-                  >
-                    {m}
-                  </span>
-                ))}
-              </div>
-
-              {/* CTA */}
-              <div className="flex items-center gap-2 mt-auto">
-                <span
-                  className="text-[13px] font-extrabold px-5 py-2.5 rounded-xl"
-                  style={{
-                    background: `linear-gradient(135deg, ${type.accent}, ${type.accent}cc)`,
-                    color: "#fff",
-                    boxShadow: `0 4px 16px ${type.glow}`,
-                  }}
-                >
-                  Select Mode →
-                </span>
-              </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
 
         {/* Info note */}
         <div

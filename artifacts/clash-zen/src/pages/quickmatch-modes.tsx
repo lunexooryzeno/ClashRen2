@@ -130,11 +130,11 @@ const BR_MODES: SubMode[] = [
   },
 ];
 
-function SubModeCard({ mode, accent, delay, visible, onSelect }: {
+function SubModeCard({ mode, delay, visible, searching, onSelect }: {
   mode: SubMode;
-  accent: string;
   delay: number;
   visible: boolean;
+  searching: number | null;
   onSelect: () => void;
 }) {
   const Icon = mode.Icon;
@@ -211,6 +211,16 @@ function SubModeCard({ mode, accent, delay, visible, onSelect }: {
               <span className="text-[11px] font-extrabold text-blue-300 tabular-nums">{mode.entryFee}</span>
             </div>
           </div>
+
+          {/* Searching badge */}
+          {searching !== null && (
+            <div className="mt-2 flex items-center gap-1">
+              <Users className="w-3 h-3" style={{ color: cardAccent }} strokeWidth={2} />
+              <span className="text-[10px] font-bold" style={{ color: `${cardAccent}cc` }}>
+                {searching === 0 ? "Be the first!" : `${searching} searching`}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Arrow */}
@@ -225,10 +235,16 @@ function SubModeCard({ mode, accent, delay, visible, onSelect }: {
   );
 }
 
+interface QuickMatchStats {
+  cs: { total: number; modes: Record<string, number> };
+  br: { total: number; modes: Record<string, number> };
+}
+
 export default function QuickMatchModes() {
   const params = useParams<{ type: string }>();
   const [, navigate] = useLocation();
   const [visible, setVisible] = useState(false);
+  const [stats, setStats] = useState<QuickMatchStats | null>(null);
 
   const typeKey = (params.type ?? "cs") as GameType;
   const meta = TYPE_META[typeKey] ?? TYPE_META.cs;
@@ -238,6 +254,20 @@ export default function QuickMatchModes() {
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/quickmatch/stats");
+        if (res.ok) setStats(await res.json());
+      } catch {}
+    }
+    fetchStats();
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const modeCounts = stats ? stats[typeKey]?.modes ?? null : null;
 
   return (
     <div className="min-h-[100dvh] flex flex-col" style={{ background: "hsl(var(--background))" }}>
@@ -300,9 +330,9 @@ export default function QuickMatchModes() {
           <SubModeCard
             key={mode.id}
             mode={mode}
-            accent={meta.accent}
             delay={idx * 70}
             visible={visible}
+            searching={modeCounts ? (modeCounts[mode.id] ?? 0) : null}
             onSelect={() => navigate(`/quickmatch/${typeKey}/${mode.id}`)}
           />
         ))}
