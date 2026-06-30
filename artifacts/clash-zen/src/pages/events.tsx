@@ -319,31 +319,22 @@ export default function Events() {
 
                 {/* Text content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                      style={{ background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.35)" }}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"
-                        style={{ animation: "qm-live 1.2s ease-in-out infinite" }} />
-                      <span className="text-[9px] font-black text-red-400 tracking-widest uppercase">Live</span>
-                    </div>
-                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Instant Match</span>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"
+                      style={{ animation: "qm-live 1.2s ease-in-out infinite" }} />
+                    <span className="text-[9px] font-black text-red-400 tracking-widest uppercase">Live</span>
                   </div>
-
                   <h2
-                    className="font-heading font-black leading-none tracking-tight mb-1"
+                    className="font-heading font-black leading-none tracking-tight"
                     style={{
                       fontSize: 26,
                       background: "linear-gradient(90deg, #ffffff 0%, #fca5a5 60%, #ffffff 100%)",
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
-                      textShadow: "none",
                     }}
                   >
                     Quick Match
                   </h2>
-                  <p className="text-[11px] text-zinc-500 font-semibold">
-                    Classic Survival · Battle Royale
-                  </p>
                 </div>
 
                 {/* CTA arrow */}
@@ -358,20 +349,6 @@ export default function Events() {
                 </div>
               </div>
 
-              {/* Bottom tag strip */}
-              <div
-                className="relative z-10 flex items-center gap-3 px-5 pb-4"
-              >
-                {["CS", "BR", "1v1", "Squad"].map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest"
-                    style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
         </div>
