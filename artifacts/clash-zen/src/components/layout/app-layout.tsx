@@ -219,17 +219,17 @@ export const TopBar = memo(function TopBar() {
                 </span>
               </div>
 
-              {/* Divider */}
-              <div style={{ width: 1, alignSelf: "stretch", background: "rgba(96,165,250,0.18)", margin: "6px 0" }} />
-
-              {/* Orange + side */}
-              <div
-                className="flex items-center justify-center px-3 py-1.5"
-                style={{
-                  background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
-                }}
-              >
-                <Plus className="w-3.5 h-3.5 text-white" strokeWidth={2.8} />
+              {/* Orange circle + button */}
+              <div className="flex items-center pr-1.5 pl-1">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
+                    boxShadow: "0 2px 10px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.2)",
+                  }}
+                >
+                  <Plus className="w-3.5 h-3.5 text-white" strokeWidth={2.8} />
+                </div>
               </div>
 
               {/* Floating delta */}
