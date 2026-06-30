@@ -464,8 +464,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return <div className="min-h-[100dvh]">{children}</div>;
   }
 
-  const hideTopBar = location.startsWith("/profile") || location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location.startsWith("/notifications") || location.startsWith("/matches") || location.startsWith("/leaderboard") || location.startsWith("/history") || location === "/about" || location.startsWith("/quickmatch");
-  const hideBottomNav = location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/top-up/pay") || location.startsWith("/wallet/withdraw") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location === "/profile/qr" || location === "/profile/security" || location === "/profile/theme" || location === "/about" || location.startsWith("/notifications") || (location.startsWith("/matches/") && !location.startsWith("/matches/mode") && location !== "/matches/my_matches") || location.startsWith("/history/matches/") || location.startsWith("/quickmatch");
+  const isQuickMatchQueue = /^\/quickmatch\/[^/]+\/[^/]+/.test(location);
+  const hideTopBar = location.startsWith("/profile") || location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location.startsWith("/notifications") || location.startsWith("/matches") || location.startsWith("/leaderboard") || location.startsWith("/history") || location === "/about" || isQuickMatchQueue;
+  const hideBottomNav = location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/top-up/pay") || location.startsWith("/wallet/withdraw") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location === "/profile/qr" || location === "/profile/security" || location === "/profile/theme" || location === "/about" || location.startsWith("/notifications") || (location.startsWith("/matches/") && !location.startsWith("/matches/mode") && location !== "/matches/my_matches") || location.startsWith("/history/matches/") || isQuickMatchQueue;
 
   return (
     <>
