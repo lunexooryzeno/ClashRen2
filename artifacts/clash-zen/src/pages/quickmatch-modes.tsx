@@ -256,15 +256,10 @@ export default function QuickMatchModes() {
   }, []);
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch("/api/quickmatch/stats");
-        if (res.ok) setStats(await res.json());
-      } catch {}
-    }
-    fetchStats();
-    const interval = setInterval(fetchStats, 10000);
-    return () => clearInterval(interval);
+    setStats({
+      cs: { total: 8, modes: { duel: 3, healing: 2, "clash-squad": 2, knife: 1 } },
+      br: { total: 5, modes: { "solo-drop": 2, "duo-rush": 1, "squad-wipe": 1, "zone-control": 1 } },
+    });
   }, []);
 
   const modeCounts = stats ? stats[typeKey]?.modes ?? null : null;

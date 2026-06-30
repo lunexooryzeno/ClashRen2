@@ -38,21 +38,6 @@ const STATUS_MESSAGES = [
   "Almost there…",
 ];
 
-async function callQueueApi(action: "join" | "leave", gameType: string, modeId: string) {
-  const token = localStorage.getItem("clash_ren_token");
-  if (!token) return;
-  try {
-    await fetch(`/api/quickmatch/search/${action}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ gameType, modeId }),
-    });
-  } catch {}
-}
-
 export default function QuickMatchQueue() {
   const params = useParams<{ type: string; mode: string }>();
   const [, navigate] = useLocation();
@@ -66,13 +51,6 @@ export default function QuickMatchQueue() {
   const [elapsed, setElapsed] = useState(0);
   const [statusIdx, setStatusIdx] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    callQueueApi("join", typeKey, modeKey);
-    return () => {
-      callQueueApi("leave", typeKey, modeKey);
-    };
-  }, [typeKey, modeKey]);
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
