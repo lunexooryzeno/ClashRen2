@@ -14,7 +14,7 @@ import {
   ChevronRight, Shield, Swords,
   User, Users, Crosshair, Medal, Flame, Target,
   TrendingUp, Crown, Gem, Wallet, Clock, CheckCircle,
-  BookOpen, Award, Share2, Lightbulb, CalendarClock, ArrowRight,
+  BookOpen, Award, Share2, Lightbulb, CalendarClock, ArrowRight, Zap,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
@@ -351,6 +351,64 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {/* ── Quick Match Banner ── */}
+        <Link href="/quickmatch" className="block mb-5">
+          <div
+            className="relative overflow-hidden rounded-2xl cursor-pointer active:scale-[0.975] transition-transform select-none"
+            style={{
+              background: "linear-gradient(135deg, rgba(239,68,68,0.14) 0%, rgba(59,130,246,0.14) 100%)",
+              border: "1px solid rgba(239,68,68,0.28)",
+              boxShadow: "0 4px 28px rgba(239,68,68,0.15)",
+            }}
+          >
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: "radial-gradient(ellipse at 80% 50%, rgba(239,68,68,0.18) 0%, transparent 60%)" }} />
+            <div className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{ background: "linear-gradient(90deg,#ef4444,#3b82f6)" }} />
+
+            <div className="relative z-10 flex items-center gap-4 px-4 py-4">
+              {/* Icon */}
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                style={{
+                  background: "linear-gradient(135deg, rgba(239,68,68,0.25), rgba(239,68,68,0.1))",
+                  border: "1.5px solid rgba(239,68,68,0.4)",
+                  boxShadow: "0 0 20px rgba(239,68,68,0.3)",
+                }}
+              >
+                <Zap className="w-6 h-6 text-yellow-400" fill="currentColor" />
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[15px] font-extrabold text-white">Quick Match</span>
+                  <span
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase"
+                    style={{ background: "rgba(239,68,68,0.2)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"
+                      style={{ animation: "live-pulse-home 1.4s ease-in-out infinite" }}
+                    />
+                    Live
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 truncate">Find an opponent instantly — CS &amp; BR modes</p>
+              </div>
+
+              {/* Arrow */}
+              <ArrowRight className="w-5 h-5 text-zinc-500 shrink-0" />
+            </div>
+          </div>
+        </Link>
+        <style>{`
+          @keyframes live-pulse-home {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+        `}</style>
 
         {/* ── Upcoming Schedule ── */}
         {(upcomingLoading || (upcoming && upcoming.filter(t => t.filledSlots < t.maxSlots).length > 0)) && (

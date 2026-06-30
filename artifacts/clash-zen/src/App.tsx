@@ -113,8 +113,11 @@ const AdminAllMatchesPage = lazy(() => import("@/pages/admin-all-matches"));
 const MyMatchDetailPage   = lazy(() => import("@/pages/my-match-detail"));
 const ApiKeysAdminPage    = lazy(() => import("@/pages/api-keys-admin"));
 const UtrTransactionsPage = lazy(() => import("@/pages/utr-transactions"));
-const JoinSuccessPage     = lazy(() => import("@/pages/join-success"));
-const AboutPage           = lazy(() => import("@/pages/about"));
+const JoinSuccessPage        = lazy(() => import("@/pages/join-success"));
+const AboutPage              = lazy(() => import("@/pages/about"));
+const QuickMatchHubPage      = lazy(() => import("@/pages/quickmatch-hub"));
+const QuickMatchModesPage    = lazy(() => import("@/pages/quickmatch-modes"));
+const QuickMatchQueuePage    = lazy(() => import("@/pages/quickmatch-queue"));
 
 // Suppress "signal is aborted without reason" — React Query cancels in-flight
 // fetches on unmount via AbortController; the resulting AbortError is harmless
@@ -215,6 +218,15 @@ function Router() {
         </Route>
         <Route path="/about">
           <ProtectedRoute component={AboutPage} />
+        </Route>
+        <Route path="/quickmatch/:type/:mode">
+          <ProtectedRoute component={QuickMatchQueuePage} />
+        </Route>
+        <Route path="/quickmatch/:type">
+          <ProtectedRoute component={QuickMatchModesPage} />
+        </Route>
+        <Route path="/quickmatch">
+          <ProtectedRoute component={QuickMatchHubPage} />
         </Route>
         <Route path="/profile/qr">
           <ProtectedRoute component={ProfileQrPage} />

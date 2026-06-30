@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { User, Users, Shield, ArrowRight, Clock, Trophy, Flame } from "lucide-react";
+import { User, Users, Shield, ArrowRight, Clock, Trophy, Flame, Zap } from "lucide-react";
 
 const MODES = [
   {
@@ -210,6 +210,83 @@ export default function Events() {
         <div className="flex flex-col gap-2.5">
           <SectionLabel delay={0} visible={visible}>My Activity</SectionLabel>
           <MyMatchesCard visible={visible} />
+        </div>
+
+        {/* Quick Match section */}
+        <div className="flex flex-col gap-2.5">
+          <SectionLabel delay={40} visible={visible}>Live Matchmaking</SectionLabel>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/quickmatch")}
+            onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
+            className="relative overflow-hidden rounded-2xl cursor-pointer active:scale-[0.975] select-none"
+            style={{
+              border: "1px solid rgba(239,68,68,0.3)",
+              boxShadow: "0 4px 32px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
+              background: "#080808",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(24px)",
+              transition: "opacity 0.4s ease 40ms, transform 0.4s ease 40ms",
+            }}
+          >
+            {/* Top gradient bar */}
+            <div className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{ background: "linear-gradient(90deg,#ef4444,#3b82f6,#ef4444)" }} />
+
+            <div className="flex flex-row" style={{ minHeight: 96 }}>
+              {/* Left — gradient panel */}
+              <div
+                className="relative shrink-0 flex items-center justify-center overflow-hidden rounded-l-2xl"
+                style={{
+                  width: "42%",
+                  background: "linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(59,130,246,0.12) 60%, transparent 100%)",
+                }}
+              >
+                {/* Radar rings watermark */}
+                <div className="absolute" style={{ width: 100, height: 100 }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="absolute inset-0 rounded-full border"
+                      style={{ borderColor: "rgba(239,68,68,0.2)", transform: `scale(${0.4 + i * 0.25})` }} />
+                  ))}
+                </div>
+                <Zap style={{ width: 36, height: 36, color: "#ef4444", opacity: 0.5 }} fill="currentColor" />
+                <div className="absolute inset-y-0 right-0 w-10 pointer-events-none"
+                  style={{ background: "linear-gradient(to right, transparent, #080808)" }} />
+              </div>
+
+              {/* Right — text */}
+              <div className="relative flex-1 flex flex-col justify-between py-3.5 pr-3.5 pl-2 overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{ background: "radial-gradient(ellipse at 120% 50%, rgba(239,68,68,0.12) 0%, transparent 65%)" }} />
+
+                <div className="relative z-10 flex items-center justify-end mb-1">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"
+                      style={{ animation: "qm-live 1.4s ease-in-out infinite" }} />
+                    <span className="text-[9px] font-black text-red-400 tracking-widest uppercase">Live</span>
+                  </div>
+                </div>
+
+                <div className="relative z-10">
+                  <h2 className="font-heading font-black text-white leading-none tracking-tight"
+                    style={{ fontSize: 24, textShadow: "0 0 18px rgba(239,68,68,0.5)" }}>
+                    Quick Match
+                  </h2>
+                  <p className="text-[11px] font-semibold mt-1 leading-tight text-zinc-500">
+                    CS · BR · Instant matchmaking
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <style>{`
+            @keyframes qm-live {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.25; }
+            }
+          `}</style>
         </div>
 
         {/* Game Modes section */}
