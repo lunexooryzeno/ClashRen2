@@ -186,6 +186,7 @@ function ModeCard({ mode, visible }: { mode: typeof MODES[number]; visible: bool
 }
 
 export default function Events() {
+  const [, navigate] = useLocation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
