@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Zap, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowLeft, Zap, Users, TrendingUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 const GAME_TYPES = [
   {
@@ -67,10 +67,24 @@ function SearchingBadge({ count, accent }: { count: number | null; accent: strin
   );
 }
 
+const TRENDING_THRESHOLD = 0.2;
+
+const DUMMY_SEQUENCE: QuickMatchStats[] = [
+  { cs: { total: 8,  modes: {} }, br: { total: 5,  modes: {} } },
+  { cs: { total: 9,  modes: {} }, br: { total: 6,  modes: {} } },
+  { cs: { total: 11, modes: {} }, br: { total: 8,  modes: {} } },
+  { cs: { total: 12, modes: {} }, br: { total: 9,  modes: {} } },
+  { cs: { total: 10, modes: {} }, br: { total: 7,  modes: {} } },
+  { cs: { total: 8,  modes: {} }, br: { total: 5,  modes: {} } },
+];
+
 export default function QuickMatchHub() {
   const [, navigate] = useLocation();
   const [visible, setVisible] = useState(false);
   const [stats, setStats] = useState<QuickMatchStats | null>(null);
+  const [trending, setTrending] = useState(false);
+  const prevTotalRef = useRef<number | null>(null);
+  const seqIdxRef = useRef(0);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
@@ -78,7 +92,20 @@ export default function QuickMatchHub() {
   }, []);
 
   useEffect(() => {
-    setStats({ cs: { total: 8, modes: {} }, br: { total: 5, modes: {} } });
+    function tick() {
+      const next = DUMMY_SEQUENCE[seqIdxRef.current % DUMMY_SEQUENCE.length];
+      seqIdxRef.current += 1;
+      const newTotal = next.cs.total + next.br.total;
+      if (prevTotalRef.current !== null && prevTotalRef.current > 0) {
+        const growth = (newTotal - prevTotalRef.current) / prevTotalRef.current;
+        setTrending(growth >= TRENDING_THRESHOLD);
+      }
+      prevTotalRef.current = newTotal;
+      setStats(next);
+    }
+    tick();
+    const id = setInterval(tick, 10_000);
+    return () => clearInterval(id);
   }, []);
 
   return (
@@ -94,6 +121,10 @@ export default function QuickMatchHub() {
         @keyframes radar-ring {
           0% { transform: scale(0.6); opacity: 0.7; }
           100% { transform: scale(2.2); opacity: 0; }
+        }
+        @keyframes trending-in {
+          0%   { opacity: 0; transform: translateX(6px) scale(0.85); }
+          100% { opacity: 1; transform: translateX(0) scale(1); }
         }
       `}</style>
 
@@ -116,24 +147,41 @@ export default function QuickMatchHub() {
             <ArrowLeft className="w-4 h-4 text-white" />
           </button>
 
-          {/* LIVE badge */}
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-            style={{
-              background: "rgba(239,68,68,0.12)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              boxShadow: "0 0 12px rgba(239,68,68,0.2)",
-            }}
-          >
-            <span
-              className="w-2 h-2 rounded-full bg-red-500"
-              style={{ animation: "live-pulse 1.4s ease-in-out infinite" }}
-            />
-            <span className="text-[11px] font-extrabold tracking-widest text-red-400 uppercase">Live</span>
-            {stats !== null && (
-              <span className="text-[11px] font-extrabold tabular-nums text-red-300">
-                · {stats.cs.total + stats.br.total} online
-              </span>
+          {/* LIVE badge + trending */}
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{
+                background: "rgba(239,68,68,0.12)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                boxShadow: "0 0 12px rgba(239,68,68,0.2)",
+              }}
+            >
+              <span
+                className="w-2 h-2 rounded-full bg-red-500"
+                style={{ animation: "live-pulse 1.4s ease-in-out infinite" }}
+              />
+              <span className="text-[11px] font-extrabold tracking-widest text-red-400 uppercase">Live</span>
+              {stats !== null && (
+                <span className="text-[11px] font-extrabold tabular-nums text-red-300">
+                  · {stats.cs.total + stats.br.total} online
+                </span>
+              )}
+            </div>
+
+            {trending && (
+              <div
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full"
+                style={{
+                  background: "linear-gradient(135deg, rgba(251,146,60,0.2), rgba(234,179,8,0.15))",
+                  border: "1px solid rgba(251,146,60,0.4)",
+                  boxShadow: "0 0 10px rgba(251,146,60,0.25)",
+                  animation: "trending-in 0.35s cubic-bezier(0.34,1.4,0.64,1) both",
+                }}
+              >
+                <TrendingUp className="w-3 h-3 text-orange-400" strokeWidth={2.5} />
+                <span className="text-[10px] font-black text-orange-300 tracking-wide uppercase">Trending</span>
+              </div>
             )}
           </div>
         </div>
