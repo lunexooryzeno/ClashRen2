@@ -225,78 +225,155 @@ export default function Events() {
         {/* Quick Match section */}
         <div className="flex flex-col gap-2.5">
           <SectionLabel delay={40} visible={visible}>Live Matchmaking</SectionLabel>
+          <style>{`
+            @keyframes qm-live {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.25; transform: scale(0.75); }
+            }
+            @keyframes qm-radar {
+              0% { transform: scale(0.5); opacity: 0.6; }
+              100% { transform: scale(2.4); opacity: 0; }
+            }
+            @keyframes qm-shimmer {
+              0% { transform: translateX(-100%) skewX(-15deg); }
+              100% { transform: translateX(300%) skewX(-15deg); }
+            }
+            @keyframes qm-border-spin {
+              0% { background-position: 0% 50%; }
+              100% { background-position: 200% 50%; }
+            }
+            @keyframes qm-float {
+              0%, 100% { transform: translateY(0px) rotate(0deg); }
+              50% { transform: translateY(-4px) rotate(3deg); }
+            }
+          `}</style>
+
           <div
             role="button"
             tabIndex={0}
             onClick={() => navigate("/quickmatch")}
             onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
-            className="relative overflow-hidden rounded-2xl cursor-pointer active:scale-[0.975] select-none"
+            className="relative cursor-pointer select-none"
             style={{
-              border: "1px solid rgba(239,68,68,0.3)",
-              boxShadow: "0 4px 32px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
-              background: "#080808",
+              padding: "1.5px",
+              borderRadius: "20px",
+              background: "linear-gradient(135deg, #ef4444 0%, #3b82f6 40%, #ef4444 80%, #f97316 100%)",
+              backgroundSize: "200% 200%",
+              animation: "qm-border-spin 3s linear infinite",
+              boxShadow: "0 0 32px rgba(239,68,68,0.35), 0 8px 48px rgba(239,68,68,0.2)",
               opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(24px)",
-              transition: "opacity 0.4s ease 40ms, transform 0.4s ease 40ms",
+              transform: visible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
+              transition: "opacity 0.45s ease 40ms, transform 0.45s cubic-bezier(0.34,1.3,0.64,1) 40ms",
             }}
           >
-            {/* Top gradient bar */}
-            <div className="absolute top-0 left-0 right-0 h-[2px]"
-              style={{ background: "linear-gradient(90deg,#ef4444,#3b82f6,#ef4444)" }} />
+            <div
+              className="relative overflow-hidden"
+              style={{
+                borderRadius: "18.5px",
+                background: "linear-gradient(135deg, #0d0505 0%, #0a0a14 50%, #050510 100%)",
+                minHeight: 128,
+              }}
+            >
+              {/* Background glow blobs */}
+              <div className="absolute -top-8 -left-8 w-40 h-40 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(239,68,68,0.22) 0%, transparent 70%)" }} />
+              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%)" }} />
 
-            <div className="flex flex-row" style={{ minHeight: 96 }}>
-              {/* Left — gradient panel */}
+              {/* Shimmer sweep */}
               <div
-                className="relative shrink-0 flex items-center justify-center overflow-hidden rounded-l-2xl"
+                className="absolute inset-0 pointer-events-none"
                 style={{
-                  width: "42%",
-                  background: "linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(59,130,246,0.12) 60%, transparent 100%)",
+                  background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.06) 50%, transparent 65%)",
+                  animation: "qm-shimmer 2.8s ease-in-out infinite",
+                  animationDelay: "0.4s",
                 }}
-              >
-                {/* Radar rings watermark */}
-                <div className="absolute" style={{ width: 100, height: 100 }}>
+              />
+
+              <div className="relative z-10 flex items-center gap-4 px-5 py-5">
+                {/* Radar icon area */}
+                <div className="relative shrink-0 flex items-center justify-center" style={{ width: 64, height: 64 }}>
                   {[0, 1, 2].map(i => (
-                    <div key={i} className="absolute inset-0 rounded-full border"
-                      style={{ borderColor: "rgba(239,68,68,0.2)", transform: `scale(${0.4 + i * 0.25})` }} />
+                    <div
+                      key={i}
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        border: "1.5px solid rgba(239,68,68,0.55)",
+                        animation: "qm-radar 2.4s ease-out infinite",
+                        animationDelay: `${i * 0.8}s`,
+                      }}
+                    />
                   ))}
-                </div>
-                <Zap style={{ width: 36, height: 36, color: "#ef4444", opacity: 0.5 }} fill="currentColor" />
-                <div className="absolute inset-y-0 right-0 w-10 pointer-events-none"
-                  style={{ background: "linear-gradient(to right, transparent, #080808)" }} />
-              </div>
-
-              {/* Right — text */}
-              <div className="relative flex-1 flex flex-col justify-between py-3.5 pr-3.5 pl-2 overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none"
-                  style={{ background: "radial-gradient(ellipse at 120% 50%, rgba(239,68,68,0.12) 0%, transparent 65%)" }} />
-
-                <div className="relative z-10 flex items-center justify-end mb-1">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)" }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"
-                      style={{ animation: "qm-live 1.4s ease-in-out infinite" }} />
-                    <span className="text-[9px] font-black text-red-400 tracking-widest uppercase">Live</span>
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center relative z-10"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.08) 100%)",
+                      border: "1.5px solid rgba(239,68,68,0.45)",
+                      boxShadow: "0 0 20px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+                      animation: "qm-float 3s ease-in-out infinite",
+                    }}
+                  >
+                    <Zap style={{ width: 22, height: 22, color: "#ef4444" }} fill="currentColor" />
                   </div>
                 </div>
 
-                <div className="relative z-10">
-                  <h2 className="font-heading font-black text-white leading-none tracking-tight"
-                    style={{ fontSize: 24, textShadow: "0 0 18px rgba(239,68,68,0.5)" }}>
+                {/* Text content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                      style={{ background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.35)" }}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"
+                        style={{ animation: "qm-live 1.2s ease-in-out infinite" }} />
+                      <span className="text-[9px] font-black text-red-400 tracking-widest uppercase">Live</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Instant Match</span>
+                  </div>
+
+                  <h2
+                    className="font-heading font-black leading-none tracking-tight mb-1"
+                    style={{
+                      fontSize: 26,
+                      background: "linear-gradient(90deg, #ffffff 0%, #fca5a5 60%, #ffffff 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      textShadow: "none",
+                    }}
+                  >
                     Quick Match
                   </h2>
-                  <p className="text-[11px] font-semibold mt-1 leading-tight text-zinc-500">
-                    CS · BR · Instant matchmaking
+                  <p className="text-[11px] text-zinc-500 font-semibold">
+                    Classic Survival · Battle Royale
                   </p>
                 </div>
+
+                {/* CTA arrow */}
+                <div
+                  className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                    boxShadow: "0 4px 16px rgba(239,68,68,0.5)",
+                  }}
+                >
+                  <ArrowRight className="w-5 h-5 text-white" strokeWidth={2.5} />
+                </div>
+              </div>
+
+              {/* Bottom tag strip */}
+              <div
+                className="relative z-10 flex items-center gap-3 px-5 pb-4"
+              >
+                {["CS", "BR", "1v1", "Squad"].map(tag => (
+                  <span
+                    key={tag}
+                    className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest"
+                    style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
-          <style>{`
-            @keyframes qm-live {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.25; }
-            }
-          `}</style>
         </div>
 
         {/* Game Modes section */}
