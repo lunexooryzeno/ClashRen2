@@ -188,12 +188,11 @@ export const TopBar = memo(function TopBar() {
             </Link>
           )}
 
-          {/* Balance pill */}
+          {/* Combined balance + add pill */}
           <Link href="/top-up">
             <div
-              className="flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
+              className="flex items-center cursor-pointer active:scale-95 transition-transform overflow-hidden"
               style={{
-                padding: "0.3rem 0.75rem",
                 borderRadius: 999,
                 background: walletFlash
                   ? "rgba(30,50,90,0.95)"
@@ -209,13 +208,29 @@ export const TopBar = memo(function TopBar() {
               }}
               data-testid="display-diamond-balance"
             >
-              <DiamondGem3D size={20} flash={walletFlash} />
-              <span
-                className="text-[14px] font-extrabold text-white tabular-nums ml-1"
-                style={walletFlash ? { animation: "wallet-num-pop 0.65s ease-out both" } : undefined}
+              {/* Diamond + number */}
+              <div className="flex items-center gap-1 px-3 py-1.5">
+                <DiamondGem3D size={20} flash={walletFlash} />
+                <span
+                  className="text-[14px] font-extrabold text-white tabular-nums"
+                  style={walletFlash ? { animation: "wallet-num-pop 0.65s ease-out both" } : undefined}
+                >
+                  {user?.diamondBalance ?? 0}
+                </span>
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: 1, alignSelf: "stretch", background: "rgba(96,165,250,0.18)", margin: "6px 0" }} />
+
+              {/* Orange + side */}
+              <div
+                className="flex items-center justify-center px-3 py-1.5"
+                style={{
+                  background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
+                }}
               >
-                {user?.diamondBalance ?? 0}
-              </span>
+                <Plus className="w-3.5 h-3.5 text-white" strokeWidth={2.8} />
+              </div>
 
               {/* Floating delta */}
               {walletDelta !== null && (
@@ -230,19 +245,6 @@ export const TopBar = memo(function TopBar() {
                 </span>
               )}
             </div>
-          </Link>
-
-          {/* Orange + button */}
-          <Link href="/top-up">
-            <button
-              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-              style={{
-                background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
-                boxShadow: "0 2px 12px rgba(249,115,22,0.45), inset 0 1px 0 rgba(255,255,255,0.2)",
-              }}
-            >
-              <Plus className="w-4 h-4 text-white" strokeWidth={2.8} />
-            </button>
           </Link>
 
           {/* Bell */}
