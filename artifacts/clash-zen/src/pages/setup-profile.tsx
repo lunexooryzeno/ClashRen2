@@ -128,6 +128,16 @@ export default function SetupProfileScreen() {
         return;
       }
 
+      const playerLevel = json.level ?? 0;
+      if (playerLevel < 40) {
+        haptic.error();
+        setFetchState("error");
+        setFetchError(
+          `Your account is Level ${playerLevel}. You need to be at least Level 40 to join Clash Ren. Level up your Free Fire account or use a different account.`
+        );
+        return;
+      }
+
       haptic.successTap();
       setFetchState("idle");
       setProfile({
