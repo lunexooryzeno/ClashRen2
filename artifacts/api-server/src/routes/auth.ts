@@ -321,7 +321,7 @@ router.post("/auth/complete-login", async (req, res) => {
     const platformId = await getUniquePlatformId();
     const [newUser] = await db
       .insert(usersTable)
-      .values({ phone: fullPhone, diamondBalance: 0, isAdmin: false, platformId })
+      .values({ phone: fullPhone, diamondBalance: 0, isAdmin: false, isProfileComplete: true, platformId })
       .returning();
     user = newUser;
   }
@@ -347,6 +347,13 @@ router.post("/auth/complete-login", async (req, res) => {
       });
       return;
     }
+  }
+
+  // Ensure isProfileComplete is true for phone-verified users (handles accounts
+  // created before this field was added, or via a path that didn't set it).
+  if (!user.isProfileComplete) {
+    await db.update(usersTable).set({ isProfileComplete: true }).where(eq(usersTable.id, user.id));
+    user = { ...user, isProfileComplete: true };
   }
 
   // 2FA check: if the user has 2FA enabled, require the passcode before issuing a session

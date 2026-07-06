@@ -110,7 +110,7 @@ const phoneSchema = z.object({
 type Step = "phone" | "otp" | "2fa" | "suspended";
 
 export default function GetStartedPage() {
-  const { isAuthenticated, isLoading, invalidateUser } = useAuth();
+  const { isAuthenticated, isLoading, invalidateUser, user } = useAuth();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("phone");
   const [suspendedData, setSuspendedData] = useState<SuspendedData | null>(null);
@@ -161,7 +161,12 @@ export default function GetStartedPage() {
   };
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && user) {
+      // New users (no uid or in-game name) must complete profile setup first
+      if (!user.uid || !user.inGameName) {
+        setLocation("/setup-profile");
+        return;
+      }
       const redirect = sessionStorage.getItem("redirectAfterLogin");
       sessionStorage.removeItem("redirectAfterLogin");
       if (
@@ -175,7 +180,7 @@ export default function GetStartedPage() {
         setLocation("/");
       }
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, user, setLocation]);
 
   useEffect(() => {
     if (timer > 0) {
