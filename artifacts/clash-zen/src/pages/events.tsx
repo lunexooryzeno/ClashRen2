@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { User, Users, Shield, ArrowRight, Swords, Gem } from "lucide-react";
+import { User, Users, Shield, ArrowRight } from "lucide-react";
 import bgImage from "@assets/1782801646557_1782801792030.png";
+import ibImage from "@assets/1783428587281_1783433274608.png";
 
 const MODES = [
   {
@@ -108,74 +109,6 @@ function ModeCard({ mode, visible }: { mode: typeof MODES[number]; visible: bool
   );
 }
 
-/* Ornate corner bracket — renders two bars forming an L */
-function CornerBracket({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const size = 18;
-  const thickness = 3;
-  const color = "#fbbf24";
-  const radius = 3;
-
-  const top    = pos === "tl" || pos === "tr" ? -1 : undefined;
-  const bottom = pos === "bl" || pos === "br" ? -1 : undefined;
-  const left   = pos === "tl" || pos === "bl" ? -1 : undefined;
-  const right  = pos === "tr" || pos === "br" ? -1 : undefined;
-
-  const hBar: React.CSSProperties = {
-    position: "absolute",
-    width: size,
-    height: thickness,
-    background: `linear-gradient(${pos.includes("l") ? "to right" : "to left"}, ${color}, rgba(251,191,36,0.4))`,
-    top: pos.includes("t") ? 0 : undefined,
-    bottom: pos.includes("b") ? 0 : undefined,
-    left: pos.includes("l") ? 0 : undefined,
-    right: pos.includes("r") ? 0 : undefined,
-    borderRadius: pos === "tl" ? `${radius}px 0 0 0` : pos === "tr" ? `0 ${radius}px 0 0` : pos === "bl" ? `0 0 0 ${radius}px` : `0 0 ${radius}px 0`,
-  };
-  const vBar: React.CSSProperties = {
-    position: "absolute",
-    width: thickness,
-    height: size,
-    background: `linear-gradient(${pos.includes("t") ? "to bottom" : "to top"}, ${color}, rgba(251,191,36,0.4))`,
-    top: pos.includes("t") ? 0 : undefined,
-    bottom: pos.includes("b") ? 0 : undefined,
-    left: pos.includes("l") ? 0 : undefined,
-    right: pos.includes("r") ? 0 : undefined,
-    borderRadius: pos === "tl" ? `${radius}px 0 0 0` : pos === "tr" ? `0 ${radius}px 0 0` : pos === "bl" ? `0 0 0 ${radius}px` : `0 0 ${radius}px 0`,
-  };
-
-  return (
-    <div style={{ position: "absolute", top, bottom, left, right, width: size, height: size, zIndex: 30, pointerEvents: "none" }}>
-      <div style={hBar} />
-      <div style={vBar} />
-    </div>
-  );
-}
-
-/* Clean golden circle emblem with crossed swords */
-function SwordEmblem() {
-  return (
-    <div className="relative flex items-center justify-center" style={{ width: 88, height: 88, flexShrink: 0 }}>
-      {/* Outer glow */}
-      <div className="absolute inset-0 rounded-full pointer-events-none" style={{
-        boxShadow: "0 0 22px rgba(245,158,11,0.6), 0 0 48px rgba(245,158,11,0.18)",
-      }} />
-
-      {/* Golden circle background */}
-      <div className="absolute inset-0 rounded-full" style={{
-        background: "radial-gradient(circle at 40% 35%, #fde68a 0%, #f59e0b 45%, #b45309 100%)",
-        border: "2.5px solid #fbbf24",
-        boxShadow: "inset 0 2px 8px rgba(255,255,255,0.25), inset 0 -2px 8px rgba(0,0,0,0.4)",
-      }} />
-
-      {/* Swords icon */}
-      <div className="relative z-10 flex items-center justify-center" style={{
-        filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.7))",
-      }}>
-        <Swords style={{ width: 42, height: 42, color: "#1c0a00" }} strokeWidth={1.8} />
-      </div>
-    </div>
-  );
-}
 
 export default function Events() {
   const [, navigate] = useLocation();
@@ -226,98 +159,21 @@ export default function Events() {
             onClick={() => navigate("/quickmatch")}
             onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
             className="relative overflow-hidden cursor-pointer active:scale-[0.99] select-none"
-            style={{
-              borderRadius: "14px",
-              background: "linear-gradient(135deg, #1c1205 0%, #111111 45%, #1a1205 100%)",
-              border: "1px solid rgba(245,158,11,0.25)",
-            }}
+            style={{ borderRadius: "14px" }}
           >
-                {/* Subtle carbon-fiber texture overlay */}
-                <div className="absolute inset-0 pointer-events-none" style={{
-                  backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)",
-                  zIndex: 0,
-                }} />
-
-                {/* Background glow */}
-                <div className="absolute -top-6 -left-6 w-48 h-48 rounded-full pointer-events-none" style={{
-                  background: "radial-gradient(circle, rgba(245,158,11,0.16) 0%, transparent 65%)",
-                }} />
-                <div className="absolute -bottom-6 -right-6 w-36 h-36 rounded-full pointer-events-none" style={{
-                  background: "radial-gradient(circle, rgba(217,119,6,0.12) 0%, transparent 65%)",
-                }} />
-
-                {/* Static shimmer highlight */}
-                <div className="absolute inset-0 pointer-events-none" style={{
-                  background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%)",
-                  zIndex: 1,
-                }} />
-
-                {/* ── Content row ── */}
-                <div className="relative flex items-center gap-3 px-3 pt-3 pb-2" style={{ zIndex: 2 }}>
-                  {/* Sword emblem */}
-                  <SwordEmblem />
-
-                  {/* Right text */}
-                  <div className="flex-1 min-w-0">
-                    {/* Live + queue badges */}
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className="rounded-full shrink-0"
-                          style={{ width: 8, height: 8, background: "#f97316", display: "inline-block" }}
-                        />
-                        <span className="text-[11px] font-black text-white tracking-widest uppercase">LIVE</span>
-                      </div>
-                      <span
-                        className="text-[10px] font-bold px-2.5 py-0.5 rounded-md"
-                        style={{
-                          background: "rgba(17,17,17,0.9)",
-                          border: "1px solid rgba(245,158,11,0.45)",
-                          color: "#fbbf24",
-                        }}
-                      >
-                        247 in queue
-                      </span>
-                    </div>
-
-                    {/* Title */}
-                    <h2
-                      className="font-heading font-black leading-none tracking-tight"
-                      style={{
-                        fontSize: 24,
-                        color: "#ffffff",
-                        textShadow: "0 0 20px rgba(245,158,11,0.5)",
-                        letterSpacing: "-0.02em",
-                      }}
-                    >
-                      Instant Battle
-                    </h2>
-
-                    {/* Tagline */}
-                    <p className="mt-1 leading-snug" style={{ fontSize: 11, color: "rgba(253,186,116,0.7)", fontWeight: 500 }}>
-                      No wait. No setup. Drop in &amp; fight.
-                    </p>
-                  </div>
-                </div>
-
-                {/* ── ENTER NOW button ── */}
-                <div
-                  className="relative mx-2.5 mb-2.5 rounded-lg flex items-center justify-center gap-1.5 py-2.5"
-                  style={{
-                    zIndex: 2,
-                    background: "linear-gradient(135deg, #ea580c 0%, #d97706 40%, #f59e0b 70%, #d97706 100%)",
-                    boxShadow: "0 3px 16px rgba(234,88,12,0.55), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.25)",
-                  }}
-                >
-                  <span
-                    className="font-black uppercase tracking-[0.15em] text-white"
-                    style={{ fontSize: 13, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}
-                  >
-                    ENTER NOW
-                  </span>
-                  <span className="text-white font-black" style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>»</span>
-                </div>
-
+            <img
+              src={ibImage}
+              alt="Instant Battle"
+              fetchPriority="high"
+              decoding="sync"
+              draggable={false}
+              style={{
+                width: "100%",
+                display: "block",
+                objectFit: "cover",
+                objectPosition: "center 20%",
+              }}
+            />
           </div>
         </div>
 
