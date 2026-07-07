@@ -151,61 +151,27 @@ function CornerBracket({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   );
 }
 
-/* Sacred-geometry circle emblem with crossed swords */
+/* Clean golden circle emblem with crossed swords */
 function SwordEmblem() {
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 96, height: 96, flexShrink: 0 }}>
-      {/* Outer glow ring */}
-      <div className="absolute inset-0 rounded-full pointer-events-none" style={{ boxShadow: "0 0 28px rgba(245,158,11,0.55), 0 0 60px rgba(245,158,11,0.2)" }} />
+    <div className="relative flex items-center justify-center" style={{ width: 88, height: 88, flexShrink: 0 }}>
+      {/* Outer glow */}
+      <div className="absolute inset-0 rounded-full pointer-events-none" style={{
+        boxShadow: "0 0 22px rgba(245,158,11,0.6), 0 0 48px rgba(245,158,11,0.18)",
+      }} />
 
-      {/* SVG mandala */}
-      <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: "absolute", inset: 0 }}>
-        <defs>
-          <radialGradient id="emblemFill" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.45" />
-            <stop offset="50%" stopColor="#d97706" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#78350f" stopOpacity="0.2" />
-          </radialGradient>
-          <radialGradient id="emblemOuter" cx="50%" cy="50%" r="50%">
-            <stop offset="70%" stopColor="#f59e0b" stopOpacity="0" />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.25" />
-          </radialGradient>
-        </defs>
+      {/* Golden circle background */}
+      <div className="absolute inset-0 rounded-full" style={{
+        background: "radial-gradient(circle at 40% 35%, #fde68a 0%, #f59e0b 45%, #b45309 100%)",
+        border: "2.5px solid #fbbf24",
+        boxShadow: "inset 0 2px 8px rgba(255,255,255,0.25), inset 0 -2px 8px rgba(0,0,0,0.4)",
+      }} />
 
-        {/* Outer ring */}
-        <circle cx="48" cy="48" r="46" fill="url(#emblemOuter)" stroke="#f59e0b" strokeWidth="1.5" strokeOpacity="0.7" />
-        {/* Inner filled circle */}
-        <circle cx="48" cy="48" r="42" fill="url(#emblemFill)" />
-
-        {/* Second ring */}
-        <circle cx="48" cy="48" r="36" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.35" />
-
-        {/* Sacred geometry — upward triangle */}
-        <polygon points="48,12 78,62 18,62" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.4" />
-        {/* Sacred geometry — downward triangle */}
-        <polygon points="48,84 18,34 78,34" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.4" />
-
-        {/* Inner small circle */}
-        <circle cx="48" cy="48" r="18" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.3" />
-
-        {/* 6 radial lines from center to ring */}
-        {[0, 60, 120, 180, 240, 300].map(angle => {
-          const rad = (angle * Math.PI) / 180;
-          const x2 = 48 + Math.cos(rad) * 36;
-          const y2 = 48 + Math.sin(rad) * 36;
-          return <line key={angle} x1="48" y1="48" x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="0.5" strokeOpacity="0.25" />;
-        })}
-
-        {/* Bright center spot */}
-        <circle cx="48" cy="48" r="4" fill="#fbbf24" fillOpacity="0.5" />
-      </svg>
-
-      {/* Swords icon layered on top */}
+      {/* Swords icon */}
       <div className="relative z-10 flex items-center justify-center" style={{
-        width: 52, height: 52,
-        filter: "drop-shadow(0 0 8px rgba(245,158,11,0.9)) drop-shadow(0 0 16px rgba(245,158,11,0.5))",
+        filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.7))",
       }}>
-        <Swords style={{ width: 38, height: 38, color: "#fde68a" }} strokeWidth={1.5} />
+        <Swords style={{ width: 42, height: 42, color: "#1c0a00" }} strokeWidth={1.8} />
       </div>
     </div>
   );
@@ -254,42 +220,10 @@ export default function Events() {
         {/* Instant Battle section */}
         <div className="flex flex-col gap-2.5 mt-2">
           <SectionLabel delay={40} visible={visible}>Instant Battle</SectionLabel>
-          <style>{`
-            @keyframes ib-live {
-              0%, 100% { opacity: 1; transform: scale(1); }
-              50%       { opacity: 0.3; transform: scale(0.7); }
-            }
-            @keyframes ib-queue {
-              0%, 100% { opacity: 1; }
-              50%       { opacity: 0.6; }
-            }
-            @keyframes ib-shimmer {
-              0%   { transform: translateX(-120%) skewX(-15deg); }
-              100% { transform: translateX(320%) skewX(-15deg); }
-            }
-            @keyframes ib-pulse-border {
-              0%, 100% { opacity: 1; }
-              50%       { opacity: 0.65; }
-            }
-            @keyframes ib-emblem-spin {
-              from { transform: rotate(0deg); }
-              to   { transform: rotate(360deg); }
-            }
-          `}</style>
-
-          {/* Outermost: entry animation wrapper */}
-          <div
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0) scale(1)" : "translateY(28px) scale(0.96)",
-              transition: "opacity 0.5s ease 60ms, transform 0.5s cubic-bezier(0.34,1.3,0.64,1) 60ms",
-              position: "relative",
-            }}
-          >
+          <div style={{ position: "relative" }}>
             {/* Outer ambient glow */}
             <div className="absolute -inset-2 rounded-2xl pointer-events-none" style={{
-              background: "radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.18) 0%, transparent 70%)",
-              animation: "ib-pulse-border 2.5s ease-in-out infinite",
+              background: "radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.15) 0%, transparent 70%)",
             }} />
 
             {/* Gold gradient border shell */}
@@ -299,7 +233,6 @@ export default function Events() {
                 borderRadius: "14px",
                 background: "linear-gradient(145deg, #fbbf24 0%, #d97706 25%, #92400e 50%, #d97706 75%, #fbbf24 100%)",
                 boxShadow: "0 0 20px rgba(245,158,11,0.45), 0 4px 40px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
-                animation: "ib-pulse-border 2.5s ease-in-out infinite",
                 position: "relative",
               }}
             >
@@ -340,11 +273,9 @@ export default function Events() {
                   background: "radial-gradient(circle, rgba(217,119,6,0.12) 0%, transparent 65%)",
                 }} />
 
-                {/* Shimmer sweep */}
+                {/* Static shimmer highlight */}
                 <div className="absolute inset-0 pointer-events-none" style={{
-                  background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%)",
-                  animation: "ib-shimmer 3.5s ease-in-out infinite",
-                  animationDelay: "0.8s",
+                  background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%)",
                   zIndex: 1,
                 }} />
 
@@ -360,7 +291,7 @@ export default function Events() {
                       <div className="flex items-center gap-1.5">
                         <span
                           className="rounded-full shrink-0"
-                          style={{ width: 8, height: 8, background: "#f97316", display: "inline-block", animation: "ib-live 1.3s ease-in-out infinite" }}
+                          style={{ width: 8, height: 8, background: "#f97316", display: "inline-block" }}
                         />
                         <span className="text-[11px] font-black text-white tracking-widest uppercase">LIVE</span>
                       </div>
@@ -370,7 +301,6 @@ export default function Events() {
                           background: "rgba(17,17,17,0.9)",
                           border: "1px solid rgba(245,158,11,0.45)",
                           color: "#fbbf24",
-                          animation: "ib-queue 2s ease-in-out infinite",
                         }}
                       >
                         247 in queue
