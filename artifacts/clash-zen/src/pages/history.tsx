@@ -7,7 +7,7 @@ import { motion, AnimatePresence, animate } from "framer-motion";
 import {
   Trophy, Swords, Gem, Search, X, TrendingUp, TrendingDown,
   Zap, Target, Clock, ChevronDown, ChevronUp, Shield,
-  Flame, Star, Award, BarChart2, Filter, RefreshCw, ArrowUpDown, Check,
+  Flame, Star, Award, BarChart2, Filter, RefreshCw, ArrowUpDown, Check, ArrowRight,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -574,6 +574,66 @@ export default function History() {
             Completed Match History
           </h1>
           <p className="text-[11px] text-zinc-500 mt-0.5">Your full competitive record</p>
+        </motion.div>
+      </div>
+
+      {/* ── My Matches section ── */}
+      <div className="shrink-0 px-4 pb-3">
+        <div className="flex items-center gap-2 px-1 mb-2.5">
+          <span className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">My Matches</span>
+          <div className="flex-1 h-px" style={{ background: "linear-gradient(to right, rgba(255,255,255,0.07), transparent)" }} />
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/matches/my_matches")}
+          onKeyDown={(e: React.KeyboardEvent) => e.key === "Enter" && navigate("/matches/my_matches")}
+          className="relative overflow-hidden rounded-2xl cursor-pointer active:scale-[0.975] select-none flex flex-row"
+          style={{
+            border: "1px solid rgba(6,182,212,0.3)",
+            boxShadow: "0 4px 32px rgba(6,182,212,0.18), inset 0 1px 0 rgba(255,255,255,0.06)",
+            background: "#080808",
+            minHeight: 96,
+          }}
+        >
+          {/* Left — gradient panel */}
+          <div
+            className="relative shrink-0 flex items-center justify-center overflow-hidden rounded-l-2xl"
+            style={{
+              width: "42%",
+              background: "linear-gradient(135deg, rgba(6,182,212,0.22) 0%, rgba(6,182,212,0.06) 60%, transparent 100%)",
+            }}
+          >
+            <Clock strokeWidth={0.5} style={{ width: 90, height: 90, color: "#06b6d4", opacity: 0.18 }} />
+            <Trophy style={{ width: 18, height: 18, color: "#06b6d4", opacity: 0.35, position: "absolute", top: 14, right: 18 }} />
+            <Flame style={{ width: 14, height: 14, color: "#22d3ee", opacity: 0.25, position: "absolute", bottom: 16, left: 16 }} />
+            <div className="absolute inset-y-0 right-0 w-10 pointer-events-none"
+              style={{ background: "linear-gradient(to right, transparent, #080808)" }} />
+          </div>
+
+          {/* Right — text */}
+          <div className="relative flex-1 flex flex-col justify-between py-3.5 pr-3.5 pl-2 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: "radial-gradient(ellipse at 120% 50%, rgba(6,182,212,0.13) 0%, transparent 65%)" }} />
+            <div className="relative z-10 flex items-center justify-end mb-1">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(6,182,212,0.094)", border: "1px solid rgba(6,182,212,0.251)" }}>
+                <ArrowRight className="w-3 h-3" style={{ color: "#06b6d4" }} />
+              </div>
+            </div>
+            <div className="relative z-10">
+              <h2 className="font-heading font-black text-white leading-none tracking-tight"
+                style={{ fontSize: 26, textShadow: "0 0 18px rgba(6,182,212,0.5)" }}>
+                My Matches
+              </h2>
+              <p className="text-[11px] font-semibold mt-1 leading-tight" style={{ color: "#06b6d4aa" }}>
+                View your match history
+              </p>
+            </div>
+          </div>
         </motion.div>
       </div>
 
