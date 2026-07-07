@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { User, Users, Shield, ArrowRight } from "lucide-react";
+import { User, Users, Shield, ArrowRight, Gem } from "lucide-react";
 import bgImage from "@assets/1782801646557_1782801792030.png";
 import ibImage from "@assets/1783428587281_1783433274608.png";
 
