@@ -220,45 +220,18 @@ export default function Events() {
         {/* Instant Battle section */}
         <div className="flex flex-col gap-2.5 mt-2">
           <SectionLabel delay={40} visible={visible}>Instant Battle</SectionLabel>
-          <div style={{ position: "relative" }}>
-            {/* Outer ambient glow */}
-            <div className="absolute -inset-2 rounded-2xl pointer-events-none" style={{
-              background: "radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.15) 0%, transparent 70%)",
-            }} />
-
-            {/* Gold gradient border shell */}
-            <div
-              style={{
-                padding: "2px",
-                borderRadius: "14px",
-                background: "linear-gradient(145deg, #fbbf24 0%, #d97706 25%, #92400e 50%, #d97706 75%, #fbbf24 100%)",
-                boxShadow: "0 0 20px rgba(245,158,11,0.45), 0 4px 40px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
-                position: "relative",
-              }}
-            >
-              {/* Corner brackets (outside the inner card, inside the border shell) */}
-              <CornerBracket pos="tl" />
-              <CornerBracket pos="tr" />
-              <CornerBracket pos="bl" />
-              <CornerBracket pos="br" />
-
-              {/* Mid-edge notch — top center */}
-              <div style={{ position: "absolute", top: -1, left: "50%", transform: "translateX(-50%)", width: 24, height: 4, background: "#fbbf24", borderRadius: "0 0 3px 3px", zIndex: 30 }} />
-              {/* Mid-edge notch — bottom center */}
-              <div style={{ position: "absolute", bottom: -1, left: "50%", transform: "translateX(-50%)", width: 24, height: 4, background: "#fbbf24", borderRadius: "3px 3px 0 0", zIndex: 30 }} />
-
-              {/* Inner dark card */}
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate("/quickmatch")}
-                onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
-                className="relative overflow-hidden cursor-pointer active:scale-[0.99] select-none"
-                style={{
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #1c1205 0%, #111111 45%, #1a1205 100%)",
-                }}
-              >
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/quickmatch")}
+            onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
+            className="relative overflow-hidden cursor-pointer active:scale-[0.99] select-none"
+            style={{
+              borderRadius: "14px",
+              background: "linear-gradient(135deg, #1c1205 0%, #111111 45%, #1a1205 100%)",
+              border: "1px solid rgba(245,158,11,0.25)",
+            }}
+          >
                 {/* Subtle carbon-fiber texture overlay */}
                 <div className="absolute inset-0 pointer-events-none" style={{
                   backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)",
@@ -345,8 +318,6 @@ export default function Events() {
                   <span className="text-white font-black" style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>»</span>
                 </div>
 
-              </div>
-            </div>
           </div>
         </div>
 
