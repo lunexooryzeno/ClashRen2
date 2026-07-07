@@ -164,8 +164,8 @@ export default function Events() {
             <img
               src={ibImage}
               alt="Instant Battle"
-              fetchPriority="high"
-              decoding="sync"
+              loading="eager"
+              decoding="async"
               draggable={false}
               style={{
                 width: "100%",
