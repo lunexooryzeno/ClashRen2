@@ -78,50 +78,134 @@ function ModeCard({ mode, visible }: { mode: typeof MODES[number]; visible: bool
         transition: `opacity 0.4s ease ${mode.delay}ms, transform 0.4s ease ${mode.delay}ms`,
       }}
     >
-      {/* Left — photo */}
       <div className="relative shrink-0 overflow-hidden rounded-l-2xl" style={{ width: "46%" }}>
-        <img
-          src={mode.image}
-          alt={mode.label}
-          className="w-full h-auto block"
-          draggable={false}
-          loading="lazy"
-          decoding="async"
-        />
-        <div className="absolute inset-y-0 right-0 w-14 pointer-events-none"
-          style={{ background: `linear-gradient(to right, transparent, #080808)` }} />
-        <div className="absolute inset-x-0 top-0 h-8 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)" }} />
+        <img src={mode.image} alt={mode.label} className="w-full h-auto block" draggable={false} loading="lazy" decoding="async" />
+        <div className="absolute inset-y-0 right-0 w-14 pointer-events-none" style={{ background: `linear-gradient(to right, transparent, #080808)` }} />
+        <div className="absolute inset-x-0 top-0 h-8 pointer-events-none" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)" }} />
       </div>
-
-      {/* Right — text */}
       <div className="relative flex-1 flex flex-col justify-between py-3 pr-3 pl-1 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse at 120% 60%, ${mode.glow.replace("0.5","0.18")} 0%, transparent 65%)` }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 120% 60%, ${mode.glow.replace("0.5","0.18")} 0%, transparent 65%)` }} />
         <div className="absolute -right-2 top-1/2 -translate-y-1/2 opacity-[0.06] pointer-events-none">
           <Icon strokeWidth={0.6} style={{ width: 88, height: 88, color: mode.accent }} />
         </div>
         <div className="relative z-10 flex items-center justify-end mb-1">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ background: `${mode.accent}18`, border: `1px solid ${mode.accent}40` }}>
+          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: `${mode.accent}18`, border: `1px solid ${mode.accent}40` }}>
             <ArrowRight className="w-3 h-3" style={{ color: mode.accent }} />
           </div>
         </div>
         <div className="relative z-10">
-          <h2 className="font-heading font-black text-white leading-none tracking-tight"
-            style={{ fontSize: 28, textShadow: `0 0 20px ${mode.glow}` }}>
+          <h2 className="font-heading font-black text-white leading-none tracking-tight" style={{ fontSize: 28, textShadow: `0 0 20px ${mode.glow}` }}>
             {mode.label}
           </h2>
-          <p className="text-[11px] font-semibold mt-1 leading-tight" style={{ color: `${mode.accent}bb` }}>
-            {mode.tagline}
-          </p>
+          <p className="text-[11px] font-semibold mt-1 leading-tight" style={{ color: `${mode.accent}bb` }}>{mode.tagline}</p>
           <div className="flex items-center gap-1 mt-2">
             <Gem className="w-2.5 h-2.5 shrink-0" style={{ color: `${mode.accent}99` }} />
-            <span className="text-[10px] font-semibold" style={{ color: `${mode.accent}77` }}>
-              {mode.entry}
-            </span>
+            <span className="text-[10px] font-semibold" style={{ color: `${mode.accent}77` }}>{mode.entry}</span>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* Ornate corner bracket — renders two bars forming an L */
+function CornerBracket({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
+  const size = 18;
+  const thickness = 3;
+  const color = "#fbbf24";
+  const radius = 3;
+
+  const top    = pos === "tl" || pos === "tr" ? -1 : undefined;
+  const bottom = pos === "bl" || pos === "br" ? -1 : undefined;
+  const left   = pos === "tl" || pos === "bl" ? -1 : undefined;
+  const right  = pos === "tr" || pos === "br" ? -1 : undefined;
+
+  const hBar: React.CSSProperties = {
+    position: "absolute",
+    width: size,
+    height: thickness,
+    background: `linear-gradient(${pos.includes("l") ? "to right" : "to left"}, ${color}, rgba(251,191,36,0.4))`,
+    top: pos.includes("t") ? 0 : undefined,
+    bottom: pos.includes("b") ? 0 : undefined,
+    left: pos.includes("l") ? 0 : undefined,
+    right: pos.includes("r") ? 0 : undefined,
+    borderRadius: pos === "tl" ? `${radius}px 0 0 0` : pos === "tr" ? `0 ${radius}px 0 0` : pos === "bl" ? `0 0 0 ${radius}px` : `0 0 ${radius}px 0`,
+  };
+  const vBar: React.CSSProperties = {
+    position: "absolute",
+    width: thickness,
+    height: size,
+    background: `linear-gradient(${pos.includes("t") ? "to bottom" : "to top"}, ${color}, rgba(251,191,36,0.4))`,
+    top: pos.includes("t") ? 0 : undefined,
+    bottom: pos.includes("b") ? 0 : undefined,
+    left: pos.includes("l") ? 0 : undefined,
+    right: pos.includes("r") ? 0 : undefined,
+    borderRadius: pos === "tl" ? `${radius}px 0 0 0` : pos === "tr" ? `0 ${radius}px 0 0` : pos === "bl" ? `0 0 0 ${radius}px` : `0 0 ${radius}px 0`,
+  };
+
+  return (
+    <div style={{ position: "absolute", top, bottom, left, right, width: size, height: size, zIndex: 30, pointerEvents: "none" }}>
+      <div style={hBar} />
+      <div style={vBar} />
+    </div>
+  );
+}
+
+/* Sacred-geometry circle emblem with crossed swords */
+function SwordEmblem() {
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 96, height: 96, flexShrink: 0 }}>
+      {/* Outer glow ring */}
+      <div className="absolute inset-0 rounded-full pointer-events-none" style={{ boxShadow: "0 0 28px rgba(245,158,11,0.55), 0 0 60px rgba(245,158,11,0.2)" }} />
+
+      {/* SVG mandala */}
+      <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: "absolute", inset: 0 }}>
+        <defs>
+          <radialGradient id="emblemFill" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.45" />
+            <stop offset="50%" stopColor="#d97706" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#78350f" stopOpacity="0.2" />
+          </radialGradient>
+          <radialGradient id="emblemOuter" cx="50%" cy="50%" r="50%">
+            <stop offset="70%" stopColor="#f59e0b" stopOpacity="0" />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.25" />
+          </radialGradient>
+        </defs>
+
+        {/* Outer ring */}
+        <circle cx="48" cy="48" r="46" fill="url(#emblemOuter)" stroke="#f59e0b" strokeWidth="1.5" strokeOpacity="0.7" />
+        {/* Inner filled circle */}
+        <circle cx="48" cy="48" r="42" fill="url(#emblemFill)" />
+
+        {/* Second ring */}
+        <circle cx="48" cy="48" r="36" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.35" />
+
+        {/* Sacred geometry — upward triangle */}
+        <polygon points="48,12 78,62 18,62" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.4" />
+        {/* Sacred geometry — downward triangle */}
+        <polygon points="48,84 18,34 78,34" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.4" />
+
+        {/* Inner small circle */}
+        <circle cx="48" cy="48" r="18" fill="none" stroke="#fbbf24" strokeWidth="0.7" strokeOpacity="0.3" />
+
+        {/* 6 radial lines from center to ring */}
+        {[0, 60, 120, 180, 240, 300].map(angle => {
+          const rad = (angle * Math.PI) / 180;
+          const x2 = 48 + Math.cos(rad) * 36;
+          const y2 = 48 + Math.sin(rad) * 36;
+          return <line key={angle} x1="48" y1="48" x2={x2} y2={y2} stroke="#fbbf24" strokeWidth="0.5" strokeOpacity="0.25" />;
+        })}
+
+        {/* Bright center spot */}
+        <circle cx="48" cy="48" r="4" fill="#fbbf24" fillOpacity="0.5" />
+      </svg>
+
+      {/* Swords icon layered on top */}
+      <div className="relative z-10 flex items-center justify-center" style={{
+        width: 52, height: 52,
+        filter: "drop-shadow(0 0 8px rgba(245,158,11,0.9)) drop-shadow(0 0 16px rgba(245,158,11,0.5))",
+      }}>
+        <Swords style={{ width: 38, height: 38, color: "#fde68a" }} strokeWidth={1.5} />
       </div>
     </div>
   );
@@ -171,154 +255,167 @@ export default function Events() {
         <div className="flex flex-col gap-2.5 mt-2">
           <SectionLabel delay={40} visible={visible}>Instant Battle</SectionLabel>
           <style>{`
-            @keyframes qm-live {
+            @keyframes ib-live {
               0%, 100% { opacity: 1; transform: scale(1); }
-              50% { opacity: 0.25; transform: scale(0.75); }
+              50%       { opacity: 0.3; transform: scale(0.7); }
             }
-            @keyframes qm-radar {
-              0% { transform: scale(0.5); opacity: 0.6; }
-              100% { transform: scale(2.4); opacity: 0; }
-            }
-            @keyframes qm-shimmer {
-              0% { transform: translateX(-100%) skewX(-15deg); }
-              100% { transform: translateX(300%) skewX(-15deg); }
-            }
-            @keyframes qm-border-spin {
-              0% { background-position: 0% 50%; }
-              100% { background-position: 200% 50%; }
-            }
-            @keyframes qm-float {
-              0%, 100% { transform: translateY(0px) rotate(0deg); }
-              50% { transform: translateY(-4px) rotate(3deg); }
-            }
-            @keyframes qm-queue-pulse {
+            @keyframes ib-queue {
               0%, 100% { opacity: 1; }
-              50% { opacity: 0.55; }
+              50%       { opacity: 0.6; }
+            }
+            @keyframes ib-shimmer {
+              0%   { transform: translateX(-120%) skewX(-15deg); }
+              100% { transform: translateX(320%) skewX(-15deg); }
+            }
+            @keyframes ib-pulse-border {
+              0%, 100% { opacity: 1; }
+              50%       { opacity: 0.65; }
+            }
+            @keyframes ib-emblem-spin {
+              from { transform: rotate(0deg); }
+              to   { transform: rotate(360deg); }
             }
           `}</style>
 
+          {/* Outermost: entry animation wrapper */}
           <div
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/quickmatch")}
-            onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
-            className="relative cursor-pointer select-none"
             style={{
-              padding: "1.5px",
-              borderRadius: "20px",
-              background: "linear-gradient(135deg, #f97316 0%, #eab308 40%, #f59e0b 70%, #f97316 100%)",
-              backgroundSize: "200% 200%",
-              animation: "qm-border-spin 3s linear infinite",
-              boxShadow: "0 0 32px rgba(249,115,22,0.4), 0 8px 48px rgba(234,179,8,0.2)",
               opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
-              transition: "opacity 0.45s ease 40ms, transform 0.45s cubic-bezier(0.34,1.3,0.64,1) 40ms",
+              transform: visible ? "translateY(0) scale(1)" : "translateY(28px) scale(0.96)",
+              transition: "opacity 0.5s ease 60ms, transform 0.5s cubic-bezier(0.34,1.3,0.64,1) 60ms",
+              position: "relative",
             }}
           >
+            {/* Outer ambient glow */}
+            <div className="absolute -inset-2 rounded-2xl pointer-events-none" style={{
+              background: "radial-gradient(ellipse at 50% 50%, rgba(245,158,11,0.18) 0%, transparent 70%)",
+              animation: "ib-pulse-border 2.5s ease-in-out infinite",
+            }} />
+
+            {/* Gold gradient border shell */}
             <div
-              className="relative overflow-hidden"
               style={{
-                borderRadius: "18.5px",
-                background: "linear-gradient(135deg, #0e0900 0%, #0a0a04 50%, #080800 100%)",
+                padding: "2px",
+                borderRadius: "14px",
+                background: "linear-gradient(145deg, #fbbf24 0%, #d97706 25%, #92400e 50%, #d97706 75%, #fbbf24 100%)",
+                boxShadow: "0 0 20px rgba(245,158,11,0.45), 0 4px 40px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+                animation: "ib-pulse-border 2.5s ease-in-out infinite",
+                position: "relative",
               }}
             >
-              {/* Background glow blobs */}
-              <div className="absolute -top-8 -left-8 w-44 h-44 rounded-full pointer-events-none"
-                style={{ background: "radial-gradient(circle, rgba(249,115,22,0.2) 0%, transparent 70%)" }} />
-              <div className="absolute -bottom-8 -right-8 w-44 h-44 rounded-full pointer-events-none"
-                style={{ background: "radial-gradient(circle, rgba(234,179,8,0.15) 0%, transparent 70%)" }} />
+              {/* Corner brackets (outside the inner card, inside the border shell) */}
+              <CornerBracket pos="tl" />
+              <CornerBracket pos="tr" />
+              <CornerBracket pos="bl" />
+              <CornerBracket pos="br" />
 
-              {/* Shimmer sweep */}
+              {/* Mid-edge notch — top center */}
+              <div style={{ position: "absolute", top: -1, left: "50%", transform: "translateX(-50%)", width: 24, height: 4, background: "#fbbf24", borderRadius: "0 0 3px 3px", zIndex: 30 }} />
+              {/* Mid-edge notch — bottom center */}
+              <div style={{ position: "absolute", bottom: -1, left: "50%", transform: "translateX(-50%)", width: 24, height: 4, background: "#fbbf24", borderRadius: "3px 3px 0 0", zIndex: 30 }} />
+
+              {/* Inner dark card */}
               <div
-                className="absolute inset-0 pointer-events-none"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate("/quickmatch")}
+                onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
+                className="relative overflow-hidden cursor-pointer active:scale-[0.99] select-none"
                 style={{
-                  background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.055) 50%, transparent 65%)",
-                  animation: "qm-shimmer 2.8s ease-in-out infinite",
-                  animationDelay: "0.4s",
-                }}
-              />
-
-              {/* Top content row */}
-              <div className="relative z-10 flex items-center gap-4 px-5 pt-5 pb-3">
-                {/* Radar icon area */}
-                <div className="relative shrink-0 flex items-center justify-center" style={{ width: 64, height: 64 }}>
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        border: "1.5px solid rgba(249,115,22,0.5)",
-                        animation: "qm-radar 2.4s ease-out infinite",
-                        animationDelay: `${i * 0.8}s`,
-                      }}
-                    />
-                  ))}
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center relative z-10"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(249,115,22,0.28) 0%, rgba(234,179,8,0.1) 100%)",
-                      border: "1.5px solid rgba(249,115,22,0.5)",
-                      boxShadow: "0 0 22px rgba(249,115,22,0.45), inset 0 1px 0 rgba(255,255,255,0.1)",
-                      animation: "qm-float 3s ease-in-out infinite",
-                    }}
-                  >
-                    <Swords style={{ width: 22, height: 22, color: "#f97316" }} />
-                  </div>
-                </div>
-
-                {/* Text content */}
-                <div className="flex-1 min-w-0">
-                  {/* Live + queue row */}
-                  <div className="flex items-center gap-2.5 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: "#f97316", animation: "qm-live 1.2s ease-in-out infinite" }}
-                      />
-                      <span className="text-[10px] font-black text-orange-400 tracking-widest uppercase">Live</span>
-                    </div>
-                    <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{
-                        background: "rgba(249,115,22,0.12)",
-                        border: "1px solid rgba(249,115,22,0.25)",
-                        color: "#fdba74",
-                        animation: "qm-queue-pulse 2s ease-in-out infinite",
-                      }}
-                    >
-                      247 in queue
-                    </span>
-                  </div>
-
-                  <h2
-                    className="font-heading font-black leading-none tracking-tight"
-                    style={{
-                      fontSize: 26,
-                      background: "linear-gradient(90deg, #ffffff 0%, #fdba74 55%, #fde68a 100%)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                    }}
-                  >
-                    Instant Battle
-                  </h2>
-                  <p className="text-[10px] font-semibold mt-1 leading-snug" style={{ color: "rgba(253,186,116,0.65)" }}>
-                    No wait. No setup. Drop in & fight.
-                  </p>
-                </div>
-              </div>
-
-              {/* Full-width CTA bar */}
-              <div
-                className="relative z-10 mx-3 mb-3 rounded-xl flex items-center justify-center gap-2 py-2.5"
-                style={{
-                  background: "linear-gradient(135deg, #f97316 0%, #eab308 100%)",
-                  boxShadow: "0 4px 20px rgba(249,115,22,0.45), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, #1c1205 0%, #111111 45%, #1a1205 100%)",
                 }}
               >
-                <span className="text-[12px] font-black text-white tracking-widest uppercase">Enter Now</span>
-                <ArrowRight className="w-4 h-4 text-white" strokeWidth={2.5} />
-              </div>
+                {/* Subtle carbon-fiber texture overlay */}
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)",
+                  zIndex: 0,
+                }} />
 
+                {/* Background glow */}
+                <div className="absolute -top-6 -left-6 w-48 h-48 rounded-full pointer-events-none" style={{
+                  background: "radial-gradient(circle, rgba(245,158,11,0.16) 0%, transparent 65%)",
+                }} />
+                <div className="absolute -bottom-6 -right-6 w-36 h-36 rounded-full pointer-events-none" style={{
+                  background: "radial-gradient(circle, rgba(217,119,6,0.12) 0%, transparent 65%)",
+                }} />
+
+                {/* Shimmer sweep */}
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%)",
+                  animation: "ib-shimmer 3.5s ease-in-out infinite",
+                  animationDelay: "0.8s",
+                  zIndex: 1,
+                }} />
+
+                {/* ── Content row ── */}
+                <div className="relative flex items-center gap-3 px-3 pt-3 pb-2" style={{ zIndex: 2 }}>
+                  {/* Sword emblem */}
+                  <SwordEmblem />
+
+                  {/* Right text */}
+                  <div className="flex-1 min-w-0">
+                    {/* Live + queue badges */}
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="rounded-full shrink-0"
+                          style={{ width: 8, height: 8, background: "#f97316", display: "inline-block", animation: "ib-live 1.3s ease-in-out infinite" }}
+                        />
+                        <span className="text-[11px] font-black text-white tracking-widest uppercase">LIVE</span>
+                      </div>
+                      <span
+                        className="text-[10px] font-bold px-2.5 py-0.5 rounded-md"
+                        style={{
+                          background: "rgba(17,17,17,0.9)",
+                          border: "1px solid rgba(245,158,11,0.45)",
+                          color: "#fbbf24",
+                          animation: "ib-queue 2s ease-in-out infinite",
+                        }}
+                      >
+                        247 in queue
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h2
+                      className="font-heading font-black leading-none tracking-tight"
+                      style={{
+                        fontSize: 24,
+                        color: "#ffffff",
+                        textShadow: "0 0 20px rgba(245,158,11,0.5)",
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
+                      Instant Battle
+                    </h2>
+
+                    {/* Tagline */}
+                    <p className="mt-1 leading-snug" style={{ fontSize: 11, color: "rgba(253,186,116,0.7)", fontWeight: 500 }}>
+                      No wait. No setup. Drop in &amp; fight.
+                    </p>
+                  </div>
+                </div>
+
+                {/* ── ENTER NOW button ── */}
+                <div
+                  className="relative mx-2.5 mb-2.5 rounded-lg flex items-center justify-center gap-1.5 py-2.5"
+                  style={{
+                    zIndex: 2,
+                    background: "linear-gradient(135deg, #ea580c 0%, #d97706 40%, #f59e0b 70%, #d97706 100%)",
+                    boxShadow: "0 3px 16px rgba(234,88,12,0.55), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.25)",
+                  }}
+                >
+                  <span
+                    className="font-black uppercase tracking-[0.15em] text-white"
+                    style={{ fontSize: 13, textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}
+                  >
+                    ENTER NOW
+                  </span>
+                  <span className="text-white font-black" style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>»</span>
+                </div>
+
+              </div>
             </div>
           </div>
         </div>
