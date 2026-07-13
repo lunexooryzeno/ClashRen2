@@ -465,8 +465,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const isQuickMatchQueue = /^\/quickmatch\/[^/]+\/[^/]+/.test(location);
-  const hideTopBar = location.startsWith("/profile") || location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location.startsWith("/notifications") || location.startsWith("/matches") || location.startsWith("/leaderboard") || location.startsWith("/history") || location === "/about" || isQuickMatchQueue;
-  const hideBottomNav = location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/top-up/pay") || location.startsWith("/wallet/withdraw") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location === "/profile/qr" || location === "/profile/security" || location === "/profile/theme" || location === "/about" || location.startsWith("/notifications") || (location.startsWith("/matches/") && !location.startsWith("/matches/mode") && location !== "/matches/my_matches") || location.startsWith("/history/matches/") || isQuickMatchQueue;
+  const isQuickMatchPage = location.startsWith("/quickmatch");
+  const hideTopBar = location.startsWith("/profile") || location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location.startsWith("/notifications") || location.startsWith("/matches") || location.startsWith("/leaderboard") || location.startsWith("/history") || location === "/about" || isQuickMatchQueue || isQuickMatchPage;
+  const hideBottomNav = location.startsWith("/wallet") || location.startsWith("/top-up") || location.startsWith("/top-up/pay") || location.startsWith("/wallet/withdraw") || location.startsWith("/support") || location.startsWith("/chat") || location.startsWith("/squad") || location === "/profile/qr" || location === "/profile/security" || location === "/profile/theme" || location === "/about" || location.startsWith("/notifications") || (location.startsWith("/matches/") && !location.startsWith("/matches/mode") && location !== "/matches/my_matches") || location.startsWith("/history/matches/") || isQuickMatchQueue || isQuickMatchPage;
 
   return (
     <>
