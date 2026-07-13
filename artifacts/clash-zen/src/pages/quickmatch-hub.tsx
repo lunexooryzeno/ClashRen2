@@ -1,90 +1,53 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Zap, Users, TrendingUp } from "lucide-react";
+import { ArrowLeft, Users, Map, Shield, Crosshair, Package, TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import brImage from "@assets/1783487489445_1_1783942080739.png";
+import csImage from "@assets/1783492275863_1783942081269.png";
 
 const GAME_TYPES = [
   {
-    id: "cs",
-    label: "Classic Survival",
-    short: "CS",
-    tagline: "Close-range tactics & skill duels",
-    accent: "#ef4444",
-    glow: "rgba(239,68,68,0.45)",
-    border: "rgba(239,68,68,0.35)",
-    bg: "linear-gradient(135deg, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0.04) 100%)",
-    icon: (
-      <svg viewBox="0 0 40 40" fill="none" width={40} height={40}>
-        <circle cx="20" cy="20" r="18" stroke="#ef4444" strokeWidth="1.5" opacity="0.3" />
-        <circle cx="20" cy="20" r="3" fill="#ef4444" />
-        <line x1="20" y1="4" x2="20" y2="12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-        <line x1="20" y1="28" x2="20" y2="36" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-        <line x1="4" y1="20" x2="12" y2="20" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-        <line x1="28" y1="20" x2="36" y2="20" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    ),
-    modes: ["1v1 Duel", "Healing Battle", "Clash Squad", "Knife Fight"],
-  },
-  {
     id: "br",
-    label: "Battle Royale",
     short: "BR",
-    tagline: "Drop, loot, survive to the last zone",
-    accent: "#3b82f6",
-    glow: "rgba(59,130,246,0.45)",
-    border: "rgba(59,130,246,0.35)",
-    bg: "linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(59,130,246,0.04) 100%)",
-    icon: (
-      <svg viewBox="0 0 40 40" fill="none" width={40} height={40}>
-        <path d="M20 4 L34 30 L20 24 L6 30 Z" stroke="#3b82f6" strokeWidth="1.5" fill="rgba(59,130,246,0.1)" strokeLinejoin="round" />
-        <circle cx="20" cy="20" r="3" fill="#3b82f6" />
-        <path d="M20 24 L20 36" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    ),
+    title: "BATTLE ROYALE",
+    subtitle: "SURVIVAL ARENA",
+    tagline: "Solo, Duo, Squad  |  Large Scale Battles",
+    image: brImage,
+    accent: "#22d3ee",
+    glow: "rgba(34,211,238,0.5)",
+    border: "rgba(34,211,238,0.55)",
+    icons: [
+      { label: "SQUAD", Icon: Users },
+      { label: "DROP", Icon: Crosshair },
+      { label: "LOOT", Icon: Package },
+    ],
     modes: ["Solo Drop", "Duo Rush", "Squad Wipe", "Zone Control"],
   },
+  {
+    id: "cs",
+    short: "CS",
+    title: "CLASSIC SURVIVAL",
+    subtitle: "TACTICAL SQUAD",
+    tagline: "Clash Squad  |  Competitive & Casual Modes",
+    image: csImage,
+    accent: "#22d3ee",
+    glow: "rgba(34,211,238,0.5)",
+    border: "rgba(34,211,238,0.55)",
+    icons: [
+      { label: "MAP", Icon: Map },
+      { label: "SQUAD", Icon: Users },
+      { label: "RANK", Icon: Shield },
+    ],
+    modes: ["1v1 Duel", "Healing Battle", "Clash Squad", "Ranked"],
+  },
 ];
 
-interface QuickMatchStats {
-  cs: { total: number; modes: Record<string, number> };
-  br: { total: number; modes: Record<string, number> };
-}
-
-function SearchingBadge({ count, accent }: { count: number | null; accent: string }) {
-  if (count === null) return null;
-  return (
-    <div
-      className="flex items-center gap-1 px-2 py-1 rounded-full"
-      style={{
-        background: `${accent}18`,
-        border: `1px solid ${accent}40`,
-      }}
-    >
-      <Users className="w-3 h-3" style={{ color: accent }} strokeWidth={2} />
-      <span className="text-[10px] font-extrabold tabular-nums" style={{ color: accent }}>
-        {count === 0 ? "Be the first!" : `${count} searching`}
-      </span>
-    </div>
-  );
-}
-
-const TRENDING_THRESHOLD = 0.2;
-
-const DUMMY_SEQUENCE: QuickMatchStats[] = [
-  { cs: { total: 8,  modes: {} }, br: { total: 5,  modes: {} } },
-  { cs: { total: 9,  modes: {} }, br: { total: 6,  modes: {} } },
-  { cs: { total: 11, modes: {} }, br: { total: 8,  modes: {} } },
-  { cs: { total: 12, modes: {} }, br: { total: 9,  modes: {} } },
-  { cs: { total: 10, modes: {} }, br: { total: 7,  modes: {} } },
-  { cs: { total: 8,  modes: {} }, br: { total: 5,  modes: {} } },
-];
+const DUMMY_TOTALS = [17, 18, 20, 21, 19, 17];
 
 export default function QuickMatchHub() {
   const [, navigate] = useLocation();
   const [visible, setVisible] = useState(false);
-  const [stats, setStats] = useState<QuickMatchStats | null>(null);
-  const [trending, setTrending] = useState(false);
-  const prevTotalRef = useRef<number | null>(null);
-  const seqIdxRef = useRef(0);
+  const [online, setOnline] = useState<number | null>(null);
+  const seqRef = useRef(0);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
@@ -93,15 +56,8 @@ export default function QuickMatchHub() {
 
   useEffect(() => {
     function tick() {
-      const next = DUMMY_SEQUENCE[seqIdxRef.current % DUMMY_SEQUENCE.length];
-      seqIdxRef.current += 1;
-      const newTotal = next.cs.total + next.br.total;
-      if (prevTotalRef.current !== null && prevTotalRef.current > 0) {
-        const growth = (newTotal - prevTotalRef.current) / prevTotalRef.current;
-        setTrending(growth >= TRENDING_THRESHOLD);
-      }
-      prevTotalRef.current = newTotal;
-      setStats(next);
+      setOnline(DUMMY_TOTALS[seqRef.current % DUMMY_TOTALS.length]);
+      seqRef.current += 1;
     }
     tick();
     const id = setInterval(tick, 10_000);
@@ -111,202 +67,235 @@ export default function QuickMatchHub() {
   return (
     <div
       className="min-h-[100dvh] flex flex-col"
-      style={{ background: "hsl(var(--background))" }}
+      style={{ background: "#090b0e" }}
     >
       <style>{`
-        @keyframes live-pulse {
+        @keyframes qm-live {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.85); }
+          50%       { opacity: 0.35; transform: scale(0.75); }
         }
-        @keyframes radar-ring {
-          0% { transform: scale(0.6); opacity: 0.7; }
-          100% { transform: scale(2.2); opacity: 0; }
-        }
-        @keyframes trending-in {
-          0%   { opacity: 0; transform: translateX(6px) scale(0.85); }
-          100% { opacity: 1; transform: translateX(0) scale(1); }
+        @keyframes qm-radar {
+          0%   { transform: scale(0.6); opacity: 0.6; }
+          100% { transform: scale(2.4); opacity: 0; }
         }
       `}</style>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div
-        className="shrink-0 px-4 pt-14 pb-6 relative"
+        className="shrink-0 px-4 pt-12 pb-5 flex items-center justify-between relative"
         style={{
-          background: "linear-gradient(180deg,#030303 0%,hsl(var(--background)) 100%)",
+          background: "linear-gradient(180deg, #060809 0%, #090b0e 100%)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
+        {/* Subtle top glow */}
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(239,68,68,0.08) 0%, transparent 60%)" }} />
+          style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(34,211,238,0.07) 0%, transparent 65%)" }} />
 
-        <div className="flex items-center justify-between mb-6 relative z-10">
-          <button
-            onClick={() => navigate("/matches")}
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
-          >
-            <ArrowLeft className="w-4 h-4 text-white" />
-          </button>
+        {/* Back */}
+        <button
+          onClick={() => navigate("/matches")}
+          className="relative z-10 w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
+        >
+          <ArrowLeft className="w-4 h-4 text-white" />
+        </button>
 
-          {/* LIVE badge + trending */}
-          <div className="flex items-center gap-2">
-            <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{
-                background: "rgba(239,68,68,0.12)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                boxShadow: "0 0 12px rgba(239,68,68,0.2)",
-              }}
-            >
-              <span
-                className="w-2 h-2 rounded-full bg-red-500"
-                style={{ animation: "live-pulse 1.4s ease-in-out infinite" }}
-              />
-              <span className="text-[11px] font-extrabold tracking-widest text-red-400 uppercase">Live</span>
-              {stats !== null && (
-                <span className="text-[11px] font-extrabold tabular-nums text-red-300">
-                  · {stats.cs.total + stats.br.total} online
-                </span>
-              )}
-            </div>
-
-            {trending && (
-              <div
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full"
-                style={{
-                  background: "linear-gradient(135deg, rgba(251,146,60,0.2), rgba(234,179,8,0.15))",
-                  border: "1px solid rgba(251,146,60,0.4)",
-                  boxShadow: "0 0 10px rgba(251,146,60,0.25)",
-                  animation: "trending-in 0.35s cubic-bezier(0.34,1.4,0.64,1) both",
-                }}
-              >
-                <TrendingUp className="w-3 h-3 text-orange-400" strokeWidth={2.5} />
-                <span className="text-[10px] font-black text-orange-300 tracking-wide uppercase">Trending</span>
-              </div>
-            )}
-          </div>
+        {/* Title */}
+        <div className="relative z-10 flex flex-col items-center">
+          <h1 className="font-heading text-[17px] font-black text-white tracking-wide leading-none">
+            Live Matchmaking
+          </h1>
+          <p className="text-[10px] text-zinc-500 mt-0.5 tracking-wider uppercase">Choose your game type</p>
         </div>
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap className="w-4 h-4 text-yellow-400" fill="currentColor" />
-            <span className="text-[10px] font-black tracking-[0.2em] uppercase text-zinc-500">Quick Match</span>
+        {/* Online badge */}
+        <div
+          className="relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+          style={{
+            background: "rgba(34,211,238,0.1)",
+            border: "1px solid rgba(34,211,238,0.3)",
+          }}
+        >
+          {/* Radar rings */}
+          <div className="relative w-2.5 h-2.5 flex items-center justify-center shrink-0">
+            <div className="absolute inset-0 rounded-full"
+              style={{ background: "rgba(34,211,238,0.3)", animation: "qm-radar 1.8s ease-out infinite" }} />
+            <div className="absolute inset-0 rounded-full"
+              style={{ background: "rgba(34,211,238,0.25)", animation: "qm-radar 1.8s ease-out 0.6s infinite" }} />
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#22d3ee", animation: "qm-live 1.4s ease-in-out infinite" }} />
           </div>
-          <h1 className="font-heading text-3xl font-black text-white tracking-tight leading-none">
-            Live<br />
-            <span style={{ background: "linear-gradient(90deg,#ef4444,#f97316)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Matchmaking
-            </span>
-          </h1>
-          <p className="text-[12px] text-zinc-500 mt-2">Choose your game type to find a match instantly</p>
+          <span className="text-[11px] font-black text-cyan-300 tabular-nums">
+            {online !== null ? `${online} online` : "—"}
+          </span>
         </div>
       </div>
 
-      {/* Game type tiles */}
-      <div className="flex-1 px-4 pb-8 flex flex-col gap-4 pt-2">
-        {GAME_TYPES.map((type, idx) => {
-          const typeStats = stats ? stats[type.id as "cs" | "br"] : null;
-          const total = typeStats?.total ?? null;
+      {/* ── Cards ── */}
+      <div className="flex-1 px-4 pt-5 pb-8 flex flex-col gap-5">
+        {GAME_TYPES.map((type, idx) => (
+          <button
+            key={type.id}
+            onClick={() => navigate(`/quickmatch/${type.id}`)}
+            className="relative overflow-hidden text-left w-full active:scale-[0.975]"
+            style={{
+              borderRadius: 16,
+              border: `1.5px solid ${type.border}`,
+              boxShadow: `0 0 0 1px rgba(34,211,238,0.08), 0 8px 40px ${type.glow.replace("0.5", "0.18")}`,
+              background: "#0d1117",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(32px)",
+              transition: `opacity 0.4s ease ${idx * 140}ms, transform 0.45s cubic-bezier(0.34,1.2,0.64,1) ${idx * 140}ms, scale 0.15s ease`,
+            }}
+          >
+            {/* Corner brackets */}
+            {(["tl", "tr", "bl", "br"] as const).map(pos => (
+              <CornerBracket key={pos} pos={pos} color={type.accent} />
+            ))}
 
-          return (
-            <button
-              key={type.id}
-              onClick={() => navigate(`/quickmatch/${type.id}`)}
-              className="relative overflow-hidden rounded-3xl text-left active:scale-[0.975] transition-transform w-full"
-              style={{
-                background: type.bg,
-                border: `1.5px solid ${type.border}`,
-                boxShadow: `0 8px 40px ${type.glow.replace("0.45", "0.2")}`,
-                minHeight: 168,
-                opacity: visible ? 1 : 0,
-                transform: visible ? "translateY(0)" : "translateY(28px)",
-                transition: `opacity 0.4s ease ${idx * 120}ms, transform 0.4s ease ${idx * 120}ms, scale 0.15s ease`,
-              }}
-            >
-              {/* Glow orb */}
-              <div
-                className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none"
-                style={{ background: `radial-gradient(circle, ${type.glow} 0%, transparent 65%)` }}
+            {/* ── Artwork ── */}
+            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/9" }}>
+              <img
+                src={type.image}
+                alt={type.title}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
               />
+              {/* Bottom gradient fade into card body */}
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(13,17,23,0.85) 80%, #0d1117 100%)" }} />
+              {/* Cyan corner glow top-right */}
+              <div className="absolute -top-4 -right-4 w-32 h-32 rounded-full pointer-events-none"
+                style={{ background: `radial-gradient(circle, ${type.glow} 0%, transparent 70%)`, opacity: 0.45 }} />
 
-              {/* Top accent bar */}
-              <div className="absolute top-0 left-0 right-0 h-[2px]"
-                style={{ background: `linear-gradient(90deg, ${type.accent}, ${type.accent}40)` }} />
-
-              <div className="relative z-10 p-5 flex flex-col h-full">
-                {/* Top row */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex flex-col gap-2">
-                    <span
-                      className="text-[10px] font-black tracking-[0.22em] uppercase px-2.5 py-1 rounded-full"
-                      style={{
-                        background: `${type.accent}20`,
-                        color: type.accent,
-                        border: `1px solid ${type.accent}45`,
-                      }}
-                    >
-                      {type.short}
-                    </span>
-                    <SearchingBadge count={total} accent={type.accent} />
-                  </div>
-                  <div style={{ opacity: 0.7 }}>{type.icon}</div>
-                </div>
-
-                {/* Title */}
-                <h2
-                  className="font-heading text-2xl font-black text-white tracking-tight leading-none mb-1"
-                  style={{ textShadow: `0 0 24px ${type.glow}` }}
-                >
-                  {type.label}
-                </h2>
-                <p className="text-[12px] mb-4" style={{ color: `${type.accent}bb` }}>{type.tagline}</p>
-
-                {/* Mode pills */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {type.modes.map(m => (
-                    <span
-                      key={m}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
-                    >
-                      {m}
-                    </span>
-                  ))}
-                </div>
-
-                {/* CTA */}
-                <div className="flex items-center gap-2 mt-auto">
-                  <span
-                    className="text-[13px] font-extrabold px-5 py-2.5 rounded-xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${type.accent}, ${type.accent}cc)`,
-                      color: "#fff",
-                      boxShadow: `0 4px 16px ${type.glow}`,
-                    }}
-                  >
-                    Select Mode →
+              {/* Title overlay on image */}
+              <div className="absolute bottom-3 left-4 right-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[11px] font-black tracking-[0.18em] uppercase px-2 py-0.5 rounded"
+                    style={{ background: `${type.accent}22`, color: type.accent, border: `1px solid ${type.accent}40` }}>
+                    {type.short}
                   </span>
                 </div>
+                <h2 className="font-heading font-black text-white leading-none mt-1.5"
+                  style={{ fontSize: 22, letterSpacing: "-0.01em", textShadow: `0 2px 16px rgba(0,0,0,0.8)` }}>
+                  {type.title}
+                  <span className="mx-1.5 text-zinc-400 font-normal">|</span>
+                  <span style={{ color: type.accent }}>{type.subtitle}</span>
+                </h2>
+                <p className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>{type.tagline}</p>
               </div>
-            </button>
-          );
-        })}
+            </div>
+
+            {/* ── Bottom content ── */}
+            <div
+              className="px-4 pt-3 pb-4 flex items-center gap-3"
+              style={{
+                background: "linear-gradient(135deg, rgba(13,17,23,0.98) 0%, rgba(15,20,28,0.98) 100%)",
+                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.008) 3px, rgba(255,255,255,0.008) 4px)",
+              }}
+            >
+              {/* Icon row */}
+              <div className="flex items-center gap-2">
+                {type.icons.map(({ label, Icon }) => (
+                  <div key={label} className="flex flex-col items-center gap-1">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{
+                        background: `${type.accent}14`,
+                        border: `1px solid ${type.accent}35`,
+                      }}
+                    >
+                      <Icon className="w-4 h-4" style={{ color: type.accent }} strokeWidth={1.8} />
+                    </div>
+                    <span className="text-[9px] font-bold tracking-wider uppercase" style={{ color: `${type.accent}99` }}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="flex-1 flex justify-end">
+                <div
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
+                  style={{
+                    background: `linear-gradient(135deg, ${type.accent}22, ${type.accent}14)`,
+                    border: `1px solid ${type.accent}55`,
+                    boxShadow: `0 4px 20px ${type.glow.replace("0.5", "0.25")}`,
+                  }}
+                >
+                  <span className="font-black uppercase tracking-[0.1em] text-white" style={{ fontSize: 11 }}>
+                    Continue to Options
+                  </span>
+                  <span style={{ color: type.accent, fontSize: 13, fontWeight: 900 }}>›</span>
+                </div>
+              </div>
+            </div>
+          </button>
+        ))}
 
         {/* Info note */}
         <div
-          className="rounded-2xl px-4 py-3 flex items-start gap-3 mt-1"
+          className="rounded-2xl px-4 py-3 flex items-start gap-3"
           style={{
-            background: "rgba(255,255,255,0.03)",
+            background: "rgba(255,255,255,0.025)",
             border: "1px solid rgba(255,255,255,0.07)",
             opacity: visible ? 1 : 0,
-            transition: "opacity 0.4s ease 340ms",
+            transition: "opacity 0.4s ease 380ms",
           }}
         >
-          <Zap className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+          <TrendingUp className="w-4 h-4 text-cyan-500 mt-0.5 shrink-0" strokeWidth={2} />
           <p className="text-[11px] text-zinc-500 leading-relaxed">
             Live matchmaking connects you with players at your skill level in real time. Entry fees apply per mode.
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CornerBracket({ pos, color }: { pos: "tl" | "tr" | "bl" | "br"; color: string }) {
+  const size = 16;
+  const thick = 2.5;
+  const r = 3;
+
+  const base: React.CSSProperties = { position: "absolute", zIndex: 20, pointerEvents: "none" };
+  const corner: React.CSSProperties = {
+    ...base,
+    top: pos.includes("t") ? -1 : undefined,
+    bottom: pos.includes("b") ? -1 : undefined,
+    left: pos.includes("l") ? -1 : undefined,
+    right: pos.includes("r") ? -1 : undefined,
+    width: size,
+    height: size,
+  };
+  const hBar: React.CSSProperties = {
+    position: "absolute",
+    width: size, height: thick,
+    background: `linear-gradient(${pos.includes("l") ? "to right" : "to left"}, ${color}, ${color}40)`,
+    top: pos.includes("t") ? 0 : undefined,
+    bottom: pos.includes("b") ? 0 : undefined,
+    left: pos.includes("l") ? 0 : undefined,
+    right: pos.includes("r") ? 0 : undefined,
+    borderRadius: pos === "tl" ? `${r}px 0 0 0` : pos === "tr" ? `0 ${r}px 0 0` : pos === "bl" ? `0 0 0 ${r}px` : `0 0 ${r}px 0`,
+  };
+  const vBar: React.CSSProperties = {
+    position: "absolute",
+    width: thick, height: size,
+    background: `linear-gradient(${pos.includes("t") ? "to bottom" : "to top"}, ${color}, ${color}40)`,
+    top: pos.includes("t") ? 0 : undefined,
+    bottom: pos.includes("b") ? 0 : undefined,
+    left: pos.includes("l") ? 0 : undefined,
+    right: pos.includes("r") ? 0 : undefined,
+    borderRadius: pos === "tl" ? `${r}px 0 0 0` : pos === "tr" ? `0 ${r}px 0 0` : pos === "bl" ? `0 0 0 ${r}px` : `0 0 ${r}px 0`,
+  };
+
+  return (
+    <div style={corner}>
+      <div style={hBar} />
+      <div style={vBar} />
     </div>
   );
 }
