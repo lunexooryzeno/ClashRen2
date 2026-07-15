@@ -119,6 +119,7 @@ const QuickMatchHubPage       = lazy(() => import("@/pages/quickmatch-hub"));
 const QuickMatchModesPage     = lazy(() => import("@/pages/quickmatch-modes"));
 const QuickMatchQueuePage     = lazy(() => import("@/pages/quickmatch-queue"));
 const QuickMatchPrizePoolPage = lazy(() => import("@/pages/quickmatch-prize-pool"));
+const DevLoginPage            = lazy(() => import("@/pages/dev-login"));
 
 // Suppress "signal is aborted without reason" — React Query cancels in-flight
 // fetches on unmount via AbortController; the resulting AbortError is harmless
@@ -169,6 +170,7 @@ function Router() {
       <Switch>
         <Route path="/landing" component={LandingPage} />
         <Route path="/get-started" component={GetStartedPage} />
+        <Route path="/dev-login" component={DevLoginPage} />
         <Route path="/setup-profile">
           <ProtectedRoute component={SetupProfileScreen} />
         </Route>

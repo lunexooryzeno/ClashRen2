@@ -415,6 +415,79 @@ router.post("/auth/logout", (_req, res) => {
   res.json({ message: "Logged out successfully" });
 });
 
+// ── Dev-only instant login (disabled in production) ────────────────────────
+// Allows bypassing OTP during local development and testing.
+// Accepts: { phone?: string, isAdmin?: boolean, createIfMissing?: boolean }
+// Returns: same shape as complete-login
+router.post("/auth/dev-login", async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(403).json({ error: "Dev login is not available in production." });
+    return;
+  }
+
+  const { phone: rawPhone, isAdmin: wantAdmin = false } = req.body as {
+    phone?: string;
+    isAdmin?: boolean;
+  };
+
+  const digits = rawPhone ? rawPhone.replace(/\D/g, "").slice(-10) : "9000000001";
+  if (!/^[6-9]\d{9}$/.test(digits)) {
+    res.status(400).json({ error: "Provide a valid 10-digit Indian mobile number." });
+    return;
+  }
+  const fullPhone = `+91${digits}`;
+
+  let user = await db.query.usersTable.findFirst({ where: eq(usersTable.phone, fullPhone) });
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    const platformId = await getUniquePlatformId();
+    const [newUser] = await db
+      .insert(usersTable)
+      .values({
+        phone: fullPhone,
+        diamondBalance: 500,
+        isAdmin: wantAdmin,
+        isProfileComplete: true,
+        platformId,
+        inGameName: wantAdmin ? "DevAdmin" : "DevPlayer",
+        uid: wantAdmin ? "DEV001" : "DEV002",
+      })
+      .returning();
+    user = newUser;
+  } else if (wantAdmin && !user.isAdmin) {
+    await db.update(usersTable).set({ isAdmin: true }).where(eq(usersTable.id, user.id));
+    user = { ...user, isAdmin: true };
+  }
+
+  if (user.status === "blocked" || user.status === "deleted") {
+    await db.update(usersTable).set({ status: "active", blockedAt: null, blockedReason: null, blockedUntil: null }).where(eq(usersTable.id, user.id));
+    user = { ...user, status: "active" };
+  }
+
+  const newSv = (user.sessionVersion ?? 1) + 1;
+  await db.update(usersTable).set({ sessionVersion: newSv }).where(eq(usersTable.id, user.id));
+  pushToUser(user.id, "session_superseded", { code: "SESSION_SUPERSEDED" });
+
+  const token = signToken({ userId: user.id, phone: user.phone, isAdmin: user.isAdmin, sv: newSv });
+  setSessionCookie(res, token);
+
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      phone: user.phone,
+      inGameName: user.inGameName,
+      uid: user.uid,
+      diamondBalance: user.diamondBalance,
+      isAdmin: user.isAdmin,
+      createdAt: user.createdAt.toISOString(),
+    },
+    isNewUser,
+  });
+});
+
 // ── Google OAuth ───────────────────────────────────────────────────────────
 import { OAuth2Client } from "google-auth-library";
 
