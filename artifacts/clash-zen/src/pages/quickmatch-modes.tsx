@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Clock, Users, Zap, Swords, Heart, Shield, Scissors, Target, Wind, Crosshair, Map } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowLeft, Clock, Users, Zap, Swords, Heart, Shield, Scissors, Target, Wind, Crosshair, Map, X, Trophy, Bolt } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 type GameType = "cs" | "br";
 
@@ -130,6 +130,219 @@ const BR_MODES: SubMode[] = [
   },
 ];
 
+interface PrizePool {
+  entry: number;
+  prize: number;
+}
+
+const PRIZE_POOLS: PrizePool[] = [
+  { entry: 12, prize: 20 },
+  { entry: 30, prize: 50 },
+  { entry: 42, prize: 70 },
+];
+
+function PrizePoolCard({ pool, onSelect }: { pool: PrizePool; onSelect: () => void }) {
+  const [pressed, setPressed] = useState(false);
+
+  return (
+    <div
+      className="shrink-0 relative overflow-hidden rounded-2xl cursor-pointer select-none"
+      style={{
+        width: "72vw",
+        maxWidth: 260,
+        minWidth: 220,
+        background: "linear-gradient(160deg, #0f1a14 0%, #0a0f0d 100%)",
+        border: "1.5px solid rgba(16,185,129,0.35)",
+        boxShadow: pressed
+          ? "0 0 0px #10b981"
+          : "0 0 22px rgba(16,185,129,0.15), inset 0 1px 0 rgba(16,185,129,0.08)",
+        transform: pressed ? "scale(0.96)" : "scale(1)",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+      }}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => { setPressed(false); onSelect(); }}
+      onPointerLeave={() => setPressed(false)}
+    >
+      {/* Top neon border accent */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl"
+        style={{ background: "linear-gradient(90deg, transparent 0%, #10b981 50%, transparent 100%)" }}
+      />
+
+      {/* WIN banner */}
+      <div
+        className="mx-4 mt-5 mb-3 rounded-xl flex items-center justify-center gap-2 py-2"
+        style={{
+          background: "linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(5,150,105,0.1) 100%)",
+          border: "1px solid rgba(16,185,129,0.3)",
+        }}
+      >
+        <Trophy className="w-4 h-4" style={{ color: "#10b981" }} strokeWidth={2} />
+        <span className="text-[13px] font-black tracking-[0.15em] uppercase" style={{ color: "#10b981" }}>
+          WIN
+        </span>
+        <span className="text-[15px] font-black" style={{ color: "#34d399" }}>
+          ₹{pool.prize}
+        </span>
+      </div>
+
+      {/* Prize breakdown */}
+      <div className="px-4 pb-4 flex flex-col gap-2.5">
+        {/* Entry fee row */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-zinc-500 font-semibold uppercase tracking-wider">Entry Fee</span>
+          <div
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <span className="text-[13px] font-black text-white">₹{pool.entry}</span>
+          </div>
+        </div>
+
+        {/* Prize pool row */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-zinc-500 font-semibold uppercase tracking-wider">Prize Pool</span>
+          <div
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg"
+            style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)" }}
+          >
+            <span className="text-[13px] font-black" style={{ color: "#34d399" }}>₹{pool.prize}</span>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+        {/* Fast match badge */}
+        <div className="flex items-center justify-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px #34d399" }} />
+          <span className="text-[10px] font-bold text-emerald-400 tracking-wide">Fast Match</span>
+        </div>
+      </div>
+
+      {/* Bottom glow */}
+      <div
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, #10b981, transparent)" }}
+      />
+    </div>
+  );
+}
+
+function PrizePoolOverlay({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (pool: PrizePool) => void;
+}) {
+  const [visible, setVisible] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 20);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleClose = () => {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  };
+
+  const handleSelect = (pool: PrizePool) => {
+    setVisible(false);
+    setTimeout(() => onSelect(pool), 200);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end"
+      style={{
+        background: visible ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0)",
+        backdropFilter: visible ? "blur(4px)" : "none",
+        transition: "background 0.3s ease, backdrop-filter 0.3s ease",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+    >
+      <style>{`
+        .prize-scroll::-webkit-scrollbar { display: none; }
+        .prize-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes card-shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+      `}</style>
+
+      <div
+        className="rounded-t-3xl overflow-hidden"
+        style={{
+          background: "linear-gradient(180deg, #0d1117 0%, #080c0a 100%)",
+          border: "1px solid rgba(16,185,129,0.2)",
+          borderBottom: "none",
+          boxShadow: "0 -8px 40px rgba(16,185,129,0.12)",
+          transform: visible ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        {/* Handle bar */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-3 pb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
+              <span className="text-[10px] font-black tracking-[0.2em] uppercase text-zinc-500">Clash Squad</span>
+            </div>
+            <h2 className="text-[18px] font-black text-white tracking-tight">Select Prize Pool</h2>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Pick your entry — winner takes all</p>
+          </div>
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <X className="w-4 h-4 text-zinc-400" />
+          </button>
+        </div>
+
+        {/* Cards scroll area */}
+        <div
+          ref={scrollRef}
+          className="prize-scroll flex gap-4 px-5 pb-6 overflow-x-auto"
+          style={{
+            scrollSnapType: "x mandatory",
+            WebkitOverflowScrolling: "touch",
+            scrollPaddingLeft: "20px",
+          }}
+        >
+          {PRIZE_POOLS.map((pool) => (
+            <div
+              key={pool.entry}
+              style={{ scrollSnapAlign: "start" }}
+            >
+              <PrizePoolCard pool={pool} onSelect={() => handleSelect(pool)} />
+            </div>
+          ))}
+          {/* Right padding sentinel */}
+          <div className="shrink-0 w-1" />
+        </div>
+
+        {/* Bottom hint */}
+        <div
+          className="mx-5 mb-6 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2"
+          style={{ background: "rgba(16,185,129,0.05)", border: "1px dashed rgba(16,185,129,0.15)" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 opacity-70" />
+          <span className="text-[10px] text-zinc-500 font-semibold">Swipe to explore pools · Tap to enter</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SubModeCard({ mode, delay, visible, searching, onSelect }: {
   mode: SubMode;
   delay: number;
@@ -245,6 +458,7 @@ export default function QuickMatchModes() {
   const [, navigate] = useLocation();
   const [visible, setVisible] = useState(false);
   const [stats, setStats] = useState<QuickMatchStats | null>(null);
+  const [showPrizePicker, setShowPrizePicker] = useState(false);
 
   const typeKey = (params.type ?? "cs") as GameType;
   const meta = TYPE_META[typeKey] ?? TYPE_META.cs;
@@ -263,6 +477,18 @@ export default function QuickMatchModes() {
   }, []);
 
   const modeCounts = stats ? stats[typeKey]?.modes ?? null : null;
+
+  const handleModeSelect = (mode: SubMode) => {
+    if (typeKey === "cs" && mode.id === "clash-squad") {
+      setShowPrizePicker(true);
+    } else {
+      navigate(`/quickmatch/${typeKey}/${mode.id}`);
+    }
+  };
+
+  const handlePrizeSelect = (pool: PrizePool) => {
+    navigate(`/quickmatch/cs?entry=${pool.entry}&prize=${pool.prize}`);
+  };
 
   return (
     <div className="min-h-[100dvh] flex flex-col" style={{ background: "hsl(var(--background))" }}>
@@ -328,7 +554,7 @@ export default function QuickMatchModes() {
             delay={idx * 70}
             visible={visible}
             searching={modeCounts ? (modeCounts[mode.id] ?? 0) : null}
-            onSelect={() => navigate(`/quickmatch/${typeKey}/${mode.id}`)}
+            onSelect={() => handleModeSelect(mode)}
           />
         ))}
 
@@ -346,6 +572,14 @@ export default function QuickMatchModes() {
           <p className="text-[11px] text-zinc-600">More modes coming soon — stay tuned for updates</p>
         </div>
       </div>
+
+      {/* Prize Pool Overlay */}
+      {showPrizePicker && (
+        <PrizePoolOverlay
+          onClose={() => setShowPrizePicker(false)}
+          onSelect={handlePrizeSelect}
+        />
+      )}
     </div>
   );
 }
