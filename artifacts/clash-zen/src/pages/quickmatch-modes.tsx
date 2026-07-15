@@ -240,6 +240,15 @@ export default function QuickMatchModes() {
   const meta = TYPE_META[typeKey] ?? TYPE_META.cs;
   const modes = typeKey === "cs" ? CS_MODES : BR_MODES;
 
+  // Parse entry/prize from hash query string e.g. #/quickmatch/cs?entry=12&prize=20
+  const hashQuery = typeof window !== "undefined"
+    ? window.location.hash.split("?")[1] ?? ""
+    : "";
+  const qp = new URLSearchParams(hashQuery);
+  const entryParam = qp.get("entry");
+  const prizeParam = qp.get("prize");
+  const hasPrizeParams = Boolean(entryParam && prizeParam);
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);
@@ -272,7 +281,7 @@ export default function QuickMatchModes() {
 
         <div className="flex items-center justify-between mb-5 relative z-10">
           <button
-            onClick={() => navigate("/quickmatch")}
+            onClick={() => navigate(hasPrizeParams ? "/quickmatch/cs/prize-pool" : "/quickmatch")}
             className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
           >
@@ -318,7 +327,10 @@ export default function QuickMatchModes() {
             delay={idx * 70}
             visible={visible}
             searching={modeCounts ? (modeCounts[mode.id] ?? 0) : null}
-            onSelect={() => navigate(`/quickmatch/${typeKey}/${mode.id}`)}
+            onSelect={() => {
+              const qs = hasPrizeParams ? `?entry=${entryParam}&prize=${prizeParam}` : "";
+              navigate(`/quickmatch/${typeKey}/${mode.id}${qs}`);
+            }}
           />
         ))}
 
