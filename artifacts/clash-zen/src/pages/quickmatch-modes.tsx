@@ -240,13 +240,8 @@ export default function QuickMatchModes() {
   const meta = TYPE_META[typeKey] ?? TYPE_META.cs;
   const modes = typeKey === "cs" ? CS_MODES : BR_MODES;
 
-  // Parse entry/prize from hash query string e.g. #/quickmatch/cs?entry=12&prize=20
-  const hashQuery = typeof window !== "undefined"
-    ? window.location.hash.split("?")[1] ?? ""
-    : "";
-  const qp = new URLSearchParams(hashQuery);
-  const entryParam = qp.get("entry");
-  const prizeParam = qp.get("prize");
+  const entryParam = sessionStorage.getItem("qm_entry");
+  const prizeParam = sessionStorage.getItem("qm_prize");
   const hasPrizeParams = Boolean(entryParam && prizeParam);
 
   useEffect(() => {

@@ -124,7 +124,9 @@ export default function QuickMatchPrizePool() {
   }, []);
 
   const handleSelect = (pool: PrizePool) => {
-    navigate(`/quickmatch/cs?entry=${pool.entry}&prize=${pool.prize}`);
+    sessionStorage.setItem("qm_entry", String(pool.entry));
+    sessionStorage.setItem("qm_prize", String(pool.prize));
+    navigate("/quickmatch/cs");
   };
 
   return (
