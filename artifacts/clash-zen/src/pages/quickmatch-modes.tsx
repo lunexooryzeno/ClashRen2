@@ -40,6 +40,7 @@ interface SubMode {
   Icon: React.ElementType;
   accent: string;
   popular?: boolean;
+  live?: boolean;
 }
 
 const CS_MODES: SubMode[] = [
@@ -53,36 +54,40 @@ const CS_MODES: SubMode[] = [
     Icon: Crosshair,
     accent: "#ef4444",
     popular: true,
+    live: true,
   },
   {
     id: "healing",
     name: "Healing Battle",
     format: "1v1",
     desc: "Fight while managing health kits — strategy meets aim",
-    waitTime: "~45s",
+    waitTime: "Coming soon",
     entryFee: 0,
     Icon: Heart,
     accent: "#ec4899",
+    live: false,
   },
   {
     id: "clash-squad",
     name: "Clash Squad",
     format: "4v4",
     desc: "Round-based squad showdown in a tight zone",
-    waitTime: "~1m",
+    waitTime: "Coming soon",
     entryFee: 0,
     Icon: Shield,
     accent: "#f97316",
+    live: false,
   },
   {
     id: "knife",
     name: "Knife Fight",
     format: "1v1",
     desc: "Melee only — pure movement and timing",
-    waitTime: "~20s",
+    waitTime: "Coming soon",
     entryFee: 0,
     Icon: Scissors,
     accent: "#a78bfa",
+    live: false,
   },
 ];
 
@@ -138,20 +143,23 @@ function SubModeCard({ mode, delay, visible, searching, onSelect }: {
   onSelect: () => void;
 }) {
   const Icon = mode.Icon;
-  const cardAccent = mode.accent;
+  const isLive = mode.live !== false;
+  const cardAccent = isLive ? mode.accent : "rgba(255,255,255,0.3)";
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl active:scale-[0.975] transition-transform cursor-pointer"
+      className={`relative overflow-hidden rounded-2xl transition-transform ${isLive ? "active:scale-[0.975] cursor-pointer" : "cursor-not-allowed"}`}
       style={{
-        background: `linear-gradient(135deg, ${cardAccent}0f 0%, rgba(255,255,255,0.02) 100%)`,
-        border: `1px solid ${cardAccent}30`,
-        boxShadow: `0 4px 24px ${cardAccent}18`,
-        opacity: visible ? 1 : 0,
+        background: isLive
+          ? `linear-gradient(135deg, ${mode.accent}0f 0%, rgba(255,255,255,0.02) 100%)`
+          : "rgba(255,255,255,0.02)",
+        border: `1px solid ${isLive ? `${mode.accent}30` : "rgba(255,255,255,0.07)"}`,
+        boxShadow: isLive ? `0 4px 24px ${mode.accent}18` : "none",
+        opacity: visible ? (isLive ? 1 : 0.45) : 0,
         transform: visible ? "translateY(0)" : "translateY(20px)",
         transition: `opacity 0.35s ease ${delay}ms, transform 0.35s ease ${delay}ms, scale 0.15s ease`,
       }}
-      onClick={onSelect}
+      onClick={isLive ? onSelect : undefined}
     >
       {/* Left accent bar */}
       <div className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl"
@@ -193,27 +201,36 @@ function SubModeCard({ mode, delay, visible, searching, onSelect }: {
             >
               {mode.format}
             </span>
-            {/* Wait time */}
-            <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3 text-zinc-600" />
-              <span className="text-[10px] text-zinc-500 font-semibold">{mode.waitTime}</span>
-            </div>
-            {/* Entry fee */}
-            <div className="flex items-center gap-1 ml-auto">
-              <svg viewBox="0 0 16 16" width={12} height={12} fill="none">
-                <polygon points="8,1 3,5 8,4.2 13,5" fill="#60a5fa" opacity="0.9" />
-                <polygon points="3,5 8,4.2 6,9" fill="#2563eb" />
-                <polygon points="13,5 8,4.2 10,9" fill="#3b82f6" />
-                <polygon points="3,5 6,9 8,15" fill="#1d4ed8" opacity="0.8" />
-                <polygon points="13,5 10,9 8,15" fill="#2563eb" opacity="0.75" />
-                <polygon points="6,9 10,9 8,15" fill="#1e3a8a" />
-              </svg>
-              <span className="text-[11px] font-extrabold text-blue-300 tabular-nums">{mode.entryFee}</span>
-            </div>
+            {isLive ? (
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-zinc-600" />
+                <span className="text-[10px] text-zinc-500 font-semibold">{mode.waitTime}</span>
+              </div>
+            ) : (
+              <span
+                className="text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                Soon
+              </span>
+            )}
+            {isLive && (
+              <div className="flex items-center gap-1 ml-auto">
+                <svg viewBox="0 0 16 16" width={12} height={12} fill="none">
+                  <polygon points="8,1 3,5 8,4.2 13,5" fill="#60a5fa" opacity="0.9" />
+                  <polygon points="3,5 8,4.2 6,9" fill="#2563eb" />
+                  <polygon points="13,5 8,4.2 10,9" fill="#3b82f6" />
+                  <polygon points="3,5 6,9 8,15" fill="#1d4ed8" opacity="0.8" />
+                  <polygon points="13,5 10,9 8,15" fill="#2563eb" opacity="0.75" />
+                  <polygon points="6,9 10,9 8,15" fill="#1e3a8a" />
+                </svg>
+                <span className="text-[11px] font-extrabold text-blue-300 tabular-nums">{mode.entryFee}</span>
+              </div>
+            )}
           </div>
 
-          {/* Searching badge */}
-          {searching !== null && (
+          {/* Searching badge — only for live modes */}
+          {isLive && searching !== null && (
             <div className="mt-2 flex items-center gap-1">
               <Users className="w-3 h-3" style={{ color: cardAccent }} strokeWidth={2} />
               <span className="text-[10px] font-bold" style={{ color: `${cardAccent}cc` }}>
@@ -223,12 +240,18 @@ function SubModeCard({ mode, delay, visible, searching, onSelect }: {
           )}
         </div>
 
-        {/* Arrow */}
+        {/* Arrow / lock */}
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: `${cardAccent}18`, border: `1px solid ${cardAccent}30` }}
+          style={{
+            background: isLive ? `${mode.accent}18` : "rgba(255,255,255,0.04)",
+            border: `1px solid ${isLive ? `${mode.accent}30` : "rgba(255,255,255,0.07)"}`,
+          }}
         >
-          <Wind className="w-3.5 h-3.5" style={{ color: cardAccent }} strokeWidth={2} />
+          {isLive
+            ? <Wind className="w-3.5 h-3.5" style={{ color: mode.accent }} strokeWidth={2} />
+            : <span className="text-[13px]">🔒</span>
+          }
         </div>
       </div>
     </div>

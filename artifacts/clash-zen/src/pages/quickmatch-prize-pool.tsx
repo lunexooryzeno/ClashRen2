@@ -124,7 +124,7 @@ export default function QuickMatchPrizePool() {
   }, []);
 
   const handleSelect = (pool: PrizePool) => {
-    navigate(`/quickmatch/cs?entry=${pool.entry}&prize=${pool.prize}`);
+    navigate(`/quickmatch/cs/duel?entry=${pool.entry}&prize=${pool.prize}`);
   };
 
   return (
