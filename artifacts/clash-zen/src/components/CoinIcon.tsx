@@ -8,27 +8,14 @@ interface CoinIconProps {
   height?: number;
 }
 
-export function CoinIcon({ className, strokeWidth = 2, style, width, height }: CoinIconProps) {
-  const size = width ?? height ?? 24;
+export function CoinIcon({ className, style, width, height }: CoinIconProps) {
+  const size = width ?? height ?? 16;
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      width={size}
-      height={size}
-      style={style}
-      className={cn("text-amber-400", className)}
+    <span
+      style={{ fontSize: size, lineHeight: 1, ...style }}
+      className={cn("text-amber-400 font-bold inline-flex items-center justify-center", className)}
     >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M8 7h8" />
-      <path d="M8 11h8" />
-      <path d="M8 7c5 0 5 4 0 4" />
-      <path d="M8 11l5.5 5" />
-    </svg>
+      ₹
+    </span>
   );
 }
