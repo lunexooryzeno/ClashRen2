@@ -16,6 +16,7 @@ const GAME_TYPES = [
 const SQUAD_OPTIONS: Record<string, { id: string; label: string }[]> = {
   cs: [
     { id: "solo",  label: "Solo"  },
+    { id: "duo",   label: "Duo"   },
     { id: "squad", label: "Squad" },
   ],
   br: [
@@ -31,6 +32,9 @@ const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; c
       { id: "duel",    label: "Normal 1v1"     },
       { id: "healing", label: "Healing Battle" },
       { id: "knife",   label: "Knife Fight"    },
+    ],
+    duo:   [
+      { id: "duel", label: "2v2 Duel", comingSoon: true },
     ],
     squad: [
       { id: "clash-squad", label: "CS 4v4" },
