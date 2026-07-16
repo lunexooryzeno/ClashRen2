@@ -25,7 +25,9 @@ export function CoinIcon({ className, strokeWidth = 2, style, width, height }: C
       className={cn("text-amber-400", className)}
     >
       <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
+      <g transform="translate(12,12) scale(0.42) translate(-12,-12)">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </g>
     </svg>
   );
 }
