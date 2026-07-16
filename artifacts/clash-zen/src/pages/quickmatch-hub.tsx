@@ -450,31 +450,60 @@ export default function QuickMatchHub() {
         <button
           onClick={handleJoin}
           disabled={isComingSoon}
-          className="w-full flex flex-col items-center justify-center gap-0.5 py-4 rounded-3xl active:scale-[0.97] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full relative overflow-hidden rounded-3xl active:scale-[0.97] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             background: isComingSoon
               ? "rgba(255,255,255,0.04)"
-              : `linear-gradient(135deg, ${accent} 0%, ${accent}bb 100%)`,
+              : `linear-gradient(135deg, ${accent}ee 0%, ${accent}99 100%)`,
             boxShadow: isComingSoon
               ? "none"
-              : `0 6px 32px ${accent}45, 0 1px 0 rgba(255,255,255,0.2) inset`,
-            border: isComingSoon ? "1px solid rgba(255,255,255,0.08)" : "none",
+              : `0 8px 40px ${accent}55, 0 1px 0 rgba(255,255,255,0.25) inset`,
+            border: isComingSoon ? "1px solid rgba(255,255,255,0.08)" : `1px solid ${accent}40`,
           }}
         >
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
-            <span
-              className="font-heading font-black tracking-wide uppercase"
-              style={{ fontSize: 15, color: isComingSoon ? "rgba(255,255,255,0.3)" : "#fff" }}
-            >
-              {isComingSoon ? "Coming Soon" : `Join Any ${gameType.toUpperCase()}`}
-            </span>
-          </div>
+          {/* Shimmer sweep */}
           {!isComingSoon && (
-            <span className="text-[10px] font-semibold text-white/60">
-              {currentMode?.label} · Entry {pool.entry} 💎
-            </span>
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)",
+                animation: "qhub-shimmer 2.8s ease-in-out infinite",
+              }}
+            />
           )}
+          <style>{`@keyframes qhub-shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }`}</style>
+
+          <div className="relative flex items-center justify-between px-5 py-4">
+            {/* Left: icon + label stack */}
+            <div className="flex flex-col items-start gap-0.5">
+              <span
+                className="font-heading font-black tracking-wide uppercase leading-none"
+                style={{ fontSize: 17, color: isComingSoon ? "rgba(255,255,255,0.3)" : "#fff" }}
+              >
+                {isComingSoon ? "Coming Soon" : "Find Match"}
+              </span>
+              {!isComingSoon && (
+                <span className="text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  {currentMode?.id === "any" ? "Any mode" : currentMode?.label} · ₹{pool.entry} entry
+                </span>
+              )}
+            </div>
+
+            {/* Right: play icon circle */}
+            {!isComingSoon && (
+              <div
+                className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+                style={{
+                  background: "rgba(255,255,255,0.18)",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                  <polygon points="6,3 20,12 6,21" />
+                </svg>
+              </div>
+            )}
+          </div>
         </button>
       </div>
 
