@@ -592,7 +592,7 @@ export default function SuperAdminPage() {
     } else {
       if (amt === 0) { toast({ title: "Amount must be greater than 0", variant: "destructive" }); return; }
       finalAmt = diamondModal.mode === "sub" ? -amt : amt;
-      logDesc = `${diamondModal.mode === "add" ? "Added coins for ${diamondModal.user.inGameName ?? diamondModal.user.phone}`;
+      logDesc = `${diamondModal.mode === "add" ? "Added" : "Removed"} coins for ${diamondModal.user.inGameName ?? diamondModal.user.phone}`;
     }
     try {
       await saFetch<unknown>(`/admin/users/${diamondModal.user.id}/diamonds`, token, { method: "PATCH", body: JSON.stringify({ amount: finalAmt }) });

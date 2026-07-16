@@ -10,7 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isExplorer: boolean;
-  invalidateUser: () => void;
+  invalidateUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -215,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Invalidate marks data stale; refetchQueries forces an immediate network
     // request so the auth state updates right away (critical after OTP login).
     queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-    queryClient.refetchQueries({ queryKey: getGetMeQueryKey() });
+    return queryClient.refetchQueries({ queryKey: getGetMeQueryKey() });
   };
 
   const logout = () => {

@@ -131,11 +131,13 @@ export default function GetStartedPage() {
   const otpValueRef = useRef(otpValue);
   const isVerifyingRef = useRef(false);
   const invalidateUserRef = useRef(invalidateUser);
+  const setLocationRef = useRef(setLocation);
   const browserTokenRef = useRef<string>("");
 
   useEffect(() => { phoneRef.current = phone; }, [phone]);
   useEffect(() => { otpValueRef.current = otpValue; }, [otpValue]);
   useEffect(() => { invalidateUserRef.current = invalidateUser; }, [invalidateUser]);
+  useEffect(() => { setLocationRef.current = setLocation; }, [setLocation]);
 
   const { toast } = useToast();
 
@@ -255,8 +257,15 @@ export default function GetStartedPage() {
     }
 
     haptic.impact(); sound.success();
-    invalidateUserRef.current();
     toast({ title: "Verified!", description: "Welcome to Clash Ren." });
+    await invalidateUserRef.current();
+    const redirect = sessionStorage.getItem("redirectAfterLogin");
+    sessionStorage.removeItem("redirectAfterLogin");
+    setLocationRef.current(
+      redirect && redirect.startsWith("/") && redirect !== "/landing" && redirect !== "/get-started"
+        ? redirect
+        : "/"
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -297,8 +306,15 @@ export default function GetStartedPage() {
     }
 
     haptic.reward(); sound.reward();
-    invalidateUserRef.current();
     toast({ title: "Verified!", description: "Welcome to Clash Ren." });
+    await invalidateUserRef.current();
+    const redirect2fa = sessionStorage.getItem("redirectAfterLogin");
+    sessionStorage.removeItem("redirectAfterLogin");
+    setLocationRef.current(
+      redirect2fa && redirect2fa.startsWith("/") && redirect2fa !== "/landing" && redirect2fa !== "/get-started"
+        ? redirect2fa
+        : "/"
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

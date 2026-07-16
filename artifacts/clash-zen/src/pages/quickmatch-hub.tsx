@@ -148,27 +148,6 @@ function Dropdown({
   );
 }
 
-function CoinIcon({ size = 14 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <radialGradient id="qh-coin-bg" cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#fef08a" />
-          <stop offset="50%" stopColor="#facc15" />
-          <stop offset="100%" stopColor="#ca8a04" />
-        </radialGradient>
-        <radialGradient id="qh-coin-inner" cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#fde68a" />
-          <stop offset="100%" stopColor="#d97706" />
-        </radialGradient>
-      </defs>
-      <circle cx="12" cy="12" r="11" fill="url(#qh-coin-bg)" />
-      <circle cx="12" cy="12" r="8.5" fill="url(#qh-coin-inner)" />
-      <text x="12" y="16.5" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#92400e" fontFamily="serif">₹</text>
-      <ellipse cx="9" cy="9" rx="2.5" ry="1.2" fill="white" opacity="0.3" transform="rotate(-30 9 9)" />
-    </svg>
-  );
-}
 
 export default function QuickMatchHub() {
   const [, navigate] = useLocation();
