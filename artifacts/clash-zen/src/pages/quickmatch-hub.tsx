@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { ArrowLeft, Trophy, Users, ChevronDown, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { useState, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";

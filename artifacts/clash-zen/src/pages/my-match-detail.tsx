@@ -5,11 +5,12 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Key, Lock, Copy, Gamepad2, CheckCircle, Clock,
-  Trophy, Swords, Gem, Calendar, Users, ShieldAlert,
+  Trophy, Swords, Calendar, Users, ShieldAlert,
   CheckCircle2, Hourglass, Flame, XCircle,
   Crown, Skull, Star, Zap, Shield, AlertTriangle, ChevronRight, X,
   FileImage, ImagePlus, Timer, Send, RotateCcw, ClipboardList,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -580,7 +581,7 @@ export default function MyMatchDetailPage() {
         <div className="rounded-2xl overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           {[
             { icon: <Calendar className="w-3.5 h-3.5 text-zinc-500" />, label: slotLabel ? `Date · ${slotLabel}` : "Date", value: slotStartTime ? format(new Date(slotStartTime), "MMM d, yyyy") : (confirmedStartTime ? format(new Date(confirmedStartTime), "MMM d, yyyy") : "—") },
-            { icon: <Gem className="w-3.5 h-3.5 text-blue-400" />, label: "Entry Fee", value: t.entryFeeDiamonds > 0 ? `${t.entryFeeDiamonds}` : "Free", isDiamond: t.entryFeeDiamonds > 0 },
+            { icon: <CoinIcon className="w-3.5 h-3.5 text-blue-400" />, label: "Entry Fee", value: t.entryFeeDiamonds > 0 ? `${t.entryFeeDiamonds}` : "Free", isDiamond: t.entryFeeDiamonds > 0 },
             { icon: <Trophy className="w-3.5 h-3.5 text-yellow-400" />, label: "Prize Pool", value: t.prizePoolDiamonds ? `${t.prizePoolDiamonds}` : "—", isDiamond: !!t.prizePoolDiamonds },
           ].map((row, i, arr) => (
             <div key={i} className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? "border-b border-white/5" : ""}`}>
@@ -588,7 +589,7 @@ export default function MyMatchDetailPage() {
               <span className="text-[11px] text-zinc-500 flex-1">{row.label}</span>
               <span className="text-[12px] font-bold text-zinc-200 flex items-center gap-1">
                 {row.value}
-                {row.isDiamond && <Gem className="w-3 h-3 text-blue-400" />}
+                {row.isDiamond && <CoinIcon className="w-3 h-3 text-blue-400" />}
               </span>
             </div>
           ))}
@@ -1132,13 +1133,13 @@ export default function MyMatchDetailPage() {
                       {prize > 0 && (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Gem className="w-3.5 h-3.5 text-blue-400" />
+                            <CoinIcon className="w-3.5 h-3.5 text-blue-400" />
                             <span className="text-[11px] font-semibold text-zinc-500">
                               {isWinner ? "Credited to your wallet" : "Credited to winner"}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Gem className="w-3 h-3 text-blue-400" />
+                            <CoinIcon className="w-3 h-3 text-blue-400" />
                             <span className="text-[15px] font-black tabular-nums"
                               style={{ color: isWinner ? "#60a5fa" : "#52525b" }}>
                               {prize.toLocaleString()}
@@ -1181,7 +1182,7 @@ export default function MyMatchDetailPage() {
                   style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}
                 >
                   <div className="px-4 pt-3 pb-2 border-b border-white/5 flex items-center gap-2">
-                    <Gem className="w-3.5 h-3.5 text-blue-400" />
+                    <CoinIcon className="w-3.5 h-3.5 text-blue-400" />
                     <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-zinc-500">Earnings Breakdown</span>
                   </div>
                   <div className="px-4 py-3 flex items-center justify-between gap-4">
@@ -1191,7 +1192,7 @@ export default function MyMatchDetailPage() {
                       <span className="text-[18px] font-black" style={{ color: t.diamondsWon > 0 ? "#34d399" : "#52525b" }}>
                         {t.diamondsWon > 0 ? `+${t.diamondsWon}` : "—"}
                       </span>
-                      {t.diamondsWon > 0 && <Gem className="w-3 h-3 text-blue-400 -mt-0.5" />}
+                      {t.diamondsWon > 0 && <CoinIcon className="w-3 h-3 text-blue-400 -mt-0.5" />}
                     </div>
                     {/* Divider */}
                     <div className="w-px h-10 bg-white/5" />
@@ -1201,7 +1202,7 @@ export default function MyMatchDetailPage() {
                       <span className="text-[18px] font-black text-zinc-500">
                         {t.entryFeeDiamonds > 0 ? `-${t.entryFeeDiamonds}` : "Free"}
                       </span>
-                      {t.entryFeeDiamonds > 0 && <Gem className="w-3 h-3 text-blue-400 -mt-0.5" />}
+                      {t.entryFeeDiamonds > 0 && <CoinIcon className="w-3 h-3 text-blue-400 -mt-0.5" />}
                     </div>
                     {/* Divider */}
                     <div className="w-px h-10 bg-white/5" />
@@ -1214,7 +1215,7 @@ export default function MyMatchDetailPage() {
                       >
                         {netProfit > 0 ? `+${netProfit}` : netProfit === 0 ? "±0" : `${netProfit}`}
                       </span>
-                      <Gem className="w-3 h-3 text-blue-400 -mt-0.5" />
+                      <CoinIcon className="w-3 h-3 text-blue-400 -mt-0.5" />
                     </div>
                   </div>
                 </motion.div>
@@ -1310,7 +1311,7 @@ export default function MyMatchDetailPage() {
                       : "Winners receive the prize pool diamonds",
                     done: isRewarded || (winnerKnown && !iWon),
                     color: "#34d399",
-                    icon: <Gem className="w-3 h-3" />,
+                    icon: <CoinIcon className="w-3 h-3" />,
                   },
                 ];
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Trophy, XCircle, AlertCircle, Gem, CheckCircle2 } from "lucide-react";
+import { X, Trophy, XCircle, AlertCircle, CheckCircle2 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 
 interface MatchResult {
   matchId: number;
@@ -157,7 +158,7 @@ export function MatchVerifyNotifier() {
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-base leading-tight">Payment Confirmed!</p>
                   <div className="flex items-center gap-1 mt-1">
-                    <Gem className="w-4 h-4 text-blue-400" />
+                    <CoinIcon className="w-4 h-4 text-blue-400" />
                     <span className="text-blue-300 font-bold text-sm">
                       +{topupResult.diamonds} Coins added to your wallet
                     </span>
@@ -222,7 +223,7 @@ export function MatchVerifyNotifier() {
 
                   {result.isWin && result.prize > 0 && (
                     <div className="flex items-center gap-1 mt-1">
-                      <Gem className="w-4 h-4 text-cyan-400" />
+                      <CoinIcon className="w-4 h-4 text-cyan-400" />
                       <span className="text-cyan-300 font-bold text-sm">
                         +{result.prize} Coins credited
                       </span>

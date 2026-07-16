@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Gem, ArrowDownLeft, ArrowUpRight, Trophy } from "lucide-react";
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Trophy } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 
@@ -41,7 +42,7 @@ function TxRow({ t, last }: { t: Transaction; last: boolean }) {
         <p className={cn("text-sm font-bold flex items-center justify-end gap-0.5",
           t.amount > 0 ? "text-emerald-400" : "text-red-400")}>
           {t.amount > 0 ? "+" : ""}{t.amount}
-          <Gem className="w-3 h-3 text-blue-400 ml-0.5" strokeWidth={2} />
+          <CoinIcon className="w-3 h-3 text-blue-400 ml-0.5" strokeWidth={2} />
         </p>
         {t.type === "prize" && <p className="text-[10px] text-emerald-600">withdrawable</p>}
       </div>
@@ -96,7 +97,7 @@ export default function WalletAllPage() {
           </div>
         ) : txs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Gem className="w-10 h-10 text-zinc-700" strokeWidth={1} />
+            <CoinIcon className="w-10 h-10 text-zinc-700" strokeWidth={1} />
             <p className="text-sm text-zinc-500">No transactions yet</p>
             <p className="text-xs text-zinc-700">Join a tournament or top up your wallet</p>
           </div>

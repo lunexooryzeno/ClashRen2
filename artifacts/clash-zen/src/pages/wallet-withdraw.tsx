@@ -3,11 +3,12 @@ import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, Gem, Trophy, ArrowDownLeft, CheckCircle,
+  ArrowLeft, Trophy, ArrowDownLeft, CheckCircle,
   Banknote, AlertCircle, ChevronRight, X, SendHorizonal,
   Clock, Bell, BookmarkCheck, ShieldAlert, Mail, MessageCircle,
   Youtube, HelpCircle, ChevronDown,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { apiFetch, apiPost } from "@/lib/api";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -722,7 +723,7 @@ export default function WalletWithdrawPage() {
                   <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Deducted</p>
                   <div className="flex items-center justify-end gap-1.5">
                     <span className="text-xl font-bold text-white">{diamondsNeeded}</span>
-                    <Gem className="w-4 h-4 text-cyan-400" />
+                    <CoinIcon className="w-4 h-4 text-cyan-400" />
                   </div>
                 </div>
               </div>

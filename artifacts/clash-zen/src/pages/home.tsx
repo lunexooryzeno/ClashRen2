@@ -13,9 +13,10 @@ import { Link } from "wouter";
 import {
   ChevronRight, Shield, Swords,
   User, Users, Crosshair, Medal, Flame, Target,
-  TrendingUp, Crown, Gem, Wallet, Clock, CheckCircle,
+  TrendingUp, Crown, Wallet, Clock, CheckCircle,
   BookOpen, Award, Share2, Lightbulb, CalendarClock, ArrowRight, Zap,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 
@@ -469,7 +470,7 @@ export default function Home() {
                         <div className="flex items-center gap-1.5 mb-3">
                           <div className="flex items-center gap-1 rounded-lg px-2.5 py-1"
                             style={{ background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.22)" }}>
-                            <Gem className="w-3.5 h-3.5 text-blue-400" />
+                            <CoinIcon className="w-3.5 h-3.5 text-blue-400" />
                             <span className="text-[13px] font-extrabold font-mono text-blue-300">{t.prizePoolDiamonds}</span>
                           </div>
                           <span className="text-[9px] text-white/35 uppercase tracking-wide font-semibold">Prize Pool</span>

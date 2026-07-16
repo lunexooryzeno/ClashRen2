@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Calendar, Users, Trophy, Swords, ShieldAlert, ArrowLeft, Key, CheckCircle, Clock, Swords as SwordsIcon, Copy, Lock, Unlock, Gamepad2, ShieldCheck, Zap, BadgeCheck, Bot, AlertTriangle, FileSearch, Wallet, Crosshair, Gem, ChevronDown, ListFilter, Check, Monitor, Video, Ban } from "lucide-react";
+import { Calendar, Users, Trophy, Swords, ShieldAlert, ArrowLeft, Key, CheckCircle, Clock, Swords as SwordsIcon, Copy, Lock, Unlock, Gamepad2, ShieldCheck, Zap, BadgeCheck, Bot, AlertTriangle, FileSearch, Wallet, Crosshair, ChevronDown, ListFilter, Check, Monitor, Video, Ban } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { useAuth } from "@/lib/auth";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -615,7 +616,7 @@ export default function EventDetails() {
                  <p className="text-[11px] font-bold text-amber-500/80 uppercase tracking-wider mb-1 relative z-10">Prize Pool</p>
                  <div className="flex items-end gap-1.5 relative z-10">
                     <span className="text-3xl font-black text-white tabular-nums leading-none tracking-tight">{tm.prizePoolDiamonds}</span>
-                    <Gem className="w-5 h-5 text-amber-400 mb-0.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                    <CoinIcon className="w-5 h-5 text-amber-400 mb-0.5 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
                  </div>
               </div>
               
@@ -626,7 +627,7 @@ export default function EventDetails() {
                     {tm.entryFeeDiamonds > 0 ? (
                       <>
                         <span className="text-2xl font-black text-white tabular-nums leading-none tracking-tight">{tm.entryFeeDiamonds}</span>
-                        <Gem className="w-4 h-4 text-violet-400 mb-0.5" />
+                        <CoinIcon className="w-4 h-4 text-violet-400 mb-0.5" />
                       </>
                     ) : (
                       <span className="text-2xl font-black text-emerald-400 leading-none tracking-tight">FREE</span>
@@ -649,7 +650,7 @@ export default function EventDetails() {
                 </div>
                 <div className="flex items-center gap-1 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
                    <span className="text-base font-black text-white tabular-nums">+{tm.perKillDiamonds}</span>
-                   <Gem className="w-3.5 h-3.5 text-primary" />
+                   <CoinIcon className="w-3.5 h-3.5 text-primary" />
                 </div>
              </div>
            )}
@@ -994,7 +995,7 @@ export default function EventDetails() {
                {tm.entryFeeDiamonds > 0 ? (
                  <>
                    <span className="text-[17px] font-black text-white leading-none tabular-nums">{tm.entryFeeDiamonds}</span>
-                   <Gem className="w-3.5 h-3.5 text-violet-400" />
+                   <CoinIcon className="w-3.5 h-3.5 text-violet-400" />
                  </>
                ) : (
                  <span className="text-[17px] font-black text-emerald-400 leading-none">FREE</span>
@@ -1085,7 +1086,7 @@ export default function EventDetails() {
                      {tm.entryFeeDiamonds > 0 ? (
                        <>
                          <span className="text-2xl font-black text-white tabular-nums leading-none tracking-tight">{tm.entryFeeDiamonds}</span>
-                         <Gem className="w-5 h-5 text-violet-400 mb-0.5 drop-shadow-[0_0_8px_rgba(167,139,250,0.4)]" />
+                         <CoinIcon className="w-5 h-5 text-violet-400 mb-0.5 drop-shadow-[0_0_8px_rgba(167,139,250,0.4)]" />
                        </>
                      ) : (
                        <span className="text-2xl font-black text-emerald-400 leading-none">FREE</span>
@@ -1168,7 +1169,7 @@ export default function EventDetails() {
                       <div className="w-px h-3 bg-white/10" />
                       <div className="flex items-center gap-1 text-[12px] font-bold text-white">
                          {(nextAvailableTournament as any).entryFeeDiamonds > 0 ? (
-                            <><Gem className="w-3.5 h-3.5 text-violet-400" /> {(nextAvailableTournament as any).entryFeeDiamonds} Entry</>
+                            <><CoinIcon className="w-3.5 h-3.5 text-violet-400" /> {(nextAvailableTournament as any).entryFeeDiamonds} Entry</>
                          ) : (
                             <span className="text-emerald-400">FREE ENTRY</span>
                          )}

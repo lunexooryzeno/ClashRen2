@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Home, Trophy, CalendarDays, Clock, User, Shield, Plus, Bell, KeyRound, Coins } from "lucide-react";
+import { Home, Trophy, CalendarDays, Clock, User, Shield, Plus, Bell, KeyRound } from "lucide-react";
+import { CoinIcon as CoinIconBase } from "@/components/CoinIcon";
 import { PushPrompt } from "@/components/push-prompt";
 import { BackgroundMotion } from "@/components/background-motion";
 import { cn } from "@/lib/utils";
@@ -12,9 +13,8 @@ import { Link } from "wouter";
 /* ── Coin icon ───────────────────────────────────────────────────────────── */
 function CoinIcon({ size = 22, flash = false }: { size?: number; flash?: boolean }) {
   return (
-    <Coins
+    <CoinIconBase
       width={size} height={size}
-      className="text-amber-400"
       style={flash ? { animation: "wallet-gem-burst 0.65s ease-out both", willChange: "transform,filter", color: "#fbbf24" } : { color: "#fbbf24" }}
     />
   );

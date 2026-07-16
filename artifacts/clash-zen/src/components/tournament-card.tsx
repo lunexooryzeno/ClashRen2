@@ -3,7 +3,8 @@ import { subscribeToSecondTick } from "@/lib/clock";
 import { Link, useLocation } from "wouter";
 import { CachedImg } from "@/components/CachedImg";
 import { format } from "date-fns";
-import { Users, Clock, Swords, Check, ShieldAlert, Gem, ChevronRight, X, Zap, Trophy } from "lucide-react";
+import { Users, Clock, Swords, Check, ShieldAlert, ChevronRight, X, Zap, Trophy } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import type { Tournament } from "@workspace/api-client-react";
 
 function resolveImageUrl(url: string | null | undefined): string | null {
@@ -155,7 +156,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
           {/* per-kill — top right, only when > 0 */}
           {perKill > 0 && (
             <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/60 border border-blue-400/30 rounded-full px-2.5 py-1">
-              <Gem className="w-3 h-3 text-blue-400" />
+              <CoinIcon className="w-3 h-3 text-blue-400" />
               <span className="text-[10px] font-bold text-blue-300">+{perKill}/kill</span>
             </div>
           )}
@@ -180,7 +181,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
           <div className="flex flex-col items-center gap-0.5 border-l border-white/5">
             <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Prize</span>
             <div className="flex items-center gap-0.5">
-              <Gem className="w-3 h-3 text-orange-400" />
+              <CoinIcon className="w-3 h-3 text-orange-400" />
               <span className="text-[13px] font-bold text-orange-300">{tournament.prizePoolDiamonds.toLocaleString()}</span>
             </div>
           </div>
@@ -190,7 +191,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
             <div className="flex flex-col items-center gap-0.5 border-l border-white/5">
               <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Per Kill</span>
               <div className="flex items-center gap-0.5">
-                <Gem className="w-3 h-3 text-blue-400" />
+                <CoinIcon className="w-3 h-3 text-blue-400" />
                 <span className="text-[13px] font-bold text-blue-300">+{perKill}</span>
               </div>
             </div>
@@ -201,7 +202,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
             <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Entry</span>
             {tournament.entryFeeDiamonds > 0 ? (
               <div className="flex items-center gap-0.5">
-                <Gem className="w-3 h-3 text-blue-400" />
+                <CoinIcon className="w-3 h-3 text-blue-400" />
                 <span className="text-[13px] font-bold text-white">{tournament.entryFeeDiamonds}</span>
               </div>
             ) : (
@@ -235,7 +236,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
                   <span className="text-sm text-zinc-300">Entry Fee</span>
                   {tournament.entryFeeDiamonds > 0 ? (
                     <div className="flex items-center gap-1.5">
-                      <Gem className="w-4 h-4 text-blue-400" />
+                      <CoinIcon className="w-4 h-4 text-blue-400" />
                       <span className="font-bold text-white text-lg">{tournament.entryFeeDiamonds}</span>
                     </div>
                   ) : (
@@ -247,7 +248,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
                   <div className="flex items-center justify-between text-sm px-1">
                     <span className="text-zinc-500">Your balance</span>
                     <div className="flex items-center gap-1">
-                      <Gem className="w-3.5 h-3.5 text-blue-400" />
+                      <CoinIcon className="w-3.5 h-3.5 text-blue-400" />
                       <span className={cn("font-bold", hasBalance ? "text-white" : "text-red-400")}>{user.diamondBalance}</span>
                     </div>
                   </div>

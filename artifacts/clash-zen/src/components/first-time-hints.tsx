@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { X, Calendar, User, Gem, ChevronRight } from "lucide-react";
+import { X, Calendar, User, ChevronRight } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 
 const getHintsDismissedKey = (userId: number) => `clash-ren:hints-dismissed:${userId}`;
 
@@ -28,7 +29,7 @@ const STEPS = [
     border: "border-blue-400/20",
   },
   {
-    icon: Gem,
+    icon: CoinIcon,
     label: "Top up your coins",
     description: "Get coins to enter paid tournaments",
     href: "/top-up",

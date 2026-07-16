@@ -3,10 +3,10 @@ import { CachedImg } from "@/components/CachedImg";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Search, SlidersHorizontal, X, Trophy, Swords,
-  Gem, Clock, CheckCircle2, AlertCircle, Hourglass,
+  ArrowLeft, Search, SlidersHorizontal, X, Trophy, Swords, Clock, CheckCircle2, AlertCircle, Hourglass,
   ChevronDown, Check, ChevronRight, Flame, ScrollText, RefreshCw,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -173,7 +173,7 @@ function MatchCard({ t, index, onClick }: { t: any; index: number; onClick: () =
         <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
           {perKill > 0 && (
             <div className="flex items-center gap-1 bg-black/60 border border-blue-400/30 rounded-full px-2.5 py-1">
-              <Gem className="w-3 h-3 text-blue-400" />
+              <CoinIcon className="w-3 h-3 text-blue-400" />
               <span className="text-[10px] font-bold text-blue-300">+{perKill}/kill</span>
             </div>
           )}
@@ -209,7 +209,7 @@ function MatchCard({ t, index, onClick }: { t: any; index: number; onClick: () =
         <div className="flex flex-col items-center gap-0.5 border-l border-white/5">
           <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Prize</span>
           <div className="flex items-center gap-0.5">
-            <Gem className="w-3 h-3 text-orange-400" />
+            <CoinIcon className="w-3 h-3 text-orange-400" />
             <span className="text-[13px] font-bold text-orange-300">{(t.prizePoolDiamonds ?? 0).toLocaleString()}</span>
           </div>
         </div>
@@ -217,7 +217,7 @@ function MatchCard({ t, index, onClick }: { t: any; index: number; onClick: () =
           <div className="flex flex-col items-center gap-0.5 border-l border-white/5">
             <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Per Kill</span>
             <div className="flex items-center gap-0.5">
-              <Gem className="w-3 h-3 text-blue-400" />
+              <CoinIcon className="w-3 h-3 text-blue-400" />
               <span className="text-[13px] font-bold text-blue-300">+{perKill}</span>
             </div>
           </div>
@@ -226,7 +226,7 @@ function MatchCard({ t, index, onClick }: { t: any; index: number; onClick: () =
           <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Entry</span>
           {t.entryFeeDiamonds > 0 ? (
             <div className="flex items-center gap-0.5">
-              <Gem className="w-3 h-3 text-blue-400" />
+              <CoinIcon className="w-3 h-3 text-blue-400" />
               <span className="text-[13px] font-bold text-white">{t.entryFeeDiamonds}</span>
             </div>
           ) : (
@@ -261,7 +261,7 @@ function MatchCard({ t, index, onClick }: { t: any; index: number; onClick: () =
           )}
           {diamondsWon > 0 && (
             <div className="flex items-center gap-1">
-              <Gem className="w-3 h-3 text-yellow-400" />
+              <CoinIcon className="w-3 h-3 text-yellow-400" />
               <span className="text-[11px] font-bold text-yellow-300">+{diamondsWon}</span>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Gem, IndianRupee, Trash2, User, Clock, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { ChevronLeft, IndianRupee, Trash2, User, Clock, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
 
 const SESSION_KEY = "czsa_v1_session";
@@ -200,7 +201,7 @@ export default function UtrTransactionsPage() {
                   </div>
                   <span className="text-zinc-600 text-xs">→</span>
                   <div className="flex items-center gap-1 text-xs font-bold text-sky-400">
-                    <Gem className="w-3 h-3" />{r.diamonds} diamonds
+                    <CoinIcon className="w-3 h-3" />{r.diamonds} diamonds
                   </div>
                 </div>
 

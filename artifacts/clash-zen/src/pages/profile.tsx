@@ -10,7 +10,7 @@ import { ThemePicker } from "@/components/theme-picker";
 import { haptic, hapticSettings } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Camera, Gem, Wallet, MessageCircle, Users, UserPlus, UserMinus,
+  Camera, Wallet, MessageCircle, Users, UserPlus, UserMinus,
   Shield, Bell, Edit3, Lock, LogOut, ChevronRight, X,
   User, TrendingUp, Sparkles, Crown, Plus, Share2, Trophy,
   Star, Zap, Award, Settings as SettingsIcon, Bookmark,
@@ -18,6 +18,7 @@ import {
   Flag, Lightbulb, CheckCircle, Clock, XCircle, AlertTriangle,
   Loader2, Crosshair, Headset, Smartphone, Info, Copy,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 
 interface ProfileAchievement {
   id: number; icon: string; bgColor: string; title: string;
@@ -480,7 +481,7 @@ export default function Profile() {
             style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)" }}
           />
           <div className="absolute right-3 top-3 opacity-30">
-            <Gem className="w-20 h-20 text-primary" strokeWidth={1} />
+            <CoinIcon className="w-20 h-20 text-primary" strokeWidth={1} />
           </div>
 
           <div className="relative">
@@ -508,7 +509,7 @@ export default function Profile() {
               style={{ borderTop: "1px dashed hsl(var(--primary) / 0.15)" }}>
               <div>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Current Balance</p>
-                <p className="text-sm font-bold text-blue-400 flex items-center gap-1"><Gem className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />{(user?.diamondBalance ?? 0).toLocaleString()}</p>
+                <p className="text-sm font-bold text-blue-400 flex items-center gap-1"><CoinIcon className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />{(user?.diamondBalance ?? 0).toLocaleString()}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Tournaments Won</p>

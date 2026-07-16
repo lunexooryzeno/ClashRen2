@@ -3,11 +3,12 @@ import { useLocation } from "wouter";
 import {
   Shield, Lock, Eye, EyeOff, LogOut, BarChart3, Trophy, Users, Swords,
   Bell, ClipboardList, Plus, Pencil, Trash2, ChevronDown, ChevronRight,
-  Search, RefreshCw, Download, X, Check, AlertTriangle, Gem, Crown,
+  Search, RefreshCw, Download, X, Check, AlertTriangle, Crown,
   Activity, Send, Filter, Clock, ArrowUpRight, ArrowDownLeft, Loader2,
   Copy, UserCheck, UserX, ChevronLeft, Settings, Hash, Zap, Database, Menu, Images,
   KeyRound, CheckCircle2, Target,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -971,7 +972,7 @@ export default function SuperAdminPage() {
           {/* Payments */}
           <div>
             <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-700">Payments</p>
-            <SidebarItem icon={Gem} label="Payment Management" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/payments`)} />
+            <SidebarItem icon={CoinIcon} label="Payment Management" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/payments`)} />
             <SidebarItem icon={Settings} label="Settings" active={tab === "settings"} onClick={() => { setTab("settings"); setSidebarOpen(false); loadData("settings"); }} />
           </div>
 
@@ -1094,7 +1095,7 @@ export default function SuperAdminPage() {
                           {[
                             { label: "Total Users", value: stats.totalUsers, icon: Users, grad: "from-blue-500/20 to-blue-700/5", ic: "text-blue-400", bd: "border-blue-500/15" },
                             { label: "Active Tournaments", value: stats.activeTournaments, icon: Trophy, grad: "from-amber-500/20 to-amber-700/5", ic: "text-amber-400", bd: "border-amber-500/15" },
-                            { label: "Diamonds Circulating", value: stats.totalDiamondsInCirculation.toLocaleString(), icon: Gem, grad: "from-cyan-500/20 to-cyan-700/5", ic: "text-cyan-400", bd: "border-cyan-500/15" },
+                            { label: "Diamonds Circulating", value: stats.totalDiamondsInCirculation.toLocaleString(), icon: CoinIcon, grad: "from-cyan-500/20 to-cyan-700/5", ic: "text-cyan-400", bd: "border-cyan-500/15" },
                             { label: "Total Squads", value: stats.totalSquads, icon: Swords, grad: "from-emerald-500/20 to-emerald-700/5", ic: "text-emerald-400", bd: "border-emerald-500/15" },
                             { label: "Transactions", value: stats.totalTransactions, icon: Activity, grad: "from-purple-500/20 to-purple-700/5", ic: "text-purple-400", bd: "border-purple-500/15" },
                             { label: "Prizes Distributed", value: stats.totalPrizesDistributed, icon: ArrowUpRight, grad: "from-rose-500/20 to-rose-700/5", ic: "text-rose-400", bd: "border-rose-500/15" },
@@ -1206,7 +1207,7 @@ export default function SuperAdminPage() {
                               style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.16)" }}
                             >
                               <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0">
-                                <Gem className="w-5 h-5 text-violet-400" />
+                                <CoinIcon className="w-5 h-5 text-violet-400" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-white">Payment Management</p>
@@ -1331,13 +1332,13 @@ export default function SuperAdminPage() {
                                 <td className="px-3 py-2.5 text-white font-semibold max-w-[120px] truncate">{u.inGameName ?? "—"}</td>
                                 <td className="px-3 py-2.5 text-zinc-400 font-mono">{u.phone}</td>
                                 <td className="px-3 py-2.5 text-zinc-500 font-mono">{u.uid ?? "—"}</td>
-                                <td className="px-3 py-2.5"><span className="flex items-center gap-1 text-cyan-400 font-mono font-bold">{u.diamondBalance} <Gem className="w-3 h-3 text-blue-400" /></span></td>
+                                <td className="px-3 py-2.5"><span className="flex items-center gap-1 text-cyan-400 font-mono font-bold">{u.diamondBalance} <CoinIcon className="w-3 h-3 text-blue-400" /></span></td>
                                 <td className="px-3 py-2.5">{u.isAdmin ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary/20 text-primary">Admin</span> : <span className="text-[10px] text-zinc-700">—</span>}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex gap-1 flex-wrap">
                                     <button onClick={() => { setDiamondModal({ user: u, mode: "add" }); setDiamondAmount(""); }} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors" title="Add coins"><ArrowDownLeft className="w-3 h-3" /></button>
                                     <button onClick={() => { setDiamondModal({ user: u, mode: "sub" }); setDiamondAmount(""); }} className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors" title="Remove coins"><ArrowUpRight className="w-3 h-3" /></button>
-                                    <button onClick={() => { setDiamondModal({ user: u, mode: "set" }); setDiamondAmount(String(u.diamondBalance)); }} className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors" title="Set balance"><Gem className="w-3 h-3" /></button>
+                                    <button onClick={() => { setDiamondModal({ user: u, mode: "set" }); setDiamondAmount(String(u.diamondBalance)); }} className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors" title="Set balance"><CoinIcon className="w-3 h-3" /></button>
                                     <button onClick={() => { setNotifModal({ user: u }); setNotifTitle(""); setNotifBody(""); setNotifType("system"); }} className="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 border border-pink-500/20 hover:bg-pink-500/20 transition-colors" title="Send notification"><Bell className="w-3 h-3" /></button>
                                     <button onClick={() => handleToggleAdmin(u)} className={cn("p-1.5 rounded-lg border transition-colors", u.isAdmin ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20")} title={u.isAdmin ? "Revoke admin" : "Grant admin"}>{u.isAdmin ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}</button>
                                   </div>
@@ -1453,7 +1454,7 @@ export default function SuperAdminPage() {
                     <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}>
                       <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(234,88,12,0.06)" }}>
                         <div className="flex items-center gap-2">
-                          <Gem className="w-3.5 h-3.5 text-orange-400" strokeWidth={2} />
+                          <CoinIcon className="w-3.5 h-3.5 text-orange-400" strokeWidth={2} />
                           <span className="text-[10px] text-orange-400/80 uppercase tracking-[0.15em] font-bold">Payment Settings</span>
                         </div>
                         {!payEditing && paySettings && (

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import {
-  ArrowLeft, Gem, CheckCircle, XCircle, Clock, RefreshCw,
+  ArrowLeft, CheckCircle, XCircle, Clock, RefreshCw,
   CreditCard, Hash, Calendar, IndianRupee, AlertTriangle,
   ChevronDown, ChevronUp, Loader2,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { cn } from "@/lib/utils";
 
 const REQUIRED_UC = "a464dfd00a173f6e10ac6a4774c62f52";
@@ -130,7 +131,7 @@ export default function AdminUserTopupHistoryPage() {
         <div className="grid grid-cols-2 gap-2">
           {[
             { label: "Verified (₹)",  value: `₹${totalVerified.toLocaleString()}`, color: "text-emerald-400", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)", icon: <CheckCircle className="w-4 h-4 text-emerald-400" /> },
-            { label: "Coins Got",  value: totalDiamonds.toLocaleString() + " 🪙", color: "text-violet-400",  bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)", icon: <Gem className="w-4 h-4 text-violet-400" /> },
+            { label: "Coins Got",  value: totalDiamonds.toLocaleString() + " 🪙", color: "text-violet-400",  bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.2)", icon: <CoinIcon className="w-4 h-4 text-violet-400" /> },
             { label: "Pending (₹)",   value: `₹${totalPending.toLocaleString()}`, color: "text-amber-400",   bg: "rgba(245,158,11,0.07)", border: "rgba(245,158,11,0.2)", icon: <Clock className="w-4 h-4 text-amber-400" /> },
             { label: "Rejected",      value: `${totalRejected} UTR${totalRejected !== 1 ? "s" : ""}`, color: "text-red-400", bg: "rgba(239,68,68,0.07)", border: "rgba(239,68,68,0.2)", icon: <XCircle className="w-4 h-4 text-red-400" /> },
           ].map(card => (
@@ -200,7 +201,7 @@ export default function AdminUserTopupHistoryPage() {
                         <p className="text-sm font-bold text-white">₹{t.rupees.toLocaleString()}</p>
                         <span className="text-zinc-600 text-xs">→</span>
                         <div className="flex items-center gap-1">
-                          <Gem className="w-3 h-3 text-violet-400" />
+                          <CoinIcon className="w-3 h-3 text-violet-400" />
                           <span className="text-xs font-semibold text-violet-300">{t.diamonds.toLocaleString()}</span>
                         </div>
                       </div>

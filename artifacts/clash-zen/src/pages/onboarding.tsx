@@ -5,10 +5,11 @@ import { useTheme } from "next-themes";
 import { haptic } from "@/lib/haptics";
 import { apiPost } from "@/lib/api";
 import {
-  Trophy, Gem, Shield, CheckCircle2,
+  Trophy, Shield, CheckCircle2,
   Users, Swords, Wallet, Zap, Clock,
   ChevronRight, Palette, Check,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { THEME_CATALOG } from "@/lib/themes";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
@@ -23,7 +24,7 @@ const STEPS = [
     body: "Browse open arenas, tap Join, pay your entry in Coins — and you're in. Room ID and password arrive in the app 10 minutes before start.",
     bullets: [
       { icon: Swords,  text: "Solo, Duo and Squad modes" },
-      { icon: Gem,     text: "Entry fees from 5 – 50 Coins" },
+      { icon: CoinIcon,     text: "Entry fees from 5 – 50 Coins" },
       { icon: Clock,   text: "Room details unlock 10 min before" },
     ],
   },
@@ -36,7 +37,7 @@ const STEPS = [
     body: "Prizes land in your Clash Ren wallet the moment results are confirmed. Per-kill bonus coins stack up — withdraw to UPI anytime, no delays.",
     bullets: [
       { icon: Trophy, text: "Wallet credited instantly on win" },
-      { icon: Gem,    text: "Bonus coins per kill" },
+      { icon: CoinIcon,    text: "Bonus coins per kill" },
       { icon: Wallet, text: "Withdraw to UPI — zero holds" },
     ],
   },
@@ -85,7 +86,7 @@ function JoinVisual({ accent }: { accent: string }) {
             <div className="flex items-center gap-1.5 mb-2.5">
               <Trophy className="w-4 h-4 text-yellow-400" />
               <span className="font-bold text-yellow-400 text-sm">500</span>
-              <Gem className="w-3.5 h-3.5 text-blue-400" />
+              <CoinIcon className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-zinc-500 text-xs ml-auto">Prize Pool</span>
             </div>
 
@@ -138,7 +139,7 @@ function RewardsVisual({ accent }: { accent: string }) {
             animation: `ob-fall 2.6s ${i * 0.52}s ease-in infinite`,
           }}
         >
-          <Gem className="w-4 h-4 text-blue-400" />
+          <CoinIcon className="w-4 h-4 text-blue-400" />
         </div>
       ))}
 
@@ -155,7 +156,7 @@ function RewardsVisual({ accent }: { accent: string }) {
             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Tournament Winnings</span>
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
-            <Gem className="w-6 h-6 text-blue-400" />
+            <CoinIcon className="w-6 h-6 text-blue-400" />
             <span className="font-heading text-4xl font-bold text-white tabular-nums">+500</span>
           </div>
           <div className="text-center mb-4">

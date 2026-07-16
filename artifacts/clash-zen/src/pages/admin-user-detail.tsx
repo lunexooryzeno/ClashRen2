@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { CachedImg } from "@/components/CachedImg";
 import { useLocation, useParams } from "wouter";
 import {
-  ArrowLeft, Gem, Crown, Ban, Unlock, ArchiveX, RotateCcw, Trash,
+  ArrowLeft, Crown, Ban, Unlock, ArchiveX, RotateCcw, Trash,
   Bell, Shield, AlertTriangle,
   Clock, Trophy, Wallet, RefreshCw, Send, Hash,
   User, Phone, Calendar, ChevronDown, ChevronUp, UserX,
@@ -13,6 +13,7 @@ import {
   Smartphone, Monitor, CreditCard, TrendingUp, TrendingDown, Gift, Award,
   Loader2, UserCheck, LogOut, ChevronRight, IndianRupee,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
@@ -777,7 +778,7 @@ export default function AdminUserDetailPage() {
               <span className="text-[10px] text-zinc-500 font-mono truncate">{user?.phone}</span>
               {user && (
                 <span className="flex items-center gap-0.5 text-[10px] font-bold text-cyan-300 shrink-0">
-                  <Gem className="w-2.5 h-2.5" />{user.diamondBalance.toLocaleString()}
+                  <CoinIcon className="w-2.5 h-2.5" />{user.diamondBalance.toLocaleString()}
                 </span>
               )}
               {user?.isOnline && (
@@ -939,7 +940,7 @@ export default function AdminUserDetailPage() {
                 { icon: <Phone className="w-3.5 h-3.5 text-blue-400" />, label: "Phone", value: user.phone },
                 { icon: <Hash className="w-3.5 h-3.5 text-primary" />, label: "Platform ID", value: user.platformId ?? `#${user.id}` },
                 ...(user.uid ? [{ icon: <Swords className="w-3.5 h-3.5 text-orange-400" />, label: "Free Fire Max UID", value: user.uid }] : []),
-                { icon: <Gem className="w-3.5 h-3.5 text-violet-400" />, label: "Coin Balance", value: <span className="flex items-center gap-1">{user.diamondBalance.toLocaleString()} <Gem className="w-3 h-3 text-violet-400" /></span> },
+                { icon: <CoinIcon className="w-3.5 h-3.5 text-violet-400" />, label: "Coin Balance", value: <span className="flex items-center gap-1">{user.diamondBalance.toLocaleString()} <CoinIcon className="w-3 h-3 text-violet-400" /></span> },
                 { icon: <Calendar className="w-3.5 h-3.5 text-emerald-400" />, label: "Registered", value: fmtDateTime(user.createdAt) },
                 {
                   icon: <Clock className="w-3.5 h-3.5 text-zinc-500" />,
@@ -1125,7 +1126,7 @@ export default function AdminUserDetailPage() {
                   </div>
                   <div className="px-4 py-2 border-t border-white/5 flex items-center justify-between">
                     <span className="text-[11px] text-zinc-500">Total Spent (entries)</span>
-                    <span className="text-xs font-mono text-red-400 flex items-center gap-1">{totalSpent} <Gem className="w-3 h-3" /></span>
+                    <span className="text-xs font-mono text-red-400 flex items-center gap-1">{totalSpent} <CoinIcon className="w-3 h-3" /></span>
                   </div>
                 </div>
               );
@@ -1433,13 +1434,13 @@ export default function AdminUserDetailPage() {
               {/* Diamonds */}
               <div className="px-4 py-3 border-b border-white/5">
                 <button className="flex items-center justify-between w-full" onClick={() => setShowDiamondForm(v => !v)}>
-                  <div className="flex items-center gap-2 text-sm font-bold text-white"><Gem className="w-4 h-4 text-cyan-400" />Adjust Coins</div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-white"><CoinIcon className="w-4 h-4 text-cyan-400" />Adjust Coins</div>
                   {showDiamondForm ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
                 </button>
                 {showDiamondForm && (
                   <div className="mt-3 flex flex-col gap-2.5">
                     <p className="text-[11px] text-zinc-500 flex items-center gap-1">
-                      Current balance: <span className="text-cyan-300 font-bold flex items-center gap-0.5">{user.diamondBalance} <Gem className="w-3 h-3 text-cyan-400" /></span>
+                      Current balance: <span className="text-cyan-300 font-bold flex items-center gap-0.5">{user.diamondBalance} <CoinIcon className="w-3 h-3 text-cyan-400" /></span>
                     </p>
                     <input
                       type="number"
@@ -1770,7 +1771,7 @@ export default function AdminUserDetailPage() {
             <div className="rounded-2xl p-4 relative overflow-hidden"
               style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(0,0,0,0.4) 100%)", border: "1px solid rgba(139,92,246,0.25)", boxShadow: "0 8px 32px rgba(139,92,246,0.1)" }}>
               <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)" }} />
-              <div className="absolute right-3 top-3 opacity-20"><Gem className="w-14 h-14 text-primary" strokeWidth={1} /></div>
+              <div className="absolute right-3 top-3 opacity-20"><CoinIcon className="w-14 h-14 text-primary" strokeWidth={1} /></div>
               <div className="relative">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.35)" }}>
@@ -1780,7 +1781,7 @@ export default function AdminUserDetailPage() {
                 </div>
                 <div className="flex items-end gap-2 mb-3">
                   <span className="text-4xl font-extrabold font-heading leading-none text-white">{user.diamondBalance.toLocaleString()}</span>
-                  <Gem className="w-7 h-7 text-violet-400 pb-0.5" />
+                  <CoinIcon className="w-7 h-7 text-violet-400 pb-0.5" />
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-3" style={{ borderTop: "1px dashed rgba(139,92,246,0.2)" }}>
                   {(() => {
@@ -2141,7 +2142,7 @@ export default function AdminUserDetailPage() {
                         </div>
                       </div>
                       <div className={cn("text-sm font-bold shrink-0", isCredit ? "text-emerald-400" : "text-red-400")}>
-                        <span className="flex items-center gap-1">{isCredit ? "+" : ""}{tx.amount} <Gem className="w-3 h-3" /></span>
+                        <span className="flex items-center gap-1">{isCredit ? "+" : ""}{tx.amount} <CoinIcon className="w-3 h-3" /></span>
                       </div>
                     </div>
                   );
@@ -2222,13 +2223,13 @@ export default function AdminUserDetailPage() {
                         <span className="text-[9px] text-zinc-600">{fmtDateTime(log.createdAt)}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 text-[9px] text-zinc-600">
-                        <span>{log.balanceBefore} <Gem className="w-2.5 h-2.5 inline text-zinc-600" /></span>
+                        <span>{log.balanceBefore} <CoinIcon className="w-2.5 h-2.5 inline text-zinc-600" /></span>
                         <span>→</span>
-                        <span className="text-zinc-400">{log.balanceAfter} <Gem className="w-2.5 h-2.5 inline text-zinc-500" /></span>
+                        <span className="text-zinc-400">{log.balanceAfter} <CoinIcon className="w-2.5 h-2.5 inline text-zinc-500" /></span>
                       </div>
                     </div>
                     <div className={cn("text-sm font-bold shrink-0", isCredit ? "text-emerald-400" : "text-red-400")}>
-                      <span className="flex items-center gap-0.5">{isCredit ? "+" : ""}{log.amount} <Gem className="w-3 h-3" /></span>
+                      <span className="flex items-center gap-0.5">{isCredit ? "+" : ""}{log.amount} <CoinIcon className="w-3 h-3" /></span>
                     </div>
                   </div>
                 );
@@ -2263,7 +2264,7 @@ export default function AdminUserDetailPage() {
                     {[
                       { icon: <Skull className="w-3 h-3 text-red-400" />, val: t.kills, label: "Kills" },
                       { icon: <Medal className="w-3 h-3 text-yellow-400" />, val: t.placement ?? "–", label: "Place" },
-                      { icon: <Gem className="w-3 h-3 text-violet-400" />, val: t.entryFeeDiamonds, label: "Entry" },
+                      { icon: <CoinIcon className="w-3 h-3 text-violet-400" />, val: t.entryFeeDiamonds, label: "Entry" },
                       { icon: <Star className="w-3 h-3 text-cyan-400" />, val: t.diamondsWon, label: "Won" },
                     ].map(s => (
                       <div key={s.label} className="rounded-xl py-1.5 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -3034,7 +3035,7 @@ export default function AdminUserDetailPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <Gem className="w-3 h-3 text-amber-400" />
+                              <CoinIcon className="w-3 h-3 text-amber-400" />
                               <span className="text-[12px] font-bold text-amber-300">+{p.amount.toLocaleString()}</span>
                             </div>
                           </div>

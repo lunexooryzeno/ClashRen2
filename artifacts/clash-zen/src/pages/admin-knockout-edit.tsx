@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import {
   ArrowLeft, RefreshCw, X, Eye, EyeOff, Upload, Copy,
-  AlignLeft, Image, Gem, Settings, Lock, Hash, Shield,
+  AlignLeft, Image, Settings, Lock, Hash, Shield,
   CheckCircle, Gamepad2, Swords, Zap, Users, Globe,
   Clock, Calendar, Star, MapPin, Tag, FileText,
   Plus, Trash2, Palette, ChevronDown, Key, Unlock,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
 
 const SESSION_KEY = "czsa_v1_session";
@@ -755,11 +756,11 @@ export default function AdminKnockoutEditPage() {
 
         {/* ── Prize Settings ── */}
         <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <SectionHead icon={Gem} label="Prize Settings" color="#eab308" />
+          <SectionHead icon={CoinIcon} label="Prize Settings" color="#eab308" />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Entry Fee">
               <div className="relative">
-                <Gem className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400 pointer-events-none" />
+                <CoinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400 pointer-events-none" />
                 <input type="text" inputMode="numeric" value={form.entryFeeDiamonds}
                   onChange={e => set("entryFeeDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
                   className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-yellow-500/30"

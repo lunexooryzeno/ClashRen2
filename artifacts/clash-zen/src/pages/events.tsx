@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { User, Users, Shield, ArrowRight, Gem } from "lucide-react";
+import { User, Users, Shield, ArrowRight } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import bgImage from "@assets/1782801646557_1782801792030.png";
 import ibImage from "@assets/1783435012009_1-removebg-preview_1783435742788.png";
 
@@ -100,7 +101,7 @@ function ModeCard({ mode, visible }: { mode: typeof MODES[number]; visible: bool
           </h2>
           <p className="text-[11px] font-semibold mt-1 leading-tight" style={{ color: `${mode.accent}bb` }}>{mode.tagline}</p>
           <div className="flex items-center gap-1 mt-2">
-            <Gem className="w-2.5 h-2.5 shrink-0" style={{ color: `${mode.accent}99` }} />
+            <CoinIcon className="w-2.5 h-2.5 shrink-0" style={{ color: `${mode.accent}99` }} />
             <span className="text-[10px] font-semibold" style={{ color: `${mode.accent}77` }}>{mode.entry}</span>
           </div>
         </div>

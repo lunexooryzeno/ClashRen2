@@ -3,10 +3,11 @@ import { useLocation } from "wouter";
 import {
   Shield, LogOut, Settings, CreditCard, ChevronLeft,
   Loader2, CheckCircle2, Clock, Ban,
-  TrendingUp, Gem, IndianRupee, RefreshCw, Check, Copy,
+  TrendingUp, IndianRupee, RefreshCw, Check, Copy,
   AlertTriangle, X, ArrowUpRight, Banknote, Package,
   Plus, Trash2, TriangleAlert, Hash, Search, Zap,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
 
 const REQUIRED_UC = "a464dfd00a173f6e10ac6a4774c62f52";
@@ -354,7 +355,7 @@ function TransactionsView({ toast }: { toast: ReturnType<typeof useToast>["toast
         {[
           { label: "Transactions", val: stats.total, icon: <TrendingUp className="w-3.5 h-3.5 text-orange-400" /> },
           { label: "Revenue", val: `₹${stats.totalRupees}`, icon: <IndianRupee className="w-3.5 h-3.5 text-emerald-400" /> },
-          { label: "Diamonds", val: stats.totalDiamonds, icon: <Gem className="w-3.5 h-3.5 text-cyan-400" /> },
+          { label: "Diamonds", val: stats.totalDiamonds, icon: <CoinIcon className="w-3.5 h-3.5 text-cyan-400" /> },
         ].map((s, i) => (
           <div key={i} className="rounded-2xl p-3 flex flex-col gap-1"
             style={{ background: "hsl(var(--card))", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -506,7 +507,7 @@ function DepositWithdrawalPermission({ toast }: { toast: ReturnType<typeof useTo
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: "hsl(var(--card))", border: "1px solid rgba(255,255,255,0.08)" }}>
       <div className="px-4 pt-3 pb-2 flex items-center gap-2">
-        <Gem className="w-4 h-4 text-blue-400" />
+        <CoinIcon className="w-4 h-4 text-blue-400" />
         <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Deposit Withdrawal Permission</span>
       </div>
       <div className="px-4 pb-3 flex flex-col gap-2">
@@ -1265,7 +1266,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Total Allocated", value: stats.totalAllocated, icon: Package, color: "text-sky-400", bg: "rgba(56,189,248,0.1)", border: "rgba(56,189,248,0.25)" },
-            { label: "Distributed", value: stats.totalDistributed, icon: Gem, color: "text-violet-400", bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.25)" },
+            { label: "Distributed", value: stats.totalDistributed, icon: CoinIcon, color: "text-violet-400", bg: "rgba(139,92,246,0.1)", border: "rgba(139,92,246,0.25)" },
             { label: "Remaining Stock", value: stats.remaining, icon: Zap, color: stats.remaining < 0 ? "text-red-400" : "text-emerald-400", bg: stats.remaining < 0 ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)", border: stats.remaining < 0 ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.25)" },
             { label: "User Balances", value: stats.totalUserBalance, icon: TrendingUp, color: stats.suspicious ? "text-red-400" : "text-orange-400", bg: stats.suspicious ? "rgba(239,68,68,0.1)" : "rgba(234,88,12,0.1)", border: stats.suspicious ? "rgba(239,68,68,0.3)" : "rgba(234,88,12,0.25)" },
           ].map((s) => {
@@ -1528,7 +1529,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
                 <span className="text-[11px] text-zinc-400 font-bold">{r.inGameName ?? r.phone}</span>
                 {r.uid && <span className="text-[10px] text-zinc-600">UID: {r.uid}</span>}
                 <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-emerald-400">
-                  <Gem className="w-3 h-3" /> +{r.diamonds.toLocaleString()} 🪙
+                  <CoinIcon className="w-3 h-3" /> +{r.diamonds.toLocaleString()} 🪙
                 </span>
                 <span className="text-[11px] text-zinc-500">₹{r.rupees.toLocaleString()}</span>
               </div>

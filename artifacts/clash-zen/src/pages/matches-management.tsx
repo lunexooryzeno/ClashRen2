@@ -4,10 +4,11 @@ import { format } from "date-fns";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Trophy, Swords, Lock,
   RefreshCw, X, ChevronDown, ToggleLeft, ToggleRight, Copy,
-  Shield, Zap, Clock, Gem, Wallet, Star, Users, Target,
+  Shield, Zap, Clock, Wallet, Star, Users, Target,
   Image, AlignLeft, Settings, Hash, AlertTriangle, CheckCircle,
   Eye, EyeOff, Flame, Upload, ExternalLink, Gamepad2,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -516,7 +517,7 @@ function MatchFormModal({
 
         {/* ── Prize Settings ── */}
         <div>
-          <SectionHead icon={Gem} label="Prize Settings" color="#eab308" />
+          <SectionHead icon={CoinIcon} label="Prize Settings" color="#eab308" />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Entry Fee (Coins)" value={form.entryFee} onChange={v => set("entryFee", Number(v))} type="number" suffix="🪙" />
@@ -599,7 +600,7 @@ function MatchCard({ match, onEdit, onDelete, accent = "#a855f7" }: {
         </div>
         <div className="flex items-center gap-3 text-[10px] text-zinc-500 mb-3">
           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{match.totalSlots} slots</span>
-          <span className="flex items-center gap-1"><Gem className="w-3 h-3 text-sky-400" />{match.entryFee} fee</span>
+          <span className="flex items-center gap-1"><CoinIcon className="w-3 h-3 text-sky-400" />{match.entryFee} fee</span>
           <span className="flex items-center gap-1"><Star className="w-3 h-3 text-amber-400" />{match.prizePool} pool</span>
         </div>
         <div className="flex gap-2">
@@ -1089,7 +1090,7 @@ function TournamentFormModal({
 
         {/* Prize Settings */}
         <div>
-          <SectionHead icon={Gem} label="Prize Settings" color="#eab308" />
+          <SectionHead icon={CoinIcon} label="Prize Settings" color="#eab308" />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <InputField label="Entry Fee (🪙)" value={form.entryFeeDiamonds} onChange={v => set("entryFeeDiamonds", Number(v))} type="number" />
@@ -1535,7 +1536,7 @@ function TournamentListCard({ t, onEdit, onDelete, onGenSlug, onPlayers }: {
           <div className="rounded-xl px-2.5 py-2 flex flex-col gap-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-black uppercase tracking-wider text-zinc-600">Entry</span>
-              <Gem className="w-2.5 h-2.5 text-blue-400" />
+              <CoinIcon className="w-2.5 h-2.5 text-blue-400" />
             </div>
             <p className="text-[13px] font-black text-blue-400">{t.entryFeeDiamonds}<span className="text-[9px] text-zinc-600 font-medium ml-0.5">🪙</span></p>
             <p className="text-[8px] text-zinc-600">fee</p>

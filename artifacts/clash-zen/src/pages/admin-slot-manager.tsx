@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { format, addDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import {
   ArrowLeft, Plus, Trash2, RefreshCw, ChevronDown, ChevronUp,
-  Clock, Users, Gem, Trophy, Zap, Shield, Eye, EyeOff,
+  Clock, Users, Trophy, Zap, Shield, Eye, EyeOff,
   Swords, Copy, CheckCircle, XCircle, AlertTriangle, Play,
   Pause, Lock, Unlock, Calendar, RotateCcw, Edit3, Target,
   Wifi, WifiOff, Crown,

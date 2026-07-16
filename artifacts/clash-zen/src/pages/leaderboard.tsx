@@ -3,7 +3,8 @@ import { CachedImg } from "@/components/CachedImg";
 import { useGetLeaderboard, useGetMe, useGetMyStats } from "@workspace/api-client-react";
 import type { LeaderboardEntry } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Crown, Trophy, Zap, Info, X, Copy, Check, User, Gamepad2, TrendingUp, Gem, Star } from "lucide-react";
+import { Crown, Trophy, Zap, Info, X, Copy, Check, User, Gamepad2, TrendingUp, Star } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -478,7 +479,7 @@ function PlayerProfileSheet({
               className="flex flex-col items-center py-3 rounded-2xl"
               style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%)", border: "1px solid rgba(251,191,36,0.22)" }}
             >
-              <Gem style={{ width: 20, height: 20, color: "#facc15" }} className="mb-0.5" />
+              <CoinIcon style={{ width: 20, height: 20, color: "#facc15" }} className="mb-0.5" />
               <span className="text-[18px] font-black tabular-nums text-yellow-400 leading-tight">
                 {entry.diamondsEarned.toLocaleString()}
               </span>

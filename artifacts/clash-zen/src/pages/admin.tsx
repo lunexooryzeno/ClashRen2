@@ -35,12 +35,13 @@ import {
   ShieldAlert, ArrowLeft, Users, Trophy, Diamond, Plus, Trash2, Edit, 
   UserCog, Shield, ShieldOff, Search, Skull, Medal, X, Save,
   Ban, Unlock, ArchiveX, RotateCcw, Trash, AlertTriangle, Clock, CreditCard,
-  Wrench, Gem, ChevronDown, ChevronUp, DollarSign, Crown, Ban as BanIcon,
+  Wrench, ChevronDown, ChevronUp, DollarSign, Crown, Ban as BanIcon,
   RefreshCw, CalendarClock, Undo2, Bell, XCircle, Timer, Minus, Megaphone, Radio,
   Flag, CheckCircle, Lightbulb, ShieldBan, CircleDot, MessageSquare,
   ScrollText, Wallet, Globe2, HeadphonesIcon, Phone, AtSign, Clock,
   KeyRound, Eye, EyeOff, CheckCircle2,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -988,7 +989,7 @@ function MatchOverrideDialog({
                   <Input type="number" min="1" className="bg-black/40 border-white/10 text-white h-8 text-xs" value={swPlacement} onChange={e => setSwPlacement(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-0.5 mb-1"><Gem className="w-3 h-3 text-yellow-400" /> Won</label>
+                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-0.5 mb-1"><CoinIcon className="w-3 h-3 text-yellow-400" /> Won</label>
                   <Input type="number" min="0" className="bg-black/40 border-white/10 text-white h-8 text-xs" value={swDiamonds} onChange={e => setSwDiamonds(e.target.value)} />
                 </div>
               </div>
@@ -1013,7 +1014,7 @@ function MatchOverrideDialog({
               {participantSelect(fpUserId, setFpUserId)}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-0.5 mb-1"><Gem className="w-3 h-3 text-emerald-400" /> Amount</label>
+                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-0.5 mb-1"><CoinIcon className="w-3 h-3 text-emerald-400" /> Amount</label>
                   <Input type="number" min="1" placeholder="diamonds" className="bg-black/40 border-white/10 text-white h-8 text-xs" value={fpAmount} onChange={e => setFpAmount(e.target.value)} />
                 </div>
                 <div>
@@ -1191,7 +1192,7 @@ function MatchOverrideDialog({
               {participantSelect(srUserId, setSrUserId)}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-0.5 mb-1"><Gem className="w-3 h-3 text-purple-400" /> Amount</label>
+                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider flex items-center gap-0.5 mb-1"><CoinIcon className="w-3 h-3 text-purple-400" /> Amount</label>
                   <Input type="number" min="1" placeholder="diamonds" className="bg-black/40 border-white/10 text-white h-8 text-xs" value={srAmount} onChange={e => setSrAmount(e.target.value)} />
                 </div>
                 <div>

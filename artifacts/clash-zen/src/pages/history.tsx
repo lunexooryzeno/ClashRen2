@@ -5,10 +5,11 @@ import type { HistoryEntry } from "@workspace/api-client-react";
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import {
-  Trophy, Swords, Gem, Search, X, TrendingUp, TrendingDown,
+  Trophy, Swords, Search, X, TrendingUp, TrendingDown,
   Zap, Target, Clock, ChevronDown, ChevronUp, Shield,
   Flame, Star, Award, BarChart2, Filter, RefreshCw, ArrowUpDown, Check, ArrowRight,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /* ─── Types ──────────────────────────────────────────────────────────────────── */
@@ -247,7 +248,7 @@ function MatchCard({ entry, index, onClick }: {
             )}
             {(entry.diamondsWon ?? 0) > 0 && (
               <div className="flex items-center gap-1">
-                <Gem className="w-3 h-3 text-cyan-400" />
+                <CoinIcon className="w-3 h-3 text-cyan-400" />
                 <span className="text-[11px] font-bold text-cyan-300">+{entry.diamondsWon}</span>
               </div>
             )}

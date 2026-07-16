@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Gem, Copy, Check, Shield, Zap, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
+import { ArrowLeft, Copy, Check, Shield, Zap, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/lib/auth";
@@ -436,7 +437,7 @@ export default function TopUpPayPage() {
             }}>
             <div className="px-4 py-2.5 flex items-center gap-2"
               style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(139,92,246,0.06)" }}>
-              <Gem className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
+              <CoinIcon className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
               <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-bold">Order Summary</span>
             </div>
             <div className="px-4 py-3 flex justify-between items-center">
@@ -450,7 +451,7 @@ export default function TopUpPayPage() {
               <div className="text-right">
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">You Receive</p>
                 <p className="text-2xl font-extrabold font-heading text-blue-300 flex items-center gap-1.5 justify-end">
-                  <Gem className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
+                  <CoinIcon className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
                   {diamonds.toLocaleString()}
                 </p>
               </div>

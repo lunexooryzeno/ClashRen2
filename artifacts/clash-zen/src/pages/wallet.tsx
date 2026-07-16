@@ -4,10 +4,11 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, Gem, Plus, ArrowDownLeft, ArrowUpRight, Trophy,
+  ArrowLeft, Plus, ArrowDownLeft, ArrowUpRight, Trophy,
   History, ArrowDown, Info, X, Wallet as WalletIcon,
   ChevronDown, Clock,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { apiFetch } from "@/lib/api";
 import { haptic } from "@/lib/haptics";
 import type { Transaction } from "./wallet-all";
@@ -144,7 +145,7 @@ export default function WalletPage() {
               <X className="w-3.5 h-3.5 text-zinc-400" />
             </button>
             <div className="flex items-center gap-2 mb-4">
-              <Gem className="w-5 h-5 text-blue-400" strokeWidth={2} />
+              <CoinIcon className="w-5 h-5 text-blue-400" strokeWidth={2} />
               <h3 className="font-heading font-bold text-foreground text-base">Diamond Value</h3>
             </div>
             <div className="space-y-0 rounded-2xl overflow-hidden"
@@ -191,7 +192,7 @@ export default function WalletPage() {
           <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full pointer-events-none"
             style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)" }} />
           <div className="absolute right-3 top-3 opacity-30">
-            <Gem className="w-20 h-20 text-primary" strokeWidth={1} />
+            <CoinIcon className="w-20 h-20 text-primary" strokeWidth={1} />
           </div>
 
           <div className="relative">
@@ -348,7 +349,7 @@ export default function WalletPage() {
                 <p className={cn("text-sm font-bold flex items-center justify-end gap-0.5",
                   t.amount > 0 ? "text-emerald-400" : "text-red-400")}>
                   {t.amount > 0 ? "+" : ""}{t.amount}
-                  <Gem className="w-3 h-3 text-blue-400 ml-0.5" strokeWidth={2} />
+                  <CoinIcon className="w-3 h-3 text-blue-400 ml-0.5" strokeWidth={2} />
                 </p>
                 {t.type === "prize" && <p className="text-[10px] text-emerald-600/80">withdrawable</p>}
               </div>

@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import {
-  ArrowLeft, Gem, ChevronRight, Zap, Star,
+  ArrowLeft, ChevronRight, Zap, Star,
   AlertTriangle, X, Eye, Shield, Clock, Loader2, Smartphone, Home,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { QRCodeSVG } from "qrcode.react";
 import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +50,7 @@ function FloatingParticles() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {PARTICLES.map((p, i) => (
         <div key={i} className="absolute bottom-0" style={{ left: p.left }}>
-          <Gem style={{ width: p.size, height: p.size, color: "hsl(var(--primary))", opacity: 0,
+          <CoinIcon style={{ width: p.size, height: p.size, color: "hsl(var(--primary))", opacity: 0,
             animation: `topup-float ${p.dur} ${p.delay} infinite ease-in-out` }} strokeWidth={1.5} />
         </div>
       ))}
@@ -130,11 +131,11 @@ function StepSelect({
             border: "1px solid rgba(139,92,246,0.4)",
             boxShadow: "0 0 40px rgba(139,92,246,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
           }}>
-          <Gem className="w-10 h-10 text-blue-300" strokeWidth={1.5} />
+          <CoinIcon className="w-10 h-10 text-blue-300" strokeWidth={1.5} />
         </div>
         <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full"
           style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)" }}>
-          <Gem className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />
+          <CoinIcon className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />
           <span className="text-xs font-bold text-white">{(user?.diamondBalance ?? 0).toLocaleString()} Diamonds Available</span>
         </div>
       </div>
@@ -224,7 +225,7 @@ function StepSelect({
                 <div className="flex items-center gap-1.5">
                   <div className="w-5 h-5 rounded-md flex items-center justify-center"
                     style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.2)" }}>
-                    <Gem className="w-3 h-3 text-blue-400" strokeWidth={2} />
+                    <CoinIcon className="w-3 h-3 text-blue-400" strokeWidth={2} />
                   </div>
                   <span className="text-sm font-bold text-blue-300">{diamonds.toLocaleString()} diamonds</span>
                 </div>
@@ -393,7 +394,7 @@ function StepQR({
           style={{ background: "hsl(var(--card))", border: "1px solid rgba(139,92,246,0.2)", animation: mounted ? "pay-slide-up 0.4s 0.12s ease both" : "none" }}>
           <div className="px-4 py-2 flex items-center gap-2"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(139,92,246,0.06)" }}>
-            <Gem className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
+            <CoinIcon className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
             <span className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-bold">Order Summary</span>
           </div>
           <div className="px-4 py-3 flex justify-between items-center">
@@ -405,7 +406,7 @@ function StepQR({
             <div className="text-right">
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5">You Receive</p>
               <p className="text-2xl font-extrabold font-heading text-blue-300 flex items-center gap-1.5 justify-end">
-                <Gem className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
+                <CoinIcon className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
                 {session.diamonds.toLocaleString()}
               </p>
             </div>
@@ -631,7 +632,7 @@ function StepSuccess({ session, onGoHome, onGoWallet }: {
               style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.2), rgba(16,185,129,0.1))",
                 border: "2px solid rgba(52,211,153,0.5)",
                 boxShadow: "0 0 60px rgba(52,211,153,0.25), inset 0 1px 0 rgba(255,255,255,0.1)" }}>
-              <Gem className="w-12 h-12 text-emerald-300" strokeWidth={1.5} />
+              <CoinIcon className="w-12 h-12 text-emerald-300" strokeWidth={1.5} />
             </div>
             {/* Check badge */}
             <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center"
@@ -660,7 +661,7 @@ function StepSuccess({ session, onGoHome, onGoWallet }: {
           {/* Diamond amount */}
           <div className="flex flex-col items-center pt-6 pb-4 px-5">
             <div className="flex items-center gap-2.5 mb-1">
-              <Gem className="w-8 h-8 text-blue-400" strokeWidth={1.5} />
+              <CoinIcon className="w-8 h-8 text-blue-400" strokeWidth={1.5} />
               <span className="text-5xl font-black text-white tabular-nums leading-none">+{diamonds.toLocaleString()}</span>
             </div>
             <p className="text-[13px] text-emerald-400 font-semibold">Coins added to your wallet</p>
@@ -675,7 +676,7 @@ function StepSuccess({ session, onGoHome, onGoWallet }: {
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl"
               style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}>
-              <Gem className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />
+              <CoinIcon className="w-3.5 h-3.5 text-blue-400" strokeWidth={2} />
               <span className="text-[13px] font-bold text-emerald-300">{diamonds.toLocaleString()} diamonds</span>
             </div>
           </div>
@@ -695,7 +696,7 @@ function StepSuccess({ session, onGoHome, onGoWallet }: {
           <button onClick={onGoWallet}
             className="w-full py-4 rounded-2xl font-bold text-[15px] text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
             style={{ background: "linear-gradient(135deg, rgb(52,211,153), rgb(16,185,129))", boxShadow: "0 8px 28px rgba(52,211,153,0.3)" }}>
-            <Gem className="w-5 h-5" strokeWidth={2} />
+            <CoinIcon className="w-5 h-5" strokeWidth={2} />
             Go to Wallet
           </button>
           <button onClick={onGoHome}

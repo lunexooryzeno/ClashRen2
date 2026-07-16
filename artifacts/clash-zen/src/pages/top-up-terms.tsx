@@ -1,6 +1,7 @@
 import React from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, ScrollText, Gem, AlertCircle, CheckCircle2, HeadphonesIcon } from "lucide-react";
+import { ArrowLeft, ScrollText, AlertCircle, CheckCircle2, HeadphonesIcon } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 
 const TERMS = [
   {
@@ -22,7 +23,7 @@ const TERMS = [
     text: "Only coins earned from winning tournaments are eligible for withdrawal.",
   },
   {
-    icon: <Gem className="w-4 h-4 text-blue-400" />,
+    icon: <CoinIcon className="w-4 h-4 text-blue-400" />,
     bg: "rgba(59,130,246,0.1)",
     border: "rgba(59,130,246,0.2)",
     text: "Top-up coins are credited to your account instantly after a successful payment.",

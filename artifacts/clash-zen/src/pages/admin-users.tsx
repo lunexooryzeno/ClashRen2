@@ -3,12 +3,13 @@ import { CachedImg } from "@/components/CachedImg";
 import { useLocation } from "wouter";
 import {
   Users, Search, Shield, Ban, ArchiveX, Eye, ArrowLeft,
-  Lock, EyeOff, RefreshCw, Gem, Crown, AlertTriangle,
+  Lock, EyeOff, RefreshCw, Crown, AlertTriangle,
   UserCheck, UserX, Clock, CheckCircle2, TrendingUp,
   Activity, UserPlus, Wifi, ChevronDown, ChevronUp, Trophy,
   Globe, MapPin, Languages, Swords, Timer, XCircle, Percent,
   CalendarClock, Zap, SlidersHorizontal, X, ArrowUpDown,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
@@ -724,7 +725,7 @@ export default function AdminUsersPage() {
                                   <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${Math.round((c.userCount / maxUsers) * 100)}%` }} />
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0 text-[9px] text-zinc-600">
-                                  <span className="flex items-center gap-0.5"><Gem className="w-2.5 h-2.5 text-cyan-500" />{c.avgDiamonds} avg</span>
+                                  <span className="flex items-center gap-0.5"><CoinIcon className="w-2.5 h-2.5 text-cyan-500" />{c.avgDiamonds} avg</span>
                                   <span>{c.activePct}% active</span>
                                 </div>
                               </div>
@@ -961,7 +962,7 @@ export default function AdminUsersPage() {
                                 <span className="text-[9px] text-zinc-600 shrink-0">{t.filledSlots}/{t.maxSlots}</span>
                                 {t.entryFee > 0 && (
                                   <span className="text-[9px] text-cyan-500 flex items-center gap-0.5 shrink-0">
-                                    <Gem className="w-2.5 h-2.5" />{t.entryFee}
+                                    <CoinIcon className="w-2.5 h-2.5" />{t.entryFee}
                                   </span>
                                 )}
                               </div>
@@ -1656,7 +1657,7 @@ export default function AdminUsersPage() {
                       <button key={val} onClick={() => setDiamondFilter(val)}
                         className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all",
                           diamondFilter === val ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300" : "bg-white/5 border-white/10 text-zinc-400 hover:text-white")}>
-                        {val !== "all" && <Gem className="w-3 h-3 text-cyan-400 opacity-60" />}{label}
+                        {val !== "all" && <CoinIcon className="w-3 h-3 text-cyan-400 opacity-60" />}{label}
                       </button>
                     ))}
                   </div>
@@ -1766,7 +1767,7 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <div className="flex items-center gap-1 text-sm font-bold text-cyan-300">
-                      <Gem className="w-3.5 h-3.5" />{u.diamondBalance}
+                      <CoinIcon className="w-3.5 h-3.5" />{u.diamondBalance}
                     </div>
                     <div className="text-[10px] text-zinc-600">{fmtDate(u.createdAt)}</div>
                     <Eye className="w-3.5 h-3.5 text-zinc-600" />
