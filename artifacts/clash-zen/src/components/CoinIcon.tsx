@@ -1,4 +1,4 @@
-import { CircleDollarSign } from "lucide-react";
+import { Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CoinIconProps {
@@ -11,7 +11,7 @@ interface CoinIconProps {
 
 export function CoinIcon({ className, strokeWidth = 2, style, width, height }: CoinIconProps) {
   return (
-    <CircleDollarSign
+    <Medal
       className={cn("text-amber-400", className)}
       strokeWidth={strokeWidth}
       style={style}
