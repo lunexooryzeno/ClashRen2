@@ -1078,7 +1078,7 @@ export default function AdminUsersPage() {
                                   { label: "Fill rate", value: `${m.avgFillRate}%` },
                                   { label: "Cancel rate", value: `${m.cancelRate}%` },
                                   { label: "Avg kills", value: String(m.avgKills) },
-                                  { label: "Avg diamonds", value: String(m.avgDiamondsWon) },
+                                  { label: "Avg coins", value: String(m.avgDiamondsWon) },
                                 ].map(s => (
                                   <div key={s.label} className="flex flex-col gap-0.5">
                                     <span className="text-[8px] text-zinc-600 uppercase tracking-wider">{s.label}</span>
@@ -1539,7 +1539,7 @@ export default function AdminUsersPage() {
               )}
               {diamondFilter !== "all" && (
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 text-[10px] font-bold">
-                  {diamondFilter === "zero" ? "0 Diamonds" : diamondFilter === "low" ? "1–99" : diamondFilter === "mid" ? "100–499" : "500+"}
+                  {diamondFilter === "zero" ? "0 Coins" : diamondFilter === "low" ? "1–99" : diamondFilter === "mid" ? "100–499" : "500+"}
                   <button onClick={() => setDiamondFilter("all")}><X className="w-2.5 h-2.5" /></button>
                 </span>
               )}
@@ -1551,7 +1551,7 @@ export default function AdminUsersPage() {
               )}
               {sortBy !== "newest" && (
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-500/15 border border-zinc-500/25 text-zinc-400 text-[10px] font-bold">
-                  {sortBy === "oldest" ? "Oldest first" : sortBy === "diamonds_desc" ? "Most Diamonds" : sortBy === "diamonds_asc" ? "Least Diamonds" : "By Name"}
+                  {sortBy === "oldest" ? "Oldest first" : sortBy === "diamonds_desc" ? "Most Coins" : sortBy === "diamonds_asc" ? "Least Coins" : "By Name"}
                   <button onClick={() => setSortBy("newest")}><X className="w-2.5 h-2.5" /></button>
                 </span>
               )}
@@ -1650,7 +1650,7 @@ export default function AdminUsersPage() {
 
                 {/* Diamonds */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Diamonds</span>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Coins</span>
                   <div className="flex gap-2 flex-wrap">
                     {([["all","Any"], ["zero","0"], ["low","1–99"], ["mid","100–499"], ["high","500+"]] as const).map(([val, label]) => (
                       <button key={val} onClick={() => setDiamondFilter(val)}
@@ -1685,8 +1685,8 @@ export default function AdminUsersPage() {
                     {([
                       ["newest", "Newest first"],
                       ["oldest", "Oldest first"],
-                      ["diamonds_desc", "Most Diamonds"],
-                      ["diamonds_asc", "Least Diamonds"],
+                      ["diamonds_desc", "Most Coins"],
+                      ["diamonds_asc", "Least Coins"],
                       ["name", "Name A–Z"],
                     ] as const).map(([val, label]) => (
                       <button key={val} onClick={() => setSortBy(val)}

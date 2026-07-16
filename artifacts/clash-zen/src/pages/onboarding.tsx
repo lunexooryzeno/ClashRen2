@@ -20,10 +20,10 @@ const STEPS = [
     glow: "rgba(255,85,32,0.35)",
     badge: "HOW IT WORKS  ·  1 OF 3",
     title: "Pick.\nPay.\nPlay.",
-    body: "Browse open arenas, tap Join, pay your entry in Diamonds — and you're in. Room ID and password arrive in the app 10 minutes before start.",
+    body: "Browse open arenas, tap Join, pay your entry in Coins — and you're in. Room ID and password arrive in the app 10 minutes before start.",
     bullets: [
       { icon: Swords,  text: "Solo, Duo and Squad modes" },
-      { icon: Gem,     text: "Entry fees from 5 – 50 Diamonds" },
+      { icon: Gem,     text: "Entry fees from 5 – 50 Coins" },
       { icon: Clock,   text: "Room details unlock 10 min before" },
     ],
   },
@@ -33,10 +33,10 @@ const STEPS = [
     glow: "rgba(250,173,20,0.30)",
     badge: "HOW IT WORKS  ·  2 OF 3",
     title: "Win.\nCollect.\nCash Out.",
-    body: "Prizes land in your Clash Ren wallet the moment results are confirmed. Per-kill bonus diamonds stack up — withdraw to UPI anytime, no delays.",
+    body: "Prizes land in your Clash Ren wallet the moment results are confirmed. Per-kill bonus coins stack up — withdraw to UPI anytime, no delays.",
     bullets: [
       { icon: Trophy, text: "Wallet credited instantly on win" },
-      { icon: Gem,    text: "Bonus diamonds per kill" },
+      { icon: Gem,    text: "Bonus coins per kill" },
       { icon: Wallet, text: "Withdraw to UPI — zero holds" },
     ],
   },
@@ -183,7 +183,7 @@ function RewardsVisual({ accent }: { accent: string }) {
           </div>
           <div>
             <div className="text-xs font-semibold text-white leading-none mb-0.5">Prize credited</div>
-            <div className="text-[10px] text-zinc-500">500 Diamonds added to wallet</div>
+            <div className="text-[10px] text-zinc-500">500 Coins added to wallet</div>
           </div>
         </div>
       </div>

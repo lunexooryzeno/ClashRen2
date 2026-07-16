@@ -29,10 +29,10 @@ const STEPS = [
   },
   {
     icon: Gem,
-    label: "Top up your diamonds",
-    description: "Get diamonds to enter paid tournaments",
+    label: "Top up your coins",
+    description: "Get coins to enter paid tournaments",
     href: "/top-up",
-    color: "text-diamond",
+    color: "text-coin",
     bg: "bg-yellow-400/10",
     border: "border-yellow-400/20",
   },

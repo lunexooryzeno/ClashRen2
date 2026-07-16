@@ -151,9 +151,9 @@ export default function WalletPage() {
               style={{ border: "1px solid hsl(var(--primary) / 0.1)" }}>
               {[
                 { label: "1 Diamond",       value: `₹${rate.toFixed(2)}`,                                color: "text-foreground" },
-                { label: "Your Balance",    value: `${(user?.diamondBalance ?? 0).toLocaleString()} 💎`,  color: "text-blue-300" },
+                { label: "Your Balance",    value: `${(user?.diamondBalance ?? 0).toLocaleString()} 🪙`,  color: "text-blue-300" },
                 { label: "Balance in ₹",   value: `₹${((user?.diamondBalance ?? 0) * rate).toFixed(2)}`, color: "text-emerald-400" },
-                { label: "Withdrawable 💎", value: `${withdrawable} → ₹${withdrawableRupees}`,           color: "text-yellow-400" },
+                { label: "Withdrawable 🪙", value: `${withdrawable} → ₹${withdrawableRupees}`,           color: "text-yellow-400" },
               ].map((row, i, arr) => (
                 <div key={row.label}
                   className={cn("flex justify-between items-center px-4 py-3", i < arr.length - 1 && "border-b border-white/5")}

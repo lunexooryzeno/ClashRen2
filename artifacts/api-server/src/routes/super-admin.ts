@@ -447,7 +447,7 @@ router.put("/super-admin/payment-settings", requireSuperAdmin, async (req, res) 
   await db.insert(adminLogsTable).values({
     action: "update_payment_settings",
     category: "general",
-    details: `Updated payment settings: UPI ID=${updated.upiId}, Rate=₹${updated.ratePerDiamond}/💎, TopUp=${updated.isEnabled}, Withdrawal=${updated.withdrawalEnabled}`,
+    details: `Updated payment settings: UPI ID=${updated.upiId}, Rate=₹${updated.ratePerDiamond}/🪙, TopUp=${updated.isEnabled}, Withdrawal=${updated.withdrawalEnabled}`,
   });
 
   res.json(updated);
@@ -674,13 +674,13 @@ router.post("/super-admin/topup-requests/:id/verify", requireSuperAdmin, async (
   await db.insert(adminLogsTable).values({
     action: "verify_topup",
     category: "general",
-    details: `Verified top-up #${id} · ₹${request.rupees} → ${request.diamonds}💎 · UTR ${request.utr}`,
+    details: `Verified top-up #${id} · ₹${request.rupees} → ${request.diamonds}🪙 · UTR ${request.utr}`,
     targetId: String(request.userId),
     targetType: "user",
   });
 
   const topupTitle = "Top-up Successful!";
-  const topupBody = `₹${request.rupees} has been verified and ${request.diamonds} diamonds have been added to your wallet.`;
+  const topupBody = `₹${request.rupees} has been verified and ${request.diamonds} coins have been added to your wallet.`;
   await db.insert(notificationsTable).values({
     userId: request.userId,
     type: "wallet",
@@ -689,7 +689,7 @@ router.post("/super-admin/topup-requests/:id/verify", requireSuperAdmin, async (
   });
   sendPushToUser(request.userId, { type: "wallet", title: topupTitle, body: topupBody, url: "/#/wallet" }).catch(() => {});
 
-  res.json({ message: "Verified and diamonds credited" });
+  res.json({ message: "Verified and coins credited" });
 });
 
 // ── POST /super-admin/topup-requests/:id/reject ────────────────────────────

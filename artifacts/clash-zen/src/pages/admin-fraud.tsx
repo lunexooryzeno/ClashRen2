@@ -625,14 +625,14 @@ export default function AdminFraudPage() {
               {/* Wins tab */}
               {activeTab === "wins" && !profileLoading && (
                 <div className="space-y-2">
-                  <p className="text-[10px] text-zinc-500 mb-2">Last 7 days · {profile?.summary.firstPlaces ?? 0} first-place finishes · {profile?.summary.totalDiamondsWon ?? 0} 💎 won</p>
+                  <p className="text-[10px] text-zinc-500 mb-2">Last 7 days · {profile?.summary.firstPlaces ?? 0} first-place finishes · {profile?.summary.totalDiamondsWon ?? 0} 🪙 won</p>
                   {profile?.recentParticipations.map((p, i) => (
                     <div key={i} className={`rounded-xl p-2.5 border ${p.placement === 1 ? "bg-yellow-500/8 border-yellow-500/25" : "bg-white/4 border-white/8"}`}>
                       <div className="flex items-center justify-between text-xs">
                         <span className={p.placement === 1 ? "text-yellow-400 font-bold" : "text-zinc-400"}>
                           {p.placement === 1 ? "🏆 1st Place" : p.placement ? `#${p.placement}` : "No placement"}
                         </span>
-                        <span className="text-emerald-400 font-semibold">+{p.diamondsWon ?? 0} 💎</span>
+                        <span className="text-emerald-400 font-semibold">+{p.diamondsWon ?? 0} 🪙</span>
                       </div>
                       <p className="text-[10px] text-zinc-600 mt-0.5">{p.kills ?? 0} kills · {p.createdAt ? formatDistanceToNow(new Date(p.createdAt), { addSuffix: true }) : "–"}</p>
                     </div>

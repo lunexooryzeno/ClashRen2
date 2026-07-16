@@ -715,8 +715,8 @@ const STAT_INFO: Record<InfoStat, { label: string; icon: React.ReactNode; color:
     label: "Points",
     icon: <Zap style={{ width: 20, height: 20 }} fill="currentColor" />,
     color: "#a78bfa",
-    rule: "Wins + Kills + Diamonds + Logins",
-    detail: "Points = (1st→50, 2nd→30, 3rd→15, 4th-10th→5) + kills×2 + diamonds÷10 + login days×3. The more active you are, the higher your score.",
+    rule: "Wins + Kills + Coins + Logins",
+    detail: "Points = (1st→50, 2nd→30, 3rd→15, 4th-10th→5) + kills×2 + coins÷10 + login days×3. The more active you are, the higher your score.",
   },
 };
 

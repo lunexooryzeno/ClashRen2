@@ -587,16 +587,16 @@ export default function SuperAdminPage() {
     let logDesc: string;
     if (diamondModal.mode === "set") {
       finalAmt = amt - diamondModal.user.diamondBalance;
-      logDesc = `Set balance to ${amt} diamonds for ${diamondModal.user.inGameName ?? diamondModal.user.phone}`;
+      logDesc = `Set balance to coins for ${diamondModal.user.inGameName ?? diamondModal.user.phone}`;
     } else {
       if (amt === 0) { toast({ title: "Amount must be greater than 0", variant: "destructive" }); return; }
       finalAmt = diamondModal.mode === "sub" ? -amt : amt;
-      logDesc = `${diamondModal.mode === "add" ? "Added" : "Removed"} ${amt} diamonds for ${diamondModal.user.inGameName ?? diamondModal.user.phone}`;
+      logDesc = `${diamondModal.mode === "add" ? "Added coins for ${diamondModal.user.inGameName ?? diamondModal.user.phone}`;
     }
     try {
       await saFetch<unknown>(`/admin/users/${diamondModal.user.id}/diamonds`, token, { method: "PATCH", body: JSON.stringify({ amount: finalAmt }) });
       await logAction("adjust_diamonds", "user", logDesc, String(diamondModal.user.id), "user");
-      toast({ title: diamondModal.mode === "set" ? `Balance set to ${amt}💎` : `${diamondModal.mode === "add" ? "Added" : "Removed"} ${amt} diamonds!` });
+      toast({ title: diamondModal.mode === "set" ? `Balance set to ${amt}🪙` : `${diamondModal.mode === "add" ? "Added" : "Removed"} ${amt} diamonds!` });
       setDiamondModal(null); setDiamondAmount(""); loadData("users");
     } catch (e: unknown) { toast({ title: "Error", description: e instanceof Error ? e.message : "Failed", variant: "destructive" }); }
   }
@@ -1172,7 +1172,7 @@ export default function SuperAdminPage() {
                               { label: "Total Participants", value: stats.totalParticipants, color: "text-white" },
                               { label: "Admin Users", value: stats.adminUsers, color: "text-primary" },
                               { label: "Total Top-ups", value: stats.totalTopups, color: "text-emerald-400" },
-                              { label: "Total Entry Fees", value: `${stats.totalEntryFees}💎`, color: "text-amber-400" },
+                              { label: "Total Entry Fees", value: `${stats.totalEntryFees}🪙`, color: "text-amber-400" },
                             ].map(r => (
                               <div key={r.label} className="flex items-center justify-between py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                                 <span className="text-xs text-zinc-600">{r.label}</span>
@@ -1196,7 +1196,7 @@ export default function SuperAdminPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-white">Manage Users</p>
-                                <p className="text-[11px] text-zinc-600 mt-0.5">Profiles, diamonds, notifications</p>
+                                <p className="text-[11px] text-zinc-600 mt-0.5">Profiles, coins, notifications</p>
                               </div>
                               <ArrowUpRight className="w-4 h-4 text-indigo-400/50 shrink-0" />
                             </button>
@@ -1281,7 +1281,7 @@ export default function SuperAdminPage() {
                                 <td className="px-3 py-2.5 text-zinc-400 whitespace-nowrap">{t.gameMode}</td>
                                 <td className="px-3 py-2.5"><StatusBadge status={t.status} /></td>
                                 <td className="px-3 py-2.5 text-zinc-400 whitespace-nowrap">{t.filledSlots}/{t.maxSlots}</td>
-                                <td className="px-3 py-2.5 text-emerald-400 font-mono">{t.prizePoolDiamonds}💎</td>
+                                <td className="px-3 py-2.5 text-emerald-400 font-mono">{t.prizePoolDiamonds}🪙</td>
                                 <td className="px-3 py-2.5 text-zinc-500 whitespace-nowrap">{fmtDate(t.startTime)}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex gap-1">
@@ -1319,7 +1319,7 @@ export default function SuperAdminPage() {
                         <table className="w-full text-xs">
                           <thead>
                             <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                              {["#", "Name", "Phone", "UID", "Diamonds", "Admin", "Actions"].map(h => (
+                              {["#", "Name", "Phone", "UID", "Coins", "Admin", "Actions"].map(h => (
                                 <th key={h} className="px-3 py-3 text-left text-[9px] text-zinc-600 font-bold uppercase tracking-wider whitespace-nowrap">{h}</th>
                               ))}
                             </tr>
@@ -1335,8 +1335,8 @@ export default function SuperAdminPage() {
                                 <td className="px-3 py-2.5">{u.isAdmin ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary/20 text-primary">Admin</span> : <span className="text-[10px] text-zinc-700">—</span>}</td>
                                 <td className="px-3 py-2.5">
                                   <div className="flex gap-1 flex-wrap">
-                                    <button onClick={() => { setDiamondModal({ user: u, mode: "add" }); setDiamondAmount(""); }} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors" title="Add diamonds"><ArrowDownLeft className="w-3 h-3" /></button>
-                                    <button onClick={() => { setDiamondModal({ user: u, mode: "sub" }); setDiamondAmount(""); }} className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors" title="Remove diamonds"><ArrowUpRight className="w-3 h-3" /></button>
+                                    <button onClick={() => { setDiamondModal({ user: u, mode: "add" }); setDiamondAmount(""); }} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors" title="Add coins"><ArrowDownLeft className="w-3 h-3" /></button>
+                                    <button onClick={() => { setDiamondModal({ user: u, mode: "sub" }); setDiamondAmount(""); }} className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors" title="Remove coins"><ArrowUpRight className="w-3 h-3" /></button>
                                     <button onClick={() => { setDiamondModal({ user: u, mode: "set" }); setDiamondAmount(String(u.diamondBalance)); }} className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors" title="Set balance"><Gem className="w-3 h-3" /></button>
                                     <button onClick={() => { setNotifModal({ user: u }); setNotifTitle(""); setNotifBody(""); setNotifType("system"); }} className="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 border border-pink-500/20 hover:bg-pink-500/20 transition-colors" title="Send notification"><Bell className="w-3 h-3" /></button>
                                     <button onClick={() => handleToggleAdmin(u)} className={cn("p-1.5 rounded-lg border transition-colors", u.isAdmin ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20")} title={u.isAdmin ? "Revoke admin" : "Grant admin"}>{u.isAdmin ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}</button>
@@ -1468,7 +1468,7 @@ export default function SuperAdminPage() {
                             {[
                               { label: "UPI ID", value: paySettings.upiId, mono: true },
                               { label: "UPI Name", value: paySettings.upiName, mono: false },
-                              { label: "Rate per Diamond", value: `₹${paySettings.ratePerDiamond}`, mono: false },
+                              { label: "Rate per Coin", value: `₹${paySettings.ratePerDiamond}`, mono: false },
                               { label: "Minimum Top-up", value: `₹${paySettings.minTopup}`, mono: false },
                               { label: "Minimum Withdrawal", value: `₹${paySettings.minWithdrawal ?? 50}`, mono: false },
                             ].map(f => (
@@ -1489,7 +1489,7 @@ export default function SuperAdminPage() {
                             {[
                               { label: "UPI ID", key: "upiId", placeholder: "e.g. 9038387188@okbizaxis", mono: true },
                               { label: "UPI Name", key: "upiName", placeholder: "e.g. Clash Ren", mono: false },
-                              { label: "Rate per Diamond (₹)", key: "ratePerDiamond", placeholder: "0.5", mono: false },
+                              { label: "Rate per Coin (₹)", key: "ratePerDiamond", placeholder: "0.5", mono: false },
                               { label: "Minimum Top-up (₹)", key: "minTopup", placeholder: "20", mono: false },
                               { label: "Minimum Withdrawal (₹)", key: "minWithdrawal", placeholder: "50", mono: false },
                             ].map(f => (
@@ -1715,7 +1715,7 @@ export default function SuperAdminPage() {
                 {[
                   { label: "Kills", key: "kills" },
                   { label: "Placement", key: "placement" },
-                  { label: "Diamonds Won", key: "diamonds" },
+                  { label: "Coins Won", key: "diamonds" },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">{f.label}</label>
@@ -1743,7 +1743,7 @@ export default function SuperAdminPage() {
                     <div className="flex items-center gap-3 text-[10px] text-zinc-500 shrink-0">
                       <span>⚔️ {p.kills}</span>
                       <span>#{p.placement ?? "—"}</span>
-                      <span className="text-emerald-400">{p.diamondsWon}💎</span>
+                      <span className="text-emerald-400">{p.diamondsWon}🪙</span>
                     </div>
                     <div className="flex gap-1 shrink-0">
                       <button onClick={() => { setEditingParticipant(p); setPEdit({ kills: String(p.kills), placement: String(p.placement ?? ""), diamonds: String(p.diamondsWon) }); }} className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20"><Pencil className="w-3 h-3" /></button>
@@ -1768,7 +1768,7 @@ export default function SuperAdminPage() {
               </h2>
               <button onClick={() => setDiamondModal(null)} className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-zinc-400"><X className="w-4 h-4" /></button>
             </div>
-            <p className="text-xs text-zinc-500 mb-3">{diamondModal.user.inGameName ?? diamondModal.user.phone} · Current: <span className="text-cyan-400 font-bold">{diamondModal.user.diamondBalance}💎</span></p>
+            <p className="text-xs text-zinc-500 mb-3">{diamondModal.user.inGameName ?? diamondModal.user.phone} · Current: <span className="text-cyan-400 font-bold">{diamondModal.user.diamondBalance}🪙</span></p>
 
             {/* Mode switcher */}
             <div className="flex rounded-xl p-0.5 mb-4" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -1793,7 +1793,7 @@ export default function SuperAdminPage() {
             {diamondModal.mode === "set" && diamondAmount && (
               <p className="text-[11px] text-zinc-600 mb-3">
                 Change: <span className={cn("font-bold", Number(diamondAmount) >= diamondModal.user.diamondBalance ? "text-emerald-400" : "text-red-400")}>
-                  {Number(diamondAmount) >= diamondModal.user.diamondBalance ? "+" : ""}{Number(diamondAmount) - diamondModal.user.diamondBalance}💎
+                  {Number(diamondAmount) >= diamondModal.user.diamondBalance ? "+" : ""}{Number(diamondAmount) - diamondModal.user.diamondBalance}🪙
                 </span>
               </p>
             )}

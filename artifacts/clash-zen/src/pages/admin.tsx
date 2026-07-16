@@ -155,8 +155,8 @@ function AdminStats() {
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Users</span>
       </div>
       <div className="glass-card p-4 rounded-2xl flex flex-col gap-1 border-diamond/20">
-        <Diamond className="w-5 h-5 text-diamond mb-1" />
-        <span className="text-2xl font-bold text-diamond">{stats?.totalDiamondsInCirculation || 0}</span>
+        <Diamond className="w-5 h-5 text-coin mb-1" />
+        <span className="text-2xl font-bold text-coin">{stats?.totalDiamondsInCirculation || 0}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Diamonds Circulating</span>
       </div>
       <div className="glass-card p-4 rounded-2xl flex flex-col gap-1">
@@ -224,11 +224,11 @@ function TournamentFormFields({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className={labelClass}>Entry Fee 💎</Label>
+          <Label className={labelClass}>Entry Fee 🪙</Label>
           <Input className={inputClass} type="number" value={form.entryFeeDiamonds} onChange={e => onChange("entryFeeDiamonds", e.target.value)} placeholder="10" min="0" />
         </div>
         <div>
-          <Label className={labelClass}>Prize Pool 💎</Label>
+          <Label className={labelClass}>Prize Pool 🪙</Label>
           <Input className={inputClass} type="number" value={form.prizePoolDiamonds} onChange={e => onChange("prizePoolDiamonds", e.target.value)} placeholder="100" min="0" />
         </div>
       </div>
@@ -772,7 +772,7 @@ function ParticipantsDialog({ tournament, onClose }: { tournament: Tournament; o
                     </div>
                     <div>
                       <label className="text-[9px] text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-0.5">
-                        <Diamond className="w-3 h-3 text-diamond" /> Won
+                        <Diamond className="w-3 h-3 text-coin" /> Won
                       </label>
                       <Input
                         type="number"
@@ -953,7 +953,7 @@ function MatchOverrideDialog({
       <option value="">— select player —</option>
       {(participants ?? []).map(p => (
         <option key={p.userId} value={String(p.userId)}>
-          {p.inGameName || p.phone} {p.diamondsWon > 0 ? `(${p.diamondsWon}💎)` : ""}
+          {p.inGameName || p.phone} {p.diamondsWon > 0 ? `(${p.diamondsWon}🪙)` : ""}
         </option>
       ))}
     </select>
@@ -1042,7 +1042,7 @@ function MatchOverrideDialog({
               {participantSelect(rvUserId, setRvUserId)}
               {rvUserId && participants && (
                 <p className="text-[11px] text-orange-300 bg-orange-500/10 rounded-lg px-3 py-1.5">
-                  Will revoke {participants.find(p => String(p.userId) === rvUserId)?.diamondsWon ?? 0} 💎 from this player
+                  Will revoke {participants.find(p => String(p.userId) === rvUserId)?.diamondsWon ?? 0} 🪙 from this player
                 </p>
               )}
               <Input placeholder="Reason (optional)" className="bg-black/40 border-white/10 text-white h-8 text-xs" value={rvReason} onChange={e => setRvReason(e.target.value)} />
@@ -1124,7 +1124,7 @@ function MatchOverrideDialog({
               {participantSelect(rrUserId, setRrUserId)}
               {rrUserId && participants && (
                 <p className="text-[11px] text-sky-300 bg-sky-500/10 rounded-lg px-3 py-1.5">
-                  Will resend: {participants.find(p => String(p.userId) === rrUserId)?.diamondsWon ?? 0} 💎 notification
+                  Will resend: {participants.find(p => String(p.userId) === rrUserId)?.diamondsWon ?? 0} 🪙 notification
                 </p>
               )}
               <Button
@@ -1148,7 +1148,7 @@ function MatchOverrideDialog({
               {participantSelect(crUserId, setCrUserId)}
               {crUserId && participants && (
                 <p className="text-[11px] text-rose-300 bg-rose-500/10 rounded-lg px-3 py-1.5">
-                  Will cancel {participants.find(p => String(p.userId) === crUserId)?.diamondsWon ?? 0} 💎 reward
+                  Will cancel {participants.find(p => String(p.userId) === crUserId)?.diamondsWon ?? 0} 🪙 reward
                 </p>
               )}
               <Input placeholder="Reason (optional)" className="bg-black/40 border-white/10 text-white h-8 text-xs" value={crReason} onChange={e => setCrReason(e.target.value)} />
@@ -1224,7 +1224,7 @@ function MatchOverrideDialog({
                     {scheduledList.filter(s => s.status === "pending").map(s => (
                       <div key={s.id} className="flex items-center justify-between gap-2 bg-white/4 rounded-lg px-3 py-1.5">
                         <div className="flex-1 min-w-0">
-                          <p className="text-[11px] text-white">User #{s.userId} · +{s.amount} 💎</p>
+                          <p className="text-[11px] text-white">User #{s.userId} · +{s.amount} 🪙</p>
                           <p className="text-[10px] text-zinc-500 truncate">{new Date(s.scheduledFor).toLocaleString()} · {s.reason || "—"}</p>
                         </div>
                         <button
@@ -1267,7 +1267,7 @@ function MatchOverrideDialog({
                     ))}
                   </select>
                   <Input
-                    type="number" min="1" placeholder="💎"
+                    type="number" min="1" placeholder="🪙"
                     className="w-16 bg-black/40 border-white/10 text-white h-8 text-xs shrink-0"
                     value={row.amount}
                     onChange={e => setBulkRows(rows => rows.map((r, j) => j === i ? { ...r, amount: e.target.value } : r))}
@@ -1392,7 +1392,7 @@ function MatchOverrideDialog({
                 <p className="text-xs font-bold text-red-300 mb-0.5">Danger Zone</p>
                 <p className="text-[11px] text-red-400/80">
                   This will mark the match as <strong>cancelled</strong> and refund all{" "}
-                  {tournament.entryFeeDiamonds > 0 ? `${tournament.entryFeeDiamonds}💎` : ""} entry fees
+                  {tournament.entryFeeDiamonds > 0 ? `${tournament.entryFeeDiamonds}🪙` : ""} entry fees
                   to every participant. This cannot be undone.
                 </p>
               </div>
@@ -1648,11 +1648,11 @@ function AdminUsers() {
                     <div className="text-[10px] text-muted-foreground mt-0.5">Joined {format(new Date(u.createdAt), "MMM d, yyyy")}</div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="flex items-center gap-0.5 font-bold text-sm text-diamond">💎{u.diamondBalance}</div>
+                    <div className="flex items-center gap-0.5 font-bold text-sm text-coin">🪙{u.diamondBalance}</div>
                     <Button size="icon" variant="ghost" className={`w-7 h-7 ${u.isAdmin ? "text-primary hover:text-destructive" : "text-white/30 hover:text-primary"}`} onClick={() => setConfirmAdminUser(u)} title={u.isAdmin ? "Revoke admin" : "Grant admin"} data-testid={`button-toggle-admin-${u.id}`}>
                       {u.isAdmin ? <Shield className="w-3.5 h-3.5" /> : <ShieldOff className="w-3.5 h-3.5" />}
                     </Button>
-                    <Button size="icon" variant="ghost" className="w-7 h-7 text-white/30 hover:text-diamond" onClick={() => { setSelectedUser(u); setAdjustAmount(""); setIsAdjustOpen(true); }} title="Adjust diamonds" data-testid={`button-adjust-user-${u.id}`}>
+                    <Button size="icon" variant="ghost" className="w-7 h-7 text-white/30 hover:text-coin" onClick={() => { setSelectedUser(u); setAdjustAmount(""); setIsAdjustOpen(true); }} title="Adjust diamonds" data-testid={`button-adjust-user-${u.id}`}>
                       <Diamond className="w-3.5 h-3.5" />
                     </Button>
                     {u.status === "blocked" ? (

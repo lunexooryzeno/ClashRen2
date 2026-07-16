@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Home, Trophy, CalendarDays, Clock, User, Shield, Plus, Bell, KeyRound } from "lucide-react";
+import { Home, Trophy, CalendarDays, Clock, User, Shield, Plus, Bell, KeyRound, Coins } from "lucide-react";
 import { PushPrompt } from "@/components/push-prompt";
 import { BackgroundMotion } from "@/components/background-motion";
 import { cn } from "@/lib/utils";
@@ -9,48 +9,14 @@ import { getUnreadCount } from "@/lib/notifications";
 import { haptic } from "@/lib/haptics";
 import { Link } from "wouter";
 
-/* ── 3D Faceted Diamond Gem icon ─────────────────────────────────────────── */
-function DiamondGem3D({ size = 22, flash = false }: { size?: number; flash?: boolean }) {
+/* ── Coin icon ───────────────────────────────────────────────────────────── */
+function CoinIcon({ size = 22, flash = false }: { size?: number; flash?: boolean }) {
   return (
-    <svg
-      width={size} height={size} viewBox="0 0 24 24" fill="none"
-      style={flash ? { animation: "wallet-gem-burst 0.65s ease-out both", willChange: "transform,filter" } : undefined}
-    >
-      <defs>
-        <linearGradient id="dg-crown" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#e0f2fe" />
-          <stop offset="60%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-        <linearGradient id="dg-left" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#2563eb" />
-          <stop offset="100%" stopColor="#1e3a8a" />
-        </linearGradient>
-        <linearGradient id="dg-right" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#1d4ed8" />
-        </linearGradient>
-        <linearGradient id="dg-bot" x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor="#1d4ed8" />
-          <stop offset="100%" stopColor="#1e3a8a" />
-        </linearGradient>
-      </defs>
-      {/* Crown / top face */}
-      <polygon points="12,2 5,8 12,6.5 19,8" fill="url(#dg-crown)" />
-      {/* Left girdle */}
-      <polygon points="5,8 12,6.5 9,14" fill="url(#dg-left)" opacity="0.95" />
-      {/* Right girdle */}
-      <polygon points="19,8 12,6.5 15,14" fill="url(#dg-right)" opacity="0.9" />
-      {/* Left pavilion */}
-      <polygon points="5,8 9,14 12,22" fill="url(#dg-left)" opacity="0.8" />
-      {/* Right pavilion */}
-      <polygon points="19,8 15,14 12,22" fill="url(#dg-right)" opacity="0.75" />
-      {/* Center bottom kite */}
-      <polygon points="9,14 15,14 12,22" fill="url(#dg-bot)" />
-      {/* Shine highlight */}
-      <polygon points="7,8.5 10,7.2 9.2,10" fill="white" opacity="0.45" />
-      <polygon points="10,7.2 12.5,6.8 11.5,9" fill="white" opacity="0.2" />
-    </svg>
+    <Coins
+      width={size} height={size}
+      className="text-amber-400"
+      style={flash ? { animation: "wallet-gem-burst 0.65s ease-out both", willChange: "transform,filter", color: "#fbbf24" } : { color: "#fbbf24" }}
+    />
   );
 }
 
@@ -206,11 +172,11 @@ export const TopBar = memo(function TopBar() {
                 transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
                 position: "relative",
               }}
-              data-testid="display-diamond-balance"
+              data-testid="display-coin-balance"
             >
-              {/* Diamond + number */}
+              {/* Coin + number */}
               <div className="flex items-center gap-1 px-3 py-1.5">
-                <DiamondGem3D size={20} flash={walletFlash} />
+                <CoinIcon size={20} flash={walletFlash} />
                 <span
                   className="text-[14px] font-extrabold text-white tabular-nums"
                   style={walletFlash ? { animation: "wallet-num-pop 0.65s ease-out both" } : undefined}

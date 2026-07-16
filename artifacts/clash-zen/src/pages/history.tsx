@@ -302,14 +302,14 @@ function MatchCard({ entry, index, onClick }: {
               <div className="grid grid-cols-2 gap-2">
                 <DetailRow label="Match ID" value={`#${entry.tournamentId}`} />
                 <DetailRow label="Joined" value={format(new Date(entry.joinedAt), "MMM d, yyyy")} />
-                <DetailRow label="Entry Fee" value={`${entry.entryFeeDiamonds ?? 0} 💎`} />
-                <DetailRow label="Reward" value={entry.diamondsWon ? `${entry.diamondsWon} 💎` : "—"} />
+                <DetailRow label="Entry Fee" value={`${entry.entryFeeDiamonds ?? 0} 🪙`} />
+                <DetailRow label="Reward" value={entry.diamondsWon ? `${entry.diamondsWon} 🪙` : "—"} />
                 <DetailRow label="Kills" value={String(entry.kills ?? 0)} />
                 <DetailRow label="Placement" value={entry.placement != null ? `#${entry.placement}` : "—"} />
                 <DetailRow label="Mode" value={entry.gameMode} />
                 <DetailRow
                   label="Net P/L"
-                  value={`${profit >= 0 ? "+" : ""}${profit} 💎`}
+                  value={`${profit >= 0 ? "+" : ""}${profit} 🪙`}
                   valueColor={profit >= 0 ? "#4ade80" : "#f87171"}
                 />
               </div>

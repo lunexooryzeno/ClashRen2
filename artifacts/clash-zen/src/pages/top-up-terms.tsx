@@ -7,31 +7,31 @@ const TERMS = [
     icon: <AlertCircle className="w-4 h-4 text-red-400" />,
     bg: "rgba(239,68,68,0.1)",
     border: "rgba(239,68,68,0.2)",
-    text: "Once purchased, diamonds cannot be refunded under any circumstances.",
+    text: "Once purchased, coins cannot be refunded under any circumstances.",
   },
   {
     icon: <AlertCircle className="w-4 h-4 text-amber-400" />,
     bg: "rgba(245,158,11,0.1)",
     border: "rgba(245,158,11,0.2)",
-    text: "Top-up diamonds are not withdrawable. They can only be used within the platform.",
+    text: "Top-up coins are not withdrawable. They can only be used within the platform.",
   },
   {
     icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
     bg: "rgba(52,211,153,0.1)",
     border: "rgba(52,211,153,0.2)",
-    text: "Only diamonds earned from winning tournaments are eligible for withdrawal.",
+    text: "Only coins earned from winning tournaments are eligible for withdrawal.",
   },
   {
     icon: <Gem className="w-4 h-4 text-blue-400" />,
     bg: "rgba(59,130,246,0.1)",
     border: "rgba(59,130,246,0.2)",
-    text: "Top-up diamonds are credited to your account instantly after a successful payment.",
+    text: "Top-up coins are credited to your account instantly after a successful payment.",
   },
   {
     icon: <HeadphonesIcon className="w-4 h-4 text-violet-400" />,
     bg: "rgba(139,92,246,0.1)",
     border: "rgba(139,92,246,0.2)",
-    text: "For any queries or issues regarding diamonds, please reach out to our customer support.",
+    text: "For any queries or issues regarding coins, please reach out to our customer support.",
   },
 ];
 
@@ -65,7 +65,7 @@ export default function TopUpTermsPage() {
             <ScrollText className="w-7 h-7 text-violet-400" />
           </div>
           <div className="text-center">
-            <p className="text-lg font-black text-white">Diamond Store</p>
+            <p className="text-lg font-black text-white">Coin Store</p>
             <p className="text-[11px] text-zinc-500 mt-0.5">Terms &amp; Conditions</p>
           </div>
         </div>

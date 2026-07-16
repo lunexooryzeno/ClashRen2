@@ -188,7 +188,7 @@ export async function pollBharatPePayments(): Promise<void> {
         userId: session.userId,
         type: "diamond_credit",
         title: "Payment Detected!",
-        body: `+${session.diamonds} 💎 credited automatically · ₹${parseFloat(session.finalAmount).toFixed(2)} received from ${txn.payerName ?? "UPI"}.`,
+        body: `+${session.diamonds} 🪙 credited automatically · ₹${parseFloat(session.finalAmount).toFixed(2)} received from ${txn.payerName ?? "UPI"}.`,
       });
 
       pushToUser(session.userId, "topup_verified", {

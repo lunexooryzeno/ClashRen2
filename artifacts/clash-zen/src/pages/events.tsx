@@ -9,7 +9,7 @@ const MODES = [
     id: "solo",
     label: "Solo",
     tagline: "Last One Standing",
-    entry: "From 10 💎 entry",
+    entry: "From 10 🪙 entry",
     icon: User,
     accent: "#ef4444",
     glow: "rgba(239,68,68,0.5)",
@@ -21,7 +21,7 @@ const MODES = [
     id: "duo",
     label: "Duo",
     tagline: "Pair Up & Dominate",
-    entry: "From 20 💎 entry",
+    entry: "From 20 🪙 entry",
     icon: Users,
     accent: "#a855f7",
     glow: "rgba(168,85,247,0.5)",
@@ -33,7 +33,7 @@ const MODES = [
     id: "squad",
     label: "Squad",
     tagline: "Unite Your Squad",
-    entry: "From 40 💎 entry",
+    entry: "From 40 🪙 entry",
     icon: Shield,
     accent: "#f59e0b",
     glow: "rgba(245,158,11,0.5)",
@@ -137,7 +137,7 @@ export default function Events() {
             <span className="text-white">Enter the </span>
             <span style={{ background: "linear-gradient(90deg,#ef4444,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Arena</span>
           </h1>
-          <p className="text-[11px] text-zinc-500 mt-1">Free Fire Max tournaments · Win real diamonds</p>
+          <p className="text-[11px] text-zinc-500 mt-1">Free Fire Max tournaments · Win real coins</p>
         </div>
 
         {/* Game Modes section */}

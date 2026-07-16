@@ -257,8 +257,8 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
                   <div className="flex items-center gap-2.5 rounded-xl p-3.5 bg-red-500/8 border border-red-500/20">
                     <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-red-300 font-medium">Not enough diamonds</p>
-                      <p className="text-[11px] text-red-400/70 mt-0.5">You need {tournament.entryFeeDiamonds - user.diamondBalance} more 💎</p>
+                      <p className="text-xs text-red-300 font-medium">Not enough coins</p>
+                      <p className="text-[11px] text-red-400/70 mt-0.5">You need {tournament.entryFeeDiamonds - user.diamondBalance} more 🪙</p>
                     </div>
                     <Link href="/top-up">
                       <button onClick={() => setShowConfirm(false)} className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/15 border border-blue-500/25 text-blue-400 active:opacity-70">

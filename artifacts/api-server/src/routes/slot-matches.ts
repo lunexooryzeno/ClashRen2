@@ -1382,7 +1382,7 @@ async function fetchPlayerStats(ffUid: string, gameMode: string, matchMode: stri
 async function creditMatchPrize(mid: number, winnerId: number, prize: number, slotId: number) {
   await db.update(usersTable).set({ diamondBalance: sql`diamond_balance + ${prize}` }).where(eq(usersTable.id, winnerId));
   await db.insert(walletTransactionsTable).values({ userId: winnerId, type: "prize", amount: prize, label: `Match Prize 🏆`, tournamentId: slotId });
-  await db.insert(notificationsTable).values({ userId: winnerId, type: "result", title: "Winner! 🏆", body: `You won the match! +${prize} 💎 diamonds credited to your wallet.` });
+  await db.insert(notificationsTable).values({ userId: winnerId, type: "result", title: "Winner! 🏆", body: `You won the match! +${prize} 🪙 diamonds credited to your wallet.` });
 }
 
 /** Returns the effective prize for a match — match-level first, falls back to tournament prize pool. */

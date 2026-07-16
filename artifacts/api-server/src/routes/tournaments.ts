@@ -320,7 +320,7 @@ router.post("/tournaments/:id/join", requireAuth, requireFullProfile, tournament
 
   // Log match participation event
   const tournament2 = await db.query.tournamentsTable.findFirst({ where: eq(tournamentsTable.id, id) });
-  await logMatchEvent(userId, "tournament_joined", `Match: ${tournament2?.title ?? `#${id}`} · Entry: ${tournament2?.entryFeeDiamonds ?? 0} 💎`);
+  await logMatchEvent(userId, "tournament_joined", `Match: ${tournament2?.title ?? `#${id}`} · Entry: ${tournament2?.entryFeeDiamonds ?? 0} 🪙`);
 
   // Async suspicious-activity checks — do not block the response
   void checkNewAccountSpend(userId, id, tournament2?.entryFeeDiamonds ?? 0);

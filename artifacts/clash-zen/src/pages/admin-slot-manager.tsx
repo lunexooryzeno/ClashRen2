@@ -467,8 +467,8 @@ function AddSlotSheet({ onAdded, onClose }: { onAdded: () => void; onClose: () =
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: "Max Players", value: maxPlayers, set: setMaxPlayers, min: 2 },
-            { label: "Entry (💎)", value: entryFee, set: setEntryFee, min: 0 },
-            { label: "Prize (💎)", value: prize, set: setPrize, min: 0 },
+            { label: "Entry (🪙)", value: entryFee, set: setEntryFee, min: 0 },
+            { label: "Prize (🪙)", value: prize, set: setPrize, min: 0 },
           ].map(({ label, value, set, min }) => (
             <div key={label}>
               <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">{label}</p>
@@ -615,11 +615,11 @@ function SlotCard({
             </div>
             <div className="rounded-xl px-2.5 py-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-wider">Entry</p>
-              <p className="text-[13px] font-black text-white">{slot.entryFeeDiamonds > 0 ? `💎${slot.entryFeeDiamonds}` : "Free"}</p>
+              <p className="text-[13px] font-black text-white">{slot.entryFeeDiamonds > 0 ? `🪙${slot.entryFeeDiamonds}` : "Free"}</p>
             </div>
             <div className="rounded-xl px-2.5 py-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-wider">Prize</p>
-              <p className="text-[13px] font-black text-white">{slot.prizePoolDiamonds > 0 ? `💎${slot.prizePoolDiamonds}` : "—"}</p>
+              <p className="text-[13px] font-black text-white">{slot.prizePoolDiamonds > 0 ? `🪙${slot.prizePoolDiamonds}` : "—"}</p>
             </div>
           </div>
 

@@ -717,7 +717,7 @@ export default function AdminSlotMatchDetailPage() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Failed");
-      showToast(`Winner overridden & ${overridePrize > 0 ? `${overridePrize} 💎 credited` : "no prize set"}`);
+      showToast(`Winner overridden & ${overridePrize > 0 ? `${overridePrize} 🪙 credited` : "no prize set"}`);
       await loadVerifications(String(match!.id));
     } catch (e: any) { showToast(e.message ?? "Failed", "err"); }
     setOverriding(false);
@@ -1438,7 +1438,7 @@ export default function AdminSlotMatchDetailPage() {
                                 : (match.player2?.inGameName ?? `User #${match.player2Id}`)}
                             </p>
                             {match.verificationStatus === "reward_distributed" && match.prizeAmountDiamonds > 0 && (
-                              <p className="text-[10px] text-green-400 font-bold">+{match.prizeAmountDiamonds} 💎 credited to wallet</p>
+                              <p className="text-[10px] text-green-400 font-bold">+{match.prizeAmountDiamonds} 🪙 credited to wallet</p>
                             )}
                           </div>
                           {match.rewardDistributedAt && (
@@ -1482,7 +1482,7 @@ export default function AdminSlotMatchDetailPage() {
                                 <p className="text-[12px] font-extrabold text-amber-300 truncate">{winnerName}</p>
                               </div>
                               {match.prizeAmountDiamonds > 0 && (
-                                <span className="text-[11px] font-black text-green-400 shrink-0">+{match.prizeAmountDiamonds} 💎</span>
+                                <span className="text-[11px] font-black text-green-400 shrink-0">+{match.prizeAmountDiamonds} 🪙</span>
                               )}
                             </div>
                             {/* Stats table */}
@@ -1572,7 +1572,7 @@ export default function AdminSlotMatchDetailPage() {
                             <div className="px-3 pb-3 space-y-2">
                               <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
                                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                                <span className="text-[10px] text-zinc-500 shrink-0">Prize 💎</span>
+                                <span className="text-[10px] text-zinc-500 shrink-0">Prize 🪙</span>
                                 <input
                                   type="number"
                                   min={0}

@@ -125,7 +125,7 @@
   --destructive:            0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 215 90% 60%;
+  --coin: 215 90% 60%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@
   --destructive:            0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 215 85% 65%;
+  --coin: 215 85% 65%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@
   --destructive:            0 84% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 215 85% 48%;
+  --coin: 215 85% 48%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@
   --destructive:            0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 195 90% 65%;
+  --coin: 195 90% 65%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -305,7 +305,7 @@
   --destructive:            300 80% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 180 100% 55%;
+  --coin: 180 100% 55%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -350,7 +350,7 @@
   --destructive:            0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 175 70% 50%;
+  --coin: 175 70% 50%;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -395,7 +395,7 @@
   --destructive:            0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --diamond: 43 100% 60%;
+  --coin: 43 100% 60%;
 }
 
 @layer base {
@@ -419,7 +419,7 @@
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-600;
   }
-  .text-diamond {
+  .text-coin {
     @apply text-[hsl(var(--diamond))];
   }
   .font-heading {
@@ -706,7 +706,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0  0% 100%;
   --destructive:      0 84% 60%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:         56 100% 65%;
+  --coin:         56 100% 65%;
 }
 
 [data-theme="synthwave"] {
@@ -739,7 +739,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0  0% 100%;
   --destructive:      0 84% 60%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:        300 100% 70%;
+  --coin:        300 100% 70%;
 }
 
 [data-theme="neo-tokyo"] {
@@ -772,7 +772,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 350 80% 5%;
   --destructive:      0 84% 60%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:        347 100% 65%;
+  --coin:        347 100% 65%;
 }
 
 [data-theme="hud"] {
@@ -805,7 +805,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 135  80% 90%;
   --destructive:      0 84% 55%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:        135 100% 60%;
+  --coin:        135 100% 60%;
 }
 
 [data-theme="glitchcore"] {
@@ -838,7 +838,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 300  60%  5%;
   --destructive:    300  80% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        180 100% 60%;
+  --coin:        180 100% 60%;
 }
 
 [data-theme="vaporwave"] {
@@ -871,7 +871,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        320 100% 75%;
+  --coin:        320 100% 75%;
 }
 
 [data-theme="cassette"] {
@@ -904,7 +904,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  36  40% 90%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         28  70% 68%;
+  --coin:         28  70% 68%;
 }
 
 [data-theme="pixel"] {
@@ -937,7 +937,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  72  80% 88%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         72  90% 55%;
+  --coin:         72  90% 55%;
 }
 
 [data-theme="voxel"] {
@@ -970,7 +970,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 180  70% 90%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        180  90% 70%;
+  --coin:        180  90% 70%;
 }
 
 [data-theme="techwear"] {
@@ -1003,7 +1003,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  88  20% 86%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         88  30% 55%;
+  --coin:         88  30% 55%;
 }
 
 /* ── CATEGORY 2: HIGH-ENERGY / AGGRESSIVE ─────────────────────── */
@@ -1038,7 +1038,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         16 100% 65%;
+  --coin:         16 100% 65%;
 }
 
 [data-theme="storm"] {
@@ -1071,7 +1071,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 220  80%  6%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        199 100% 70%;
+  --coin:        199 100% 70%;
 }
 
 [data-theme="toxic"] {
@@ -1104,7 +1104,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 110  80% 88%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        110 100% 65%;
+  --coin:        110 100% 65%;
 }
 
 [data-theme="neon-abyss"] {
@@ -1137,7 +1137,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 280  80%  5%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        275 100% 72%;
+  --coin:        275 100% 72%;
 }
 
 [data-theme="chrome"] {
@@ -1170,7 +1170,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0  0% 90%;
   --destructive:      0 84% 60%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:          0  0% 80%;
+  --coin:          0  0% 80%;
 }
 
 [data-theme="voltage"] {
@@ -1203,7 +1203,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         53 100% 65%;
+  --coin:         53 100% 65%;
 }
 
 [data-theme="warzone"] {
@@ -1236,7 +1236,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  80  55%  4%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         80  65% 50%;
+  --coin:         80  65% 50%;
 }
 
 [data-theme="dieselpunk"] {
@@ -1269,7 +1269,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  36  40% 88%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         27  80% 58%;
+  --coin:         27  80% 58%;
 }
 
 [data-theme="nitro"] {
@@ -1302,7 +1302,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 237  65%  5%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        217 100% 68%;
+  --coin:        217 100% 68%;
 }
 
 [data-theme="rampage"] {
@@ -1335,7 +1335,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:    347 100% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        348  90% 62%;
+  --coin:        348  90% 62%;
 }
 
 /* ── CATEGORY 3: IMMERSIVE & ATMOSPHERIC ──────────────────────── */
@@ -1370,7 +1370,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        239 100% 74%;
+  --coin:        239 100% 74%;
 }
 
 [data-theme="void"] {
@@ -1403,7 +1403,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 90%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        240  40% 60%;
+  --coin:        240  40% 60%;
 }
 
 [data-theme="eclipse"] {
@@ -1436,7 +1436,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         24 100% 65%;
+  --coin:         24 100% 65%;
 }
 
 [data-theme="phantom"] {
@@ -1469,7 +1469,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 230  65%  5%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        159 100% 72%;
+  --coin:        159 100% 72%;
 }
 
 [data-theme="deep-ocean"] {
@@ -1502,7 +1502,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 210  85%  4%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        197 100% 55%;
+  --coin:        197 100% 55%;
 }
 
 [data-theme="crystalline"] {
@@ -1535,7 +1535,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 215  70%  5%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        186 100% 78%;
+  --coin:        186 100% 78%;
 }
 
 [data-theme="solar-flare"] {
@@ -1568,7 +1568,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         45 100% 65%;
+  --coin:         45 100% 65%;
 }
 
 [data-theme="plasma"] {
@@ -1601,7 +1601,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        292 100% 78%;
+  --coin:        292 100% 78%;
 }
 
 [data-theme="gravity"] {
@@ -1634,7 +1634,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        263 100% 72%;
+  --coin:        263 100% 72%;
 }
 
 [data-theme="aurora"] {
@@ -1667,7 +1667,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        142  85% 60%;
+  --coin:        142  85% 60%;
 }
 
 /* ── CATEGORY 4: COOL & COMPETITIVE / CLEAN UI ────────────────── */
@@ -1702,7 +1702,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 210  20%  4%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        215  30% 60%;
+  --coin:        215  30% 60%;
 }
 
 [data-theme="stealth"] {
@@ -1735,7 +1735,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 92%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        215  25% 55%;
+  --coin:        215  25% 55%;
 }
 
 [data-theme="ice"] {
@@ -1768,7 +1768,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 212  80%  6%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        204 100% 80%;
+  --coin:        204 100% 80%;
 }
 
 [data-theme="minimal-mono"] {
@@ -1801,7 +1801,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0  0% 85%;
   --destructive:      0 84% 55%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:          0  0% 65%;
+  --coin:          0  0% 65%;
 }
 
 [data-theme="neon-mint"] {
@@ -1834,7 +1834,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        160  80% 65%;
+  --coin:        160  80% 65%;
 }
 
 [data-theme="monochrome"] {
@@ -1867,7 +1867,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0  0%  4%;
   --destructive:      0 84% 55%;
   --destructive-foreground:  0  0% 100%;
-  --diamond:          0  0% 75%;
+  --coin:          0  0% 75%;
 }
 
 [data-theme="gridrunner"] {
@@ -1900,7 +1900,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        190 100% 60%;
+  --coin:        190 100% 60%;
 }
 
 [data-theme="slate"] {
@@ -1933,7 +1933,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 90%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        215  30% 72%;
+  --coin:        215  30% 72%;
 }
 
 /* ── CATEGORY 5: COMMUNITY & CULTURE-DRIVEN ───────────────────── */
@@ -1968,7 +1968,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        330 100% 78%;
+  --coin:        330 100% 78%;
 }
 
 [data-theme="kpop"] {
@@ -2001,7 +2001,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        350 100% 78%;
+  --coin:        350 100% 78%;
 }
 
 [data-theme="graffiti"] {
@@ -2034,7 +2034,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         48 100% 65%;
+  --coin:         48 100% 65%;
 }
 
 [data-theme="punk"] {
@@ -2067,7 +2067,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         24 100% 65%;
+  --coin:         24 100% 65%;
 }
 
 [data-theme="retro-arcade"] {
@@ -2100,7 +2100,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 280  90%  3%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:          0 100% 68%;
+  --coin:          0 100% 68%;
 }
 
 [data-theme="cel-shaded"] {
@@ -2133,7 +2133,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         43 100% 70%;
+  --coin:         43 100% 70%;
 }
 
 [data-theme="battle-royale"] {
@@ -2166,7 +2166,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         21 100% 62%;
+  --coin:         21 100% 62%;
 }
 
 [data-theme="faction"] {
@@ -2199,7 +2199,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        217 100% 68%;
+  --coin:        217 100% 68%;
 }
 
 [data-theme="fps-classic"] {
@@ -2232,7 +2232,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  80  25% 85%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         24  90% 50%;
+  --coin:         24  90% 50%;
 }
 
 [data-theme="moba-fantasy"] {
@@ -2265,7 +2265,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground: 255 100%  5%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        271 100% 75%;
+  --coin:        271 100% 75%;
 }
 
 [data-theme="fgc"] {
@@ -2298,7 +2298,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  20 100%  4%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         45 100% 65%;
+  --coin:         45 100% 65%;
 }
 
 [data-theme="racing"] {
@@ -2331,7 +2331,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0 100%  3%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:          0 100% 68%;
+  --coin:          0 100% 68%;
 }
 
 [data-theme="rhythm"] {
@@ -2364,7 +2364,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:   0   0% 100%;
   --destructive:      0  84% 60%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:        330 100% 72%;
+  --coin:        330 100% 72%;
 }
 
 [data-theme="rts"] {
@@ -2397,7 +2397,7 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  37  50% 88%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         37 100% 60%;
+  --coin:         37 100% 60%;
 }
 
 [data-theme="battle-royale-map"] {
@@ -2430,5 +2430,5 @@ button:not(:disabled), a, [role="button"]:not([aria-disabled="true"]) {
   --accent-foreground:  85  50% 88%;
   --destructive:      0  84% 55%;
   --destructive-foreground:  0   0% 100%;
-  --diamond:         85  90% 58%;
+  --coin:         85  90% 58%;
 }

@@ -65,7 +65,7 @@ async function processScheduledRewards() {
           userId: sr.userId,
           type: "result",
           title: "Prize Credited",
-          body: `+${sr.amount} 💎 scheduled reward credited${sr.reason ? `: ${sr.reason}` : ""}.`,
+          body: `+${sr.amount} 🪙 scheduled reward credited${sr.reason ? `: ${sr.reason}` : ""}.`,
         });
         await db.update(scheduledRewardsTable)
           .set({ status: "processed", processedAt: new Date() })

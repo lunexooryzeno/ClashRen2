@@ -116,14 +116,14 @@ interface WithdrawalRisk {
 
 type Section = "profile" | "wallet" | "tournaments" | "notifications" | "ffstats" | "logs" | "chat" | "withdrawals" | "comms" | "payments" | "achievements";
 
-const ACH_ICONS = ["🏆","🥇","🎖️","💎","⭐","🔥","⚡","👑","🛡️","🎯","💪","🎮","🌟","💫","🎁","🦁","🐯","🏅","⚔️","🎲","🕹️","🌈","✨","🚀","💥","🔮","🌙","🌊","🐉","🍀","🎪","🏔️","🎭","🎊","🦊","🌸","🎵","🧿","🦅","🏋️"];
+const ACH_ICONS = ["🏆","🥇","🎖️","🪙","⭐","🔥","⚡","👑","🛡️","🎯","💪","🎮","🌟","💫","🎁","🦁","🐯","🏅","⚔️","🎲","🕹️","🌈","✨","🚀","💥","🔮","🌙","🌊","🐉","🍀","🎪","🏔️","🎭","🎊","🦊","🌸","🎵","🧿","🦅","🏋️"];
 const ACH_COLORS = ["#f59e0b","#ef4444","#8b5cf6","#3b82f6","#10b981","#ec4899","#06b6d4","#f97316","#6366f1","#14b8a6","#84cc16","#e2e8f0"];
 
 const COMM_TEMPLATES: Record<string, { label: string; defaultTitle: string; defaultBody: string; type: string; accentClass: string; bg: string }> = {
   warning:    { label: "Warning",      defaultTitle: "Account Warning",       defaultBody: "Your account has received a formal warning for violating our community guidelines. Further violations may result in suspension.",  type: "moderation", accentClass: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/25" },
   reminder:   { label: "Match Reminder", defaultTitle: "Match Starting Soon", defaultBody: "Your match is starting soon! Please join the room with the provided credentials and be ready on time. Good luck!",             type: "tournament", accentClass: "text-sky-400",    bg: "bg-sky-500/10 border-sky-500/25" },
   dispute:    { label: "Dispute",      defaultTitle: "Dispute Resolution",    defaultBody: "Your dispute has been reviewed by our admin team. A decision has been reached and any balance adjustments have been processed.",  type: "result",     accentClass: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/25" },
-  payout:     { label: "Payout",       defaultTitle: "Payout Processed",      defaultBody: "Your prize payout has been successfully processed. Check your diamond balance — your winnings are now available.",               type: "wallet",     accentClass: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/25" },
+  payout:     { label: "Payout",       defaultTitle: "Payout Processed",      defaultBody: "Your prize payout has been successfully processed. Check your coin balance — your winnings are now available.",               type: "wallet",     accentClass: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/25" },
   custom:     { label: "Custom",       defaultTitle: "",                       defaultBody: "",                                                                                                                                type: "general",    accentClass: "text-zinc-400",   bg: "bg-white/5 border-white/10" },
 };
 
@@ -397,7 +397,7 @@ export default function AdminUserDetailPage() {
         setWithdrawals(prev => prev.map(w => w.id === id ? { ...w, status: "rejected", rejectedAt: new Date().toISOString(), rejectedReason: reason.trim() } : w));
         setRejectingWdId(null);
         setRejectWdReason("");
-        toast({ title: "Rejected", description: "Diamonds refunded to user." });
+        toast({ title: "Rejected", description: "Coins refunded to user." });
       } else {
         const e = await res.json().catch(() => ({}));
         toast({ title: "Failed", description: (e as { error?: string }).error ?? "Error", variant: "destructive" });
@@ -649,7 +649,7 @@ export default function AdminUserDetailPage() {
     if (ok) {
       setShowDiamondForm(false);
       setDiamondAmount("");
-      toast({ title: mode === "add" ? `+${amt} diamonds added` : `-${amt} diamonds deducted`, description: "User has been notified." });
+      toast({ title: mode === "add" ? `+${amt} coins added` : `-${amt} coins deducted`, description: "User has been notified." });
     }
   };
   const handleToggleAdmin = async () => {
@@ -939,7 +939,7 @@ export default function AdminUserDetailPage() {
                 { icon: <Phone className="w-3.5 h-3.5 text-blue-400" />, label: "Phone", value: user.phone },
                 { icon: <Hash className="w-3.5 h-3.5 text-primary" />, label: "Platform ID", value: user.platformId ?? `#${user.id}` },
                 ...(user.uid ? [{ icon: <Swords className="w-3.5 h-3.5 text-orange-400" />, label: "Free Fire Max UID", value: user.uid }] : []),
-                { icon: <Gem className="w-3.5 h-3.5 text-violet-400" />, label: "Diamond Balance", value: <span className="flex items-center gap-1">{user.diamondBalance.toLocaleString()} <Gem className="w-3 h-3 text-violet-400" /></span> },
+                { icon: <Gem className="w-3.5 h-3.5 text-violet-400" />, label: "Coin Balance", value: <span className="flex items-center gap-1">{user.diamondBalance.toLocaleString()} <Gem className="w-3 h-3 text-violet-400" /></span> },
                 { icon: <Calendar className="w-3.5 h-3.5 text-emerald-400" />, label: "Registered", value: fmtDateTime(user.createdAt) },
                 {
                   icon: <Clock className="w-3.5 h-3.5 text-zinc-500" />,
@@ -1433,7 +1433,7 @@ export default function AdminUserDetailPage() {
               {/* Diamonds */}
               <div className="px-4 py-3 border-b border-white/5">
                 <button className="flex items-center justify-between w-full" onClick={() => setShowDiamondForm(v => !v)}>
-                  <div className="flex items-center gap-2 text-sm font-bold text-white"><Gem className="w-4 h-4 text-cyan-400" />Adjust Diamonds</div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-white"><Gem className="w-4 h-4 text-cyan-400" />Adjust Coins</div>
                   {showDiamondForm ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
                 </button>
                 {showDiamondForm && (
@@ -1776,7 +1776,7 @@ export default function AdminUserDetailPage() {
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.35)" }}>
                     <Wallet className="w-3.5 h-3.5 text-primary" />
                   </div>
-                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Diamond Balance</p>
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Coin Balance</p>
                 </div>
                 <div className="flex items-end gap-2 mb-3">
                   <span className="text-4xl font-extrabold font-heading leading-none text-white">{user.diamondBalance.toLocaleString()}</span>
@@ -2047,12 +2047,12 @@ export default function AdminUserDetailPage() {
                         <div key={tx.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-white/3">
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] text-white truncate">{tx.label}</p>
-                            <p className="text-[10px] text-zinc-600">{fmtRelative(tx.createdAt)} · +{tx.amount} 💎</p>
+                            <p className="text-[10px] text-zinc-600">{fmtRelative(tx.createdAt)} · +{tx.amount} 🪙</p>
                           </div>
                           <button
                             className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-colors shrink-0"
                             onClick={async () => {
-                              if (!confirm(`Reverse reward of ${tx.amount} 💎 from "${tx.label}"?`)) return;
+                              if (!confirm(`Reverse reward of ${tx.amount} 🪙 from "${tx.label}"?`)) return;
                               try {
                                 const result = await saFetch<{ newBalance: number }>(`/admin/users/${userId}/wallet/reverse-reward`, token, {
                                   method: "POST", body: JSON.stringify({ transactionId: tx.id }),
@@ -2083,12 +2083,12 @@ export default function AdminUserDetailPage() {
                         <div key={tx.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-white/3">
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] text-white truncate">{tx.label}</p>
-                            <p className="text-[10px] text-zinc-600">{fmtRelative(tx.createdAt)} · {tx.amount} 💎</p>
+                            <p className="text-[10px] text-zinc-600">{fmtRelative(tx.createdAt)} · {tx.amount} 🪙</p>
                           </div>
                           <button
                             className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-colors shrink-0"
                             onClick={async () => {
-                              if (!confirm(`Refund entry fee of ${Math.abs(tx.amount)} 💎 for "${tx.label}"?`)) return;
+                              if (!confirm(`Refund entry fee of ${Math.abs(tx.amount)} 🪙 for "${tx.label}"?`)) return;
                               try {
                                 const result = await saFetch<{ newBalance: number }>(`/admin/users/${userId}/wallet/refund-entry`, token, {
                                   method: "POST", body: JSON.stringify({ transactionId: tx.id }),
@@ -2833,7 +2833,7 @@ export default function AdminUserDetailPage() {
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
                 <ScrollText className="w-10 h-10 text-zinc-700" />
                 <p className="text-zinc-500 text-sm">No admin logs for this user</p>
-                <p className="text-zinc-700 text-xs">Actions like blocks, diamond adjustments and notifications will appear here</p>
+                <p className="text-zinc-700 text-xs">Actions like blocks, coin adjustments and notifications will appear here</p>
               </div>
             )}
 
@@ -3015,7 +3015,7 @@ export default function AdminUserDetailPage() {
                         <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Winnings — Match Sources</p>
                         <div className="flex items-center gap-1">
                           <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="text-[10px] text-amber-400 font-bold">{prizes.reduce((s, t) => s + t.amount, 0).toLocaleString()} 💎 total</span>
+                          <span className="text-[10px] text-amber-400 font-bold">{prizes.reduce((s, t) => s + t.amount, 0).toLocaleString()} 🪙 total</span>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
@@ -3182,7 +3182,7 @@ export default function AdminUserDetailPage() {
                         {/* Diamond source origin */}
                         <div className="flex flex-col gap-2 rounded-xl px-3 py-3"
                           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                          <p className="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Diamond Origin</p>
+                          <p className="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Coin Origin</p>
                           <div className="flex gap-1 h-3 rounded-full overflow-hidden w-full">
                             {diamondSources.topupPercent > 0 && <div className="bg-emerald-500 h-full transition-all" style={{ width: `${diamondSources.topupPercent}%` }} title="Top-ups" />}
                             {diamondSources.prizePercent > 0 && <div className="bg-amber-500 h-full transition-all" style={{ width: `${diamondSources.prizePercent}%` }} title="Prizes" />}
@@ -3197,7 +3197,7 @@ export default function AdminUserDetailPage() {
                               <div key={s.label} className="flex items-center gap-1.5">
                                 <div className={cn("w-2 h-2 rounded-full shrink-0", s.dot)} />
                                 <span className="text-[10px] text-zinc-500">{s.label}</span>
-                                <span className={cn("text-[10px] font-bold", s.color)}>{s.pct}% ({s.val.toLocaleString()}💎)</span>
+                                <span className={cn("text-[10px] font-bold", s.color)}>{s.pct}% ({s.val.toLocaleString()}🪙)</span>
                               </div>
                             ))}
                           </div>
@@ -3206,8 +3206,8 @@ export default function AdminUserDetailPage() {
                         {/* Stats row */}
                         <div className="grid grid-cols-3 gap-1.5">
                           {[
-                            { label: "Withdrawn",   value: `${withdrawalStats.totalWithdrawn.toLocaleString()}💎`, sub: `${withdrawalStats.paidRequests} paid` },
-                            { label: "Pending WD",  value: `${withdrawalStats.pendingWithdraw.toLocaleString()}💎`, sub: `${withdrawalStats.totalRequests} total` },
+                            { label: "Withdrawn",   value: `${withdrawalStats.totalWithdrawn.toLocaleString()}🪙`, sub: `${withdrawalStats.paidRequests} paid` },
+                            { label: "Pending WD",  value: `${withdrawalStats.pendingWithdraw.toLocaleString()}🪙`, sub: `${withdrawalStats.totalRequests} total` },
                             { label: "Win Ratio",   value: winRatio !== null ? `${winRatio}x` : "N/A", sub: "prize ÷ entry" },
                             { label: "Verified ₹",  value: `₹${topupStats.verifiedRupees.toLocaleString()}`, sub: `${topupStats.verified}/${topupStats.total} topups` },
                             { label: "Rejected UTR",value: `${topupStats.rejected}`, sub: topupStats.rejected > 0 ? "suspicious" : "clean" },

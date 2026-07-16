@@ -55,7 +55,7 @@ const QUICK_ACTIONS = [
 const HOW_TO_STEPS = [
   { step: "01", title: "Choose a Mode", desc: "Pick Solo, Duo, or Squad — whatever fits your squad." , Icon: Target,       color: "#ef4444" },
   { step: "02", title: "Join a Match",  desc: "Browse open tournaments and register before they fill up.", Icon: Swords,       color: "#a855f7" },
-  { step: "03", title: "Win & Earn",    desc: "Top the scoreboard to claim your prize pool diamonds.",    Icon: Award,        color: "#eab308" },
+  { step: "03", title: "Win & Earn",    desc: "Top the scoreboard to claim your prize pool coins.",    Icon: Award,        color: "#eab308" },
 ];
 
 /* ── Pro Tips ─────────────────────────────────────────────────────────────── */

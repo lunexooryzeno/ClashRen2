@@ -1305,7 +1305,7 @@ function Divider() {
 const TINT_STYLES: Record<string, { bg: string; border: string; iconBg: string; iconText: string }> = {
   "primary":      { bg: "linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.06))",  border: "hsl(var(--primary) / 0.25)", iconBg: "hsl(var(--primary) / 0.2)",  iconText: "text-primary" },
   "primary-soft": { bg: "linear-gradient(135deg, hsl(var(--primary) / 0.09), hsl(var(--primary) / 0.04))",  border: "hsl(var(--primary) / 0.20)", iconBg: "hsl(var(--primary) / 0.15)", iconText: "text-primary" },
-  "diamond":      { bg: "linear-gradient(135deg, hsl(var(--diamond) / 0.10), hsl(var(--diamond) / 0.04))",  border: "hsl(var(--diamond) / 0.25)", iconBg: "hsl(var(--diamond) / 0.2)",  iconText: "text-diamond" },
+  "diamond":      { bg: "linear-gradient(135deg, hsl(var(--diamond) / 0.10), hsl(var(--diamond) / 0.04))",  border: "hsl(var(--diamond) / 0.25)", iconBg: "hsl(var(--diamond) / 0.2)",  iconText: "text-coin" },
 };
 
 function QuickAction({ href, icon, label, sub, tint, testId, badge }: { href: string; icon: React.ReactNode; label: string; sub?: string; tint: keyof typeof TINT_STYLES; testId?: string; badge?: string }) {

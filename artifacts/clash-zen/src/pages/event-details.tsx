@@ -644,7 +644,7 @@ export default function EventDetails() {
                    </div>
                    <div>
                      <p className="text-sm font-bold text-white leading-tight">Per Kill Bonus</p>
-                     <p className="text-[11px] text-zinc-400 mt-0.5">Extra diamonds for every elimination</p>
+                     <p className="text-[11px] text-zinc-400 mt-0.5">Extra coins for every elimination</p>
                    </div>
                 </div>
                 <div className="flex items-center gap-1 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
@@ -976,7 +976,7 @@ export default function EventDetails() {
                    <div className="absolute left-0 flex items-center justify-center w-6 h-6 bg-background rounded-full border-2 border-primary/50 z-10 text-[10px] font-bold text-primary">4</div>
                    <div className="pl-10">
                       <p className="text-sm font-bold text-white mb-0.5">Dominate & Earn</p>
-                      <p className="text-[11px] text-zinc-400">Win the match and get diamonds credited directly to your wallet.</p>
+                      <p className="text-[11px] text-zinc-400">Win the match and get coins credited directly to your wallet.</p>
                    </div>
                 </div>
              </div>
@@ -1096,7 +1096,7 @@ export default function EventDetails() {
                 {user && tm.entryFeeDiamonds > user.diamondBalance && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex gap-3 mb-4">
                      <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                     <p className="text-[12px] text-red-200/90 leading-snug">Insufficient diamonds. Please top up your wallet to join this tournament.</p>
+                     <p className="text-[12px] text-red-200/90 leading-snug">Insufficient coins. Please top up your wallet to join this tournament.</p>
                   </div>
                 )}
 

@@ -159,7 +159,7 @@ export function MatchVerifyNotifier() {
                   <div className="flex items-center gap-1 mt-1">
                     <Gem className="w-4 h-4 text-blue-400" />
                     <span className="text-blue-300 font-bold text-sm">
-                      +{topupResult.diamonds} Diamonds added to your wallet
+                      +{topupResult.diamonds} Coins added to your wallet
                     </span>
                   </div>
                   <p className="text-emerald-300/60 text-xs mt-0.5">₹{topupResult.rupees} · UTR {topupResult.utr}</p>
@@ -224,7 +224,7 @@ export function MatchVerifyNotifier() {
                     <div className="flex items-center gap-1 mt-1">
                       <Gem className="w-4 h-4 text-cyan-400" />
                       <span className="text-cyan-300 font-bold text-sm">
-                        +{result.prize} Diamonds credited
+                        +{result.prize} Coins credited
                       </span>
                     </div>
                   )}

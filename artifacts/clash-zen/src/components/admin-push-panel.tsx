@@ -11,7 +11,7 @@ const TYPES = [
   { value: "system",     label: "Announcement",   emoji: "📢" },
   { value: "tournament", label: "Tournament",      emoji: "🏆" },
   { value: "result",     label: "Match Result",    emoji: "🎯" },
-  { value: "wallet",     label: "Wallet/Payment",  emoji: "💎" },
+  { value: "wallet",     label: "Wallet/Payment",  emoji: "🪙" },
 ];
 
 async function fetchStats(): Promise<PushStats> {

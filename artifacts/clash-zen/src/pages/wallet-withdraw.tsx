@@ -247,7 +247,7 @@ export default function WalletWithdrawPage() {
             <h3 className="font-heading font-bold text-lg text-foreground mb-4">Withdrawal Rules</h3>
             <div className="space-y-3">
               {[
-                { icon: "💎", title: "Only Winnings are Withdrawable", desc: "Diamonds earned from tournament prizes can be withdrawn as cash or Google Play codes." },
+                { icon: "🪙", title: "Only Winnings are Withdrawable", desc: "Diamonds earned from tournament prizes can be withdrawn as cash or Google Play codes." },
                 { icon: "🚫", title: "Deposits are Non-Refundable",   desc: "Top-up diamonds are used for tournament entry fees and cannot be withdrawn." },
                 { icon: "⚡", title: "Processing Time",               desc: "Most withdrawals complete within 30 minutes. Maximum wait is 12 hours." },
                 { icon: "📱", title: "UPI or Google Play",            desc: "Receive payout via UPI or as a Google Play Redeem Code sent by email or WhatsApp." },

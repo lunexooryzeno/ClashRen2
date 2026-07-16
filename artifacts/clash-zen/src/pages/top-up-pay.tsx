@@ -149,7 +149,7 @@ export default function TopUpPayPage() {
           setPollStatus("verified");
           haptic.successTap();
           invalidateUser();
-          toast({ title: "Payment confirmed!", description: `${data.diamonds} diamonds have been added to your wallet.` });
+          toast({ title: "Payment confirmed!", description: `${data.diamonds} coins have been added to your wallet.` });
           setTimeout(() => setLocation("/wallet"), 1800);
         } else if (data.status === "rejected") {
           stopPolling();
@@ -312,7 +312,7 @@ export default function TopUpPayPage() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white mb-1.5">Payment Confirmed!</h2>
-                <p className="text-[13px] text-zinc-400">Your diamonds have been added. Redirecting to wallet…</p>
+                <p className="text-[13px] text-zinc-400">Your coins have been added. Redirecting to wallet…</p>
               </div>
             </>
           )}

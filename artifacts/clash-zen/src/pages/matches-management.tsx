@@ -519,11 +519,11 @@ function MatchFormModal({
           <SectionHead icon={Gem} label="Prize Settings" color="#eab308" />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <InputField label="Entry Fee (Diamonds)" value={form.entryFee} onChange={v => set("entryFee", Number(v))} type="number" suffix="💎" />
-              <InputField label="Prize Pool (Diamonds)" value={form.prizePool} onChange={v => set("prizePool", Number(v))} type="number" suffix="💎" />
+              <InputField label="Entry Fee (Coins)" value={form.entryFee} onChange={v => set("entryFee", Number(v))} type="number" suffix="🪙" />
+              <InputField label="Prize Pool (Diamonds)" value={form.prizePool} onChange={v => set("prizePool", Number(v))} type="number" suffix="🪙" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <InputField label="Winner Diamonds" value={form.winnerDiamonds} onChange={v => set("winnerDiamonds", Number(v))} type="number" suffix="💎" />
+              <InputField label="Winner Diamonds" value={form.winnerDiamonds} onChange={v => set("winnerDiamonds", Number(v))} type="number" suffix="🪙" />
               <InputField label="Winner Wallet (₹)" value={form.winnerWallet} onChange={v => set("winnerWallet", Number(v))} type="number" suffix="₹" />
             </div>
 
@@ -546,9 +546,9 @@ function MatchFormModal({
                       {p.place}
                     </div>
                     <input type="number" value={p.diamonds} onChange={e => updatePlacement(i, "diamonds", Number(e.target.value))}
-                      placeholder="💎" className="flex-1 min-w-0 bg-transparent text-[12px] text-white focus:outline-none text-center"
+                      placeholder="🪙" className="flex-1 min-w-0 bg-transparent text-[12px] text-white focus:outline-none text-center"
                       style={{ border: "none" }} />
-                    <span className="text-zinc-600 text-[10px]">💎</span>
+                    <span className="text-zinc-600 text-[10px]">🪙</span>
                     <div className="w-px h-4 bg-zinc-700/50" />
                     <input type="number" value={p.wallet} onChange={e => updatePlacement(i, "wallet", Number(e.target.value))}
                       placeholder="₹" className="flex-1 min-w-0 bg-transparent text-[12px] text-white focus:outline-none text-center"
@@ -1092,11 +1092,11 @@ function TournamentFormModal({
           <SectionHead icon={Gem} label="Prize Settings" color="#eab308" />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <InputField label="Entry Fee (💎)" value={form.entryFeeDiamonds} onChange={v => set("entryFeeDiamonds", Number(v))} type="number" />
-              <InputField label="Prize Pool (💎)" value={form.prizePoolDiamonds} onChange={v => set("prizePoolDiamonds", Number(v))} type="number" />
+              <InputField label="Entry Fee (🪙)" value={form.entryFeeDiamonds} onChange={v => set("entryFeeDiamonds", Number(v))} type="number" />
+              <InputField label="Prize Pool (🪙)" value={form.prizePoolDiamonds} onChange={v => set("prizePoolDiamonds", Number(v))} type="number" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <InputField label="Per Kill (💎)" value={form.perKillDiamonds} onChange={v => set("perKillDiamonds", Number(v))} type="number" />
+              <InputField label="Per Kill (🪙)" value={form.perKillDiamonds} onChange={v => set("perKillDiamonds", Number(v))} type="number" />
               <InputField label="Max Slots" value={form.maxSlots} onChange={v => set("maxSlots", Number(v))} type="number" />
             </div>
           </div>
@@ -1528,7 +1528,7 @@ function TournamentListCard({ t, onEdit, onDelete, onGenSlug, onPlayers }: {
               <span className="text-[8px] font-black uppercase tracking-wider text-zinc-600">Prize</span>
               <Star className="w-2.5 h-2.5 text-amber-500" />
             </div>
-            <p className="text-[13px] font-black text-amber-400">{t.prizePoolDiamonds}<span className="text-[9px] text-zinc-600 font-medium ml-0.5">💎</span></p>
+            <p className="text-[13px] font-black text-amber-400">{t.prizePoolDiamonds}<span className="text-[9px] text-zinc-600 font-medium ml-0.5">🪙</span></p>
             {t.perKillDiamonds > 0 && <p className="text-[8px] text-blue-400 font-bold">+{t.perKillDiamonds}/kill</p>}
           </div>
           {/* Fee */}
@@ -1537,7 +1537,7 @@ function TournamentListCard({ t, onEdit, onDelete, onGenSlug, onPlayers }: {
               <span className="text-[8px] font-black uppercase tracking-wider text-zinc-600">Entry</span>
               <Gem className="w-2.5 h-2.5 text-blue-400" />
             </div>
-            <p className="text-[13px] font-black text-blue-400">{t.entryFeeDiamonds}<span className="text-[9px] text-zinc-600 font-medium ml-0.5">💎</span></p>
+            <p className="text-[13px] font-black text-blue-400">{t.entryFeeDiamonds}<span className="text-[9px] text-zinc-600 font-medium ml-0.5">🪙</span></p>
             <p className="text-[8px] text-zinc-600">fee</p>
           </div>
         </div>

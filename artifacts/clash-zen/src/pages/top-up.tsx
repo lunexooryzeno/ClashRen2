@@ -145,7 +145,7 @@ function StepSelect({
         <div className="rounded-2xl px-4 py-3 flex items-center justify-center gap-2.5"
           style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12))", border: "1px solid rgba(139,92,246,0.35)" }}>
           <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
-          <span className="text-[13px] font-bold text-violet-200 tracking-wide">Pay via UPI · Diamonds credited instantly</span>
+          <span className="text-[13px] font-bold text-violet-200 tracking-wide">Pay via UPI · Coins credited instantly</span>
         </div>
       </div>
 
@@ -564,7 +564,7 @@ function ActiveSessionModal({
           <p className="text-[12px] text-zinc-400 leading-relaxed text-center mb-5">
             Complete your payment of{" "}
             <span className="text-white font-bold">₹{finalAmt.toFixed(2)}</span> to receive{" "}
-            <span className="text-blue-300 font-bold">💎 {session.diamonds.toLocaleString()} diamonds</span>.
+            <span className="text-blue-300 font-bold">🪙 {session.diamonds.toLocaleString()} diamonds</span>.
           </p>
 
           <div className="flex flex-col gap-2.5">
@@ -663,7 +663,7 @@ function StepSuccess({ session, onGoHome, onGoWallet }: {
               <Gem className="w-8 h-8 text-blue-400" strokeWidth={1.5} />
               <span className="text-5xl font-black text-white tabular-nums leading-none">+{diamonds.toLocaleString()}</span>
             </div>
-            <p className="text-[13px] text-emerald-400 font-semibold">Diamonds added to your wallet</p>
+            <p className="text-[13px] text-emerald-400 font-semibold">Coins added to your wallet</p>
           </div>
 
           {/* Summary row */}
@@ -684,7 +684,7 @@ function StepSuccess({ session, onGoHome, onGoWallet }: {
           <div className="px-4 pb-4">
             <p className="text-center text-[13px] text-zinc-400 leading-relaxed">
               You paid <span className="text-white font-bold">₹{paidRupees.toFixed(0)}</span> and received{" "}
-              <span className="text-blue-300 font-bold">💎 {diamonds.toLocaleString()} diamonds</span> in your wallet.
+              <span className="text-blue-300 font-bold">🪙 {diamonds.toLocaleString()} diamonds</span> in your wallet.
             </p>
           </div>
         </div>

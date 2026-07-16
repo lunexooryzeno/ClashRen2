@@ -6,7 +6,7 @@
  * checkTournamentBan        — hard gate: block tournament-banned users at join time
  * checkNewAccountSpend      — flag accounts < 24 h old joining paid tournaments
  * checkEmulatorUsage        — flag emulator usage (soft, admin reviews)
- * checkWinPattern           — flag implausible win streaks (> 5 wins or > 2000 💎 in 7 days)
+ * checkWinPattern           — flag implausible win streaks (> 5 wins or > 2000 🪙 in 7 days)
  *
  * All checks except checkTournamentBan are fire-and-forget (non-blocking).
  */
@@ -88,7 +88,7 @@ export async function checkTournamentBan(
 }
 
 // ── New account spending ──────────────────────────────────────────────────────
-// Flags accounts < 24 h old that join a paid tournament (≥ 30 💎 entry).
+// Flags accounts < 24 h old that join a paid tournament (≥ 30 🪙 entry).
 export async function checkNewAccountSpend(
   userId: number,
   tournamentId: number,
@@ -130,7 +130,7 @@ export async function checkEmulatorUsage(
 }
 
 // ── Suspicious win pattern ────────────────────────────────────────────────────
-// Flags users with > 5 first-place finishes or > 2 000 💎 won in the last 7 days.
+// Flags users with > 5 first-place finishes or > 2 000 🪙 won in the last 7 days.
 // Called async after result-posting — never blocks a live request.
 export async function checkWinPattern(userId: number): Promise<void> {
   const since = new Date(Date.now() - 7 * 24 * 3_600_000);

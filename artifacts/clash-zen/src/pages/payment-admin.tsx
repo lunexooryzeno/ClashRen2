@@ -433,7 +433,7 @@ function TransactionsView({ toast }: { toast: ReturnType<typeof useToast>["toast
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold text-white">₹{req.rupees}</p>
-                  <p className="text-[9px] text-cyan-400">{req.diamonds}💎</p>
+                  <p className="text-[9px] text-cyan-400">{req.diamonds}🪙</p>
                 </div>
               </div>
               <div className="px-3 pb-2 flex items-center justify-between">
@@ -1249,7 +1249,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
           <div>
             <p className="text-sm font-bold text-red-400">Suspicious Activity Detected</p>
             <p className="text-xs text-zinc-400 mt-0.5">
-              User balances exceed allocated stock by <span className="text-red-400 font-bold">{stats.suspiciousDiff.toLocaleString()} 💎</span>.
+              User balances exceed allocated stock by <span className="text-red-400 font-bold">{stats.suspiciousDiff.toLocaleString()} 🪙</span>.
               This may indicate diamonds were issued outside of the topup system.
             </p>
           </div>
@@ -1278,7 +1278,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
                   <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{s.label}</span>
                 </div>
                 <p className={`text-2xl font-bold ${s.color}`}>{s.value.toLocaleString()}</p>
-                <p className="text-[10px] text-zinc-500">💎 diamonds</p>
+                <p className="text-[10px] text-zinc-500">🪙 diamonds</p>
               </div>
             );
           })}
@@ -1360,7 +1360,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">+{entry.diamonds.toLocaleString()} 💎</span>
+                <span className="text-sm font-bold text-white">+{entry.diamonds.toLocaleString()} 🪙</span>
               </div>
               {entry.notes && <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{entry.notes}</p>}
               <p className="text-[10px] text-zinc-600 mt-0.5">{fmtDate(entry.createdAt)}</p>
@@ -1452,7 +1452,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
                   <p className={`text-sm font-bold ${flagged ? "text-red-400" : "text-sky-400"}`}>
                     {u.diamondBalance.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-zinc-600">💎 {pct}%</p>
+                  <p className="text-[10px] text-zinc-600">🪙 {pct}%</p>
                 </div>
               </div>
             );
@@ -1528,7 +1528,7 @@ function DiamondStockView({ toast }: { toast: ReturnType<typeof useToast>["toast
                 <span className="text-[11px] text-zinc-400 font-bold">{r.inGameName ?? r.phone}</span>
                 {r.uid && <span className="text-[10px] text-zinc-600">UID: {r.uid}</span>}
                 <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-emerald-400">
-                  <Gem className="w-3 h-3" /> +{r.diamonds.toLocaleString()} 💎
+                  <Gem className="w-3 h-3" /> +{r.diamonds.toLocaleString()} 🪙
                 </span>
                 <span className="text-[11px] text-zinc-500">₹{r.rupees.toLocaleString()}</span>
               </div>

@@ -284,10 +284,10 @@ router.delete("/admin/tournaments/:id", requireAdmin, async (req, res) => {
       if (!silent) {
         await db.insert(notificationsTable).values({
           userId: p.userId, type: "wallet", title: "Match Registration Removed",
-          body: `Your registration for ${tournament.title} was removed by admin.${reason ? ` Reason: ${reason}.` : ""}${tournament.entryFeeDiamonds > 0 ? ` Your entry fee of ${tournament.entryFeeDiamonds} 💎 has been refunded.` : ""}`,
+          body: `Your registration for ${tournament.title} was removed by admin.${reason ? ` Reason: ${reason}.` : ""}${tournament.entryFeeDiamonds > 0 ? ` Your entry fee of ${tournament.entryFeeDiamonds} 🪙 has been refunded.` : ""}`,
         });
         pushAfter(p.userId, "wallet", "Registration Removed",
-          `${tournament.title}${tournament.entryFeeDiamonds > 0 ? ` — ${tournament.entryFeeDiamonds} 💎 refunded` : ""}`, "/#/wallet");
+          `${tournament.title}${tournament.entryFeeDiamonds > 0 ? ` — ${tournament.entryFeeDiamonds} 🪙 refunded` : ""}`, "/#/wallet");
       }
     }
     await db.delete(tournamentParticipantsTable).where(eq(tournamentParticipantsTable.tournamentId, id));
@@ -324,10 +324,10 @@ router.delete("/admin/tournaments/:id", requireAdmin, async (req, res) => {
       if (!silent) {
         await db.insert(notificationsTable).values({
           userId: p.userId, type: "wallet", title: "Match Cancelled — Refunded",
-          body: `${tournament.title} was cancelled. Reason: ${reason}${tournament.entryFeeDiamonds > 0 ? ` Your entry fee of ${tournament.entryFeeDiamonds} 💎 has been refunded.` : ""}`,
+          body: `${tournament.title} was cancelled. Reason: ${reason}${tournament.entryFeeDiamonds > 0 ? ` Your entry fee of ${tournament.entryFeeDiamonds} 🪙 has been refunded.` : ""}`,
         });
         pushAfter(p.userId, "wallet", "Match Cancelled",
-          `${tournament.title} cancelled${tournament.entryFeeDiamonds > 0 ? ` — ${tournament.entryFeeDiamonds} 💎 refunded` : ""}`, "/#/wallet");
+          `${tournament.title} cancelled${tournament.entryFeeDiamonds > 0 ? ` — ${tournament.entryFeeDiamonds} 🪙 refunded` : ""}`, "/#/wallet");
       }
     }
   }
@@ -399,10 +399,10 @@ router.post("/admin/tournaments/:id/cancel", requireAdmin, async (req, res) => {
     if (!silent) {
       await db.insert(notificationsTable).values({
         userId: p.userId, type: "wallet", title: "Match Cancelled — Refunded",
-        body: `${tournament.title} was cancelled. Reason: ${reason}${tournament.entryFeeDiamonds > 0 ? ` Your entry fee of ${tournament.entryFeeDiamonds} 💎 has been refunded.` : ""}`,
+        body: `${tournament.title} was cancelled. Reason: ${reason}${tournament.entryFeeDiamonds > 0 ? ` Your entry fee of ${tournament.entryFeeDiamonds} 🪙 has been refunded.` : ""}`,
       });
       pushAfter(p.userId, "wallet", "Match Cancelled",
-        `${tournament.title} cancelled${tournament.entryFeeDiamonds > 0 ? ` — ${tournament.entryFeeDiamonds} 💎 refunded` : ""}`, "/#/wallet");
+        `${tournament.title} cancelled${tournament.entryFeeDiamonds > 0 ? ` — ${tournament.entryFeeDiamonds} 🪙 refunded` : ""}`, "/#/wallet");
     }
   }
 
@@ -500,13 +500,13 @@ router.post("/admin/tournaments/:id/set-winner", requireAdmin, requireFinanceAdm
     });
     await db.insert(notificationsTable).values({
       userId, type: "result", title: placement === 1 ? "Winner! 🏆" : "Prize Credited",
-      body: `You have been set as${placement === 1 ? " the winner" : ` #${placement}`} in ${tournament.title}. ${delta > 0 ? `+${delta}` : delta} 💎 diamonds.`,
+      body: `You have been set as${placement === 1 ? " the winner" : ` #${placement}`} in ${tournament.title}. ${delta > 0 ? `+${delta}` : delta} 🪙 diamonds.`,
     });
-    pushAfter(userId, "result", placement === 1 ? "Winner! 🏆" : "Prize Credited 💎",
-      `${delta > 0 ? `+${delta}` : delta} 💎 for ${tournament.title}`, `/#/history/matches/${tournamentId}`);
+    pushAfter(userId, "result", placement === 1 ? "Winner! 🏆" : "Prize Credited 🪙",
+      `${delta > 0 ? `+${delta}` : delta} 🪙 for ${tournament.title}`, `/#/history/matches/${tournamentId}`);
   }
   await writeLog(userId, "set_winner", "tournament",
-    `${tournament.title} · User #${userId} · Place #${placement ?? "?"} · ${diamondsWon} 💎`);
+    `${tournament.title} · User #${userId} · Place #${placement ?? "?"} · ${diamondsWon} 🪙`);
   const updatedUser = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
   res.json({ message: "Winner set", userId, diamondsWon, balanceAfter: updatedUser?.diamondBalance ?? 0 });
 });
@@ -541,11 +541,11 @@ router.post("/admin/tournaments/:id/force-payout", requireAdmin, requireFinanceA
   });
   await db.insert(notificationsTable).values({
     userId, type: "wallet", title: "Prize Credited",
-    body: `${amount} 💎 diamonds have been credited for ${tournament.title}.${reason ? ` ${reason}` : ""}`,
+    body: `${amount} 🪙 diamonds have been credited for ${tournament.title}.${reason ? ` ${reason}` : ""}`,
   });
-  pushAfter(userId, "wallet", "Prize Credited 💎", `+${amount} 💎 for ${tournament.title}`, "/#/wallet");
+  pushAfter(userId, "wallet", "Prize Credited 🪙", `+${amount} 🪙 for ${tournament.title}`, "/#/wallet");
   await writeLog(userId, "force_payout", "tournament",
-    `${tournament.title} · +${amount} 💎${reason ? ` · ${reason}` : ""}`);
+    `${tournament.title} · +${amount} 🪙${reason ? ` · ${reason}` : ""}`);
   res.json({ message: "Payout forced", userId, amount });
 });
 
@@ -585,10 +585,10 @@ router.post("/admin/tournaments/:id/revoke-payout", requireAdmin, requireFinance
   });
   await db.insert(notificationsTable).values({
     userId, type: "wallet", title: "Payout Revoked",
-    body: `Your payout of ${revokeAmount} 💎 for ${tournament.title} has been revoked.${reason ? ` Reason: ${reason}` : ""}`,
+    body: `Your payout of ${revokeAmount} 🪙 for ${tournament.title} has been revoked.${reason ? ` Reason: ${reason}` : ""}`,
   });
   await writeLog(userId, "revoke_payout", "tournament",
-    `${tournament.title} · -${actualDeducted} 💎 revoked${reason ? ` · ${reason}` : ""}`);
+    `${tournament.title} · -${actualDeducted} 🪙 revoked${reason ? ` · ${reason}` : ""}`);
   res.json({ message: "Payout revoked", userId, deducted: actualDeducted });
 });
 
@@ -610,10 +610,10 @@ router.post("/admin/tournaments/:id/resend-reward", requireAdmin, async (req, re
 
   await db.insert(notificationsTable).values({
     userId, type: "result", title: "Reward Reminder",
-    body: `You earned ${participant.diamondsWon} 💎 in ${tournament.title}. Your prize is in your wallet!`,
+    body: `You earned ${participant.diamondsWon} 🪙 in ${tournament.title}. Your prize is in your wallet!`,
   });
   await writeLog(userId, "resend_reward", "tournament",
-    `${tournament.title} · Resent ${participant.diamondsWon} 💎 notification`);
+    `${tournament.title} · Resent ${participant.diamondsWon} 🪙 notification`);
   res.json({ message: "Reward notification resent", userId, diamondsWon: participant.diamondsWon });
 });
 
@@ -658,10 +658,10 @@ router.post("/admin/tournaments/:id/cancel-reward", requireAdmin, async (req, re
 
   await db.insert(notificationsTable).values({
     userId, type: "wallet", title: "Reward Cancelled",
-    body: `Your reward of ${cancelAmount} 💎 for ${tournament.title} has been cancelled.${reason ? ` Reason: ${reason}` : ""}`,
+    body: `Your reward of ${cancelAmount} 🪙 for ${tournament.title} has been cancelled.${reason ? ` Reason: ${reason}` : ""}`,
   });
   await writeLog(userId, "cancel_reward", "tournament",
-    `${tournament.title} · ${cancelAmount} 💎 cancelled${deductBalance ? ` · -${deducted} deducted` : " · no deduction"}${reason ? ` · ${reason}` : ""}`);
+    `${tournament.title} · ${cancelAmount} 🪙 cancelled${deductBalance ? ` · -${deducted} deducted` : " · no deduction"}${reason ? ` · ${reason}` : ""}`);
   res.json({ message: "Reward cancelled", userId, deducted });
 });
 
@@ -688,7 +688,7 @@ router.post("/admin/tournaments/:id/schedule-reward", requireAdmin, async (req, 
   }).returning();
 
   await writeLog(userId, "schedule_reward", "tournament",
-    `${tournament.title} · +${amount} 💎 scheduled for ${new Date(scheduledFor).toLocaleString()}`);
+    `${tournament.title} · +${amount} 🪙 scheduled for ${new Date(scheduledFor).toLocaleString()}`);
   res.json(sr);
 });
 
@@ -756,9 +756,9 @@ router.post("/admin/tournaments/:id/bulk-reward", requireAdmin, requireFinanceAd
       });
       await db.insert(notificationsTable).values({
         userId: r.userId, type: "result", title: "Prize Credited",
-        body: `+${r.amount} 💎 awarded for ${tournament.title}.${r.reason ? ` ${r.reason}` : ""}`,
+        body: `+${r.amount} 🪙 awarded for ${tournament.title}.${r.reason ? ` ${r.reason}` : ""}`,
       });
-      pushAfter(r.userId, "result", "Prize Credited 💎", `+${r.amount} 💎 for ${tournament.title}`, "/#/wallet");
+      pushAfter(r.userId, "result", "Prize Credited 🪙", `+${r.amount} 🪙 for ${tournament.title}`, "/#/wallet");
       results.push({ userId: r.userId, amount: r.amount, success: true });
     } catch (e) {
       results.push({ userId: r.userId, amount: r.amount, success: false, error: String(e) });
@@ -942,7 +942,7 @@ router.patch("/admin/tournaments/:id/participants/:userId", requireAdmin, async 
         // Log reward_sent
         await db.insert(adminLogsTable).values({
           targetId: userId, action: "reward_sent", category: "tournament",
-          details: `Match: ${tournament.title} · +${delta} 💎 · ${placementText}`,
+          details: `Match: ${tournament.title} · +${delta} 🪙 · ${placementText}`,
         });
       }
     }
@@ -955,7 +955,7 @@ router.patch("/admin/tournaments/:id/participants/:userId", requireAdmin, async 
       userId, adminId: req.user!.userId, amount: prizeDelta,
       balanceBefore: user.diamondBalance - prizeDelta,
       balanceAfter: user.diamondBalance,
-      reason: prizeDelta > 0 ? `Prize distribution +${prizeDelta} 💎` : `Prize adjustment ${prizeDelta} 💎`,
+      reason: prizeDelta > 0 ? `Prize distribution +${prizeDelta} 🪙` : `Prize adjustment ${prizeDelta} 🪙`,
       source: "prize_distribution",
     });
   }
@@ -1547,7 +1547,7 @@ router.post("/admin/users/:id/wallet/reverse-reward", requireAdmin, requireFinan
   });
 
   await writeLog(id, "reward_reversed", "wallet",
-    `TX #${tx.id} · -${tx.amount} 💎 · ${tx.label}`);
+    `TX #${tx.id} · -${tx.amount} 🪙 · ${tx.label}`);
 
   await logBalChange({
     userId: id, adminId: req.user!.userId, amount: -tx.amount,
@@ -1589,7 +1589,7 @@ router.post("/admin/users/:id/wallet/refund-entry", requireAdmin, requireFinance
   });
 
   await writeLog(id, "entry_refunded", "wallet",
-    `TX #${tx.id} · +${refundAmount} 💎 · ${tx.label}`);
+    `TX #${tx.id} · +${refundAmount} 🪙 · ${tx.label}`);
 
   await logBalChange({
     userId: id, adminId: req.user!.userId, amount: refundAmount,
@@ -2972,7 +2972,7 @@ router.get("/admin/users/:id/withdrawal-risk", requireAdmin, async (req, res) =>
 
   if (totalFromTopups > 0 && (totalWithdrawn + pendingWithdraw) > totalFromTopups) {
     score += 20;
-    riskFlags.push({ flag: "withdrawal_exceeds_topup", severity: "high", detail: `Withdrawals (${totalWithdrawn + pendingWithdraw}💎) exceed verified top-ups (${totalFromTopups}💎)` });
+    riskFlags.push({ flag: "withdrawal_exceeds_topup", severity: "high", detail: `Withdrawals (${totalWithdrawn + pendingWithdraw}🪙) exceed verified top-ups (${totalFromTopups}🪙)` });
   }
 
   if (recentWithdrawals.length >= 3) {

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Terminal, User, ShieldCheck, Loader2, LogIn } from "lucide-react";
 
 const PRESETS = [
-  { label: "Regular Player", phone: "9000000001", isAdmin: false, desc: "500 💎 · No admin rights" },
+  { label: "Regular Player", phone: "9000000001", isAdmin: false, desc: "500 🪙 · No admin rights" },
   { label: "Player 2", phone: "9000000002", isAdmin: false, desc: "Fresh test account" },
   { label: "Admin User", phone: "9000000099", isAdmin: true, desc: "Full admin access" },
 ];

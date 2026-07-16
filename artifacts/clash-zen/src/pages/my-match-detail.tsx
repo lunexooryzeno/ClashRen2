@@ -476,7 +476,7 @@ export default function MyMatchDetailPage() {
                 )}
                 {t.entryFeeDiamonds > 0 && (
                   <div className="flex items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-xl w-fit" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)" }}>
-                    <span className="text-green-400 text-[11px] font-bold">💎 {t.entryFeeDiamonds} refunded to your wallet</span>
+                    <span className="text-green-400 text-[11px] font-bold">🪙 {t.entryFeeDiamonds} refunded to your wallet</span>
                   </div>
                 )}
               </div>
@@ -1301,7 +1301,7 @@ export default function MyMatchDetailPage() {
                   {
                     label: "Reward Credited",
                     ts: isRewarded
-                      ? `+${t.diamondsWon} 💎 added to wallet`
+                      ? `+${t.diamondsWon} 🪙 added to wallet`
                       : winnerKnown && !iWon
                       ? "No reward — match lost"
                       : null,
