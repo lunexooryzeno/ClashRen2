@@ -1,339 +1,518 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Users, Map, Shield, Crosshair, Package, ChevronRight, Zap, Target } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import brImage from "@assets/1783487489445_1_1783942080739.png";
-import csImage from "@assets/1783492275863_1783942081269.png";
+import { ArrowLeft, Trophy, Users, ChevronDown, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
-const DUMMY_TOTALS = [17, 18, 20, 21, 19, 17];
-
-const MODES = [
-  {
-    id: "cs",
-    label: "CLASH SQUAD",
-    short: "CS",
-    tagline: "1v1 tactical elimination.",
-    desc: "Head-to-head showdown — outaim your opponent and claim the prize.",
-    accent: "#22d3ee",
-    accentDim: "rgba(34,211,238,0.18)",
-    accentGlow: "rgba(34,211,238,0.55)",
-    gradient: "linear-gradient(160deg, rgba(34,211,238,0.2) 0%, rgba(0,0,0,0) 55%)",
-    image: csImage,
-    comingSoon: false,
-    stats: [
-      { icon: Crosshair, value: "1v1", label: "Format" },
-      { icon: Shield, value: "Live", label: "Status" },
-      { icon: Target, value: "1", label: "Mode" },
-    ],
-    modes: [{ label: "1v1 Duel", live: true }],
-  },
-  {
-    id: "br",
-    label: "BATTLE ROYALE",
-    short: "BR",
-    tagline: "100 players. One winner.",
-    desc: "Drop in, loot up, and fight to be the last squad standing across massive open maps.",
-    accent: "#f97316",
-    accentDim: "rgba(249,115,22,0.18)",
-    accentGlow: "rgba(249,115,22,0.55)",
-    gradient: "linear-gradient(160deg, rgba(249,115,22,0.22) 0%, rgba(0,0,0,0) 55%)",
-    image: brImage,
-    comingSoon: true,
-    stats: [
-      { icon: Users, value: "4v4", label: "Max Squad" },
-      { icon: Crosshair, value: "100", label: "Players" },
-      { icon: Package, value: "4", label: "Modes" },
-    ],
-    modes: [
-      { label: "Solo Drop", live: false },
-      { label: "Duo Rush", live: false },
-      { label: "Squad Wipe", live: false },
-      { label: "Zone Control", live: false },
-    ],
-  },
+const PRIZE_POOLS = [
+  { entry: 12, prize: 20, activePlayers: 18 },
+  { entry: 30, prize: 50, activePlayers: 11 },
+  { entry: 42, prize: 70, activePlayers: 7 },
 ];
 
-export default function QuickMatchHub() {
-  const [, navigate] = useLocation();
-  const [online, setOnline] = useState<number | null>(null);
-  const [entered, setEntered] = useState(false);
-  const seqRef = useRef(0);
+const GAME_TYPES = [
+  { id: "cs" as const, label: "Clash Squad" },
+  { id: "br" as const, label: "Battle Royale", comingSoon: true },
+];
+
+const SQUAD_OPTIONS: Record<string, { id: string; label: string }[]> = {
+  cs: [
+    { id: "solo",  label: "Solo"  },
+    { id: "squad", label: "Squad" },
+  ],
+  br: [
+    { id: "solo",  label: "Solo"  },
+    { id: "duo",   label: "Duo"   },
+    { id: "squad", label: "Squad" },
+  ],
+};
+
+const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; comingSoon?: boolean }[]>> = {
+  cs: {
+    solo:  [
+      { id: "duel",    label: "Normal 1v1"     },
+      { id: "healing", label: "Healing Battle" },
+      { id: "knife",   label: "Knife Fight"    },
+    ],
+    squad: [
+      { id: "clash-squad", label: "CS 4v4" },
+    ],
+  },
+  br: {
+    solo:  [
+      { id: "solo-drop",    label: "Solo Drop",    comingSoon: true },
+      { id: "zone-control", label: "Zone Control", comingSoon: true },
+    ],
+    duo:   [
+      { id: "duo-rush", label: "Duo Rush", comingSoon: true },
+    ],
+    squad: [
+      { id: "squad-wipe", label: "Squad Wipe", comingSoon: true },
+    ],
+  },
+};
+
+function Dropdown({
+  label,
+  options,
+  value,
+  onChange,
+  accent = "#22d3ee",
+}: {
+  label?: string;
+  options: { id: string; label: string; comingSoon?: boolean }[];
+  value: string;
+  onChange: (id: string) => void;
+  accent?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find(o => o.id === value) ?? options[0];
 
   useEffect(() => {
-    const t = setTimeout(() => setEntered(true), 40);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    function tick() {
-      setOnline(DUMMY_TOTALS[seqRef.current % DUMMY_TOTALS.length]);
-      seqRef.current += 1;
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
-    tick();
-    const id = setInterval(tick, 10_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const handleModeSelect = (id: string) => {
-    const mode = MODES.find(m => m.id === id);
-    if (!mode || mode.comingSoon) return;
-    if (id === "cs") {
-      navigate("/quickmatch/cs/prize-pool");
-    } else {
-      navigate(`/quickmatch/${id}`);
-    }
-  };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   return (
-    <div
-      className="relative min-h-[100dvh] overflow-hidden"
-      style={{ background: "#06070a" }}
-    >
-      <style>{`
-        @keyframes qm-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
-        @keyframes qm-ring  { 0%{transform:scale(0.5);opacity:0.7} 100%{transform:scale(2.6);opacity:0} }
-        @keyframes qm-slide-up { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes qm-badge-in { from{opacity:0;transform:scale(0.8) translateY(-6px)} to{opacity:1;transform:scale(1) translateY(0)} }
-      `}</style>
-
-      {/* ── Sticky floating header ── */}
-      <div
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4"
+    <div ref={ref} className="relative flex-1">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl active:scale-[0.97] transition-transform"
         style={{
-          paddingTop: "calc(env(safe-area-inset-top) + 12px)",
-          paddingBottom: 12,
-          background: "linear-gradient(to bottom, rgba(6,7,10,0.92) 0%, transparent 100%)",
-          pointerEvents: "none",
+          background: open ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
+          border: `1.5px solid ${open ? accent + "60" : "rgba(255,255,255,0.1)"}`,
+          transition: "background 0.15s, border-color 0.15s, transform 0.1s",
         }}
       >
-        <button
-          onClick={() => navigate("/matches")}
-          className="flex items-center gap-2 rounded-2xl active:scale-90 transition-transform"
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            padding: "8px 14px 8px 10px",
-            pointerEvents: "auto",
-            backdropFilter: "blur(16px)",
-          }}
-        >
-          <ArrowLeft className="w-4 h-4 text-white" strokeWidth={2.2} />
-          <span className="text-[12px] font-bold text-white tracking-wide">Back</span>
-        </button>
+        <div className="flex flex-col items-start min-w-0">
+          {label && <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 leading-none mb-0.5">{label}</span>}
+          <span className="text-[13px] font-extrabold text-white truncate">{selected.label}</span>
+        </div>
+        <ChevronDown
+          className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-200"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      </button>
 
-        {/* Online pill */}
+      {open && (
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-2xl"
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl overflow-hidden"
           style={{
-            background: "rgba(6,7,10,0.75)",
+            background: "rgba(14,16,22,0.98)",
             border: "1px solid rgba(255,255,255,0.1)",
-            backdropFilter: "blur(16px)",
-            pointerEvents: "auto",
-            animation: "qm-badge-in 0.5s cubic-bezier(0.34,1.4,0.64,1) 0.2s both",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
+            backdropFilter: "blur(24px)",
           }}
         >
-          <div className="relative w-3 h-3 flex items-center justify-center shrink-0">
-            <div className="absolute inset-0 rounded-full bg-emerald-400/30"
-              style={{ animation: "qm-ring 1.8s ease-out infinite" }} />
-            <div className="absolute inset-0 rounded-full bg-emerald-400/20"
-              style={{ animation: "qm-ring 1.8s ease-out 0.7s infinite" }} />
-            <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"
-              style={{ animation: "qm-pulse 1.6s ease-in-out infinite" }} />
-          </div>
-          <span className="text-[11px] font-black text-emerald-300 tabular-nums">
-            {online !== null ? `${online} online` : "—"}
-          </span>
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => { if (!opt.comingSoon) { onChange(opt.id); setOpen(false); } }}
+              className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+              style={{
+                background: opt.id === value ? "rgba(255,255,255,0.06)" : "transparent",
+                opacity: opt.comingSoon ? 0.4 : 1,
+                cursor: opt.comingSoon ? "not-allowed" : "pointer",
+              }}
+            >
+              <span className={`text-[13px] font-bold ${opt.id === value ? "text-white" : "text-zinc-400"}`}>
+                {opt.label}
+              </span>
+              {opt.id === value && (
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+              )}
+              {opt.comingSoon && (
+                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Soon</span>
+              )}
+            </button>
+          ))}
         </div>
-      </div>
-
-      {/* ── Page title block ── */}
-      <div
-        className="relative z-10 pt-28 pb-6 px-5 flex flex-col gap-1"
-        style={{
-          opacity: entered ? 1 : 0,
-          transform: entered ? "translateY(0)" : "translateY(16px)",
-          transition: "opacity 0.4s ease, transform 0.45s cubic-bezier(0.34,1.2,0.64,1)",
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-amber-400" strokeWidth={2.5} />
-          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-400">
-            Live Matchmaking
-          </span>
-        </div>
-        <h1
-          className="font-heading font-black text-white leading-none"
-          style={{ fontSize: 30, letterSpacing: "-0.02em" }}
-        >
-          Choose Your<br />
-          <span style={{ color: "#f97316" }}>Game Mode</span>
-        </h1>
-      </div>
-
-      {/* ── Mode cards ── */}
-      <div className="relative z-10 px-4 pb-10 flex flex-col gap-4">
-        {MODES.map((mode, idx) => (
-          <ModeCard
-            key={mode.id}
-            mode={mode}
-            entered={entered}
-            delay={idx * 120 + 80}
-            onSelect={() => handleModeSelect(mode.id)}
-          />
-        ))}
-      </div>
+      )}
     </div>
   );
 }
 
-function ModeCard({
-  mode,
-  entered,
-  delay,
-  onSelect,
-}: {
-  mode: typeof MODES[0];
-  entered: boolean;
-  delay: number;
-  onSelect: () => void;
-}) {
-  const [pressed, setPressed] = useState(false);
+function DiamondIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="qh-dg-c" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#e0f2fe" />
+          <stop offset="60%" stopColor="#60a5fa" />
+          <stop offset="100%" stopColor="#3b82f6" />
+        </linearGradient>
+        <linearGradient id="qh-dg-l" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2563eb" /><stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+        <linearGradient id="qh-dg-r" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#60a5fa" /><stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+      </defs>
+      <polygon points="12,2 5,8 12,6.5 19,8" fill="url(#qh-dg-c)" />
+      <polygon points="5,8 12,6.5 9,14" fill="url(#qh-dg-l)" opacity="0.95" />
+      <polygon points="19,8 12,6.5 15,14" fill="url(#qh-dg-r)" opacity="0.9" />
+      <polygon points="5,8 9,14 12,22" fill="url(#qh-dg-l)" opacity="0.8" />
+      <polygon points="19,8 15,14 12,22" fill="url(#qh-dg-r)" opacity="0.75" />
+      <polygon points="9,14 15,14 12,22" fill="#1e3a8a" />
+      <polygon points="7,8.5 10,7.2 9.2,10" fill="white" opacity="0.45" />
+    </svg>
+  );
+}
+
+export default function QuickMatchHub() {
+  const [, navigate] = useLocation();
+
+  const [gameType, setGameType] = useState<"cs" | "br">("cs");
+  const [squadSize, setSquadSize] = useState("solo");
+  const [modeId, setModeId] = useState("duel");
+  const [prizeIdx, setPrizeIdx] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const [showTypeSheet, setShowTypeSheet] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const pool = PRIZE_POOLS[prizeIdx];
+  const squadOpts = SQUAD_OPTIONS[gameType];
+  const modeOpts = MODE_OPTIONS[gameType][squadSize] ?? [];
+  const currentMode = modeOpts.find(m => m.id === modeId) ?? modeOpts[0];
+  const isComingSoon = currentMode?.comingSoon ?? false;
+
+  const accent = gameType === "cs" ? "#22d3ee" : "#f97316";
+
+  const handleSquadChange = (id: string) => {
+    setSquadSize(id);
+    const newModes = MODE_OPTIONS[gameType][id] ?? [];
+    if (newModes.length > 0) setModeId(newModes[0].id);
+  };
+
+  const handleTypeChange = (id: string) => {
+    const gt = id as "cs" | "br";
+    setGameType(gt);
+    setShowTypeSheet(false);
+    const newSquad = SQUAD_OPTIONS[gt][0].id;
+    setSquadSize(newSquad);
+    const newModes = MODE_OPTIONS[gt][newSquad] ?? [];
+    if (newModes.length > 0) setModeId(newModes[0].id);
+  };
+
+  const prevPrize = () => setPrizeIdx(i => (i - 1 + PRIZE_POOLS.length) % PRIZE_POOLS.length);
+  const nextPrize = () => setPrizeIdx(i => (i + 1) % PRIZE_POOLS.length);
+
+  const handleJoin = () => {
+    if (isComingSoon) return;
+    sessionStorage.setItem("qm_entry", String(pool.entry));
+    sessionStorage.setItem("qm_prize", String(pool.prize));
+    navigate(`/quickmatch/${gameType}/${currentMode?.id ?? "duel"}`);
+  };
 
   return (
-    <button
-      onPointerDown={() => setPressed(true)}
-      onPointerUp={() => setPressed(false)}
-      onPointerLeave={() => setPressed(false)}
-      onClick={onSelect}
-      className="relative w-full overflow-hidden text-left"
-      style={{
-        borderRadius: 20,
-        border: `1.5px solid ${mode.accent}44`,
-        background: "#0d0f14",
-        opacity: entered ? 1 : 0,
-        transform: entered
-          ? pressed ? "scale(0.975)" : "translateY(0)"
-          : "translateY(36px)",
-        transition: `opacity 0.45s ease ${delay}ms, transform ${pressed ? "0.12s" : `0.5s cubic-bezier(0.34,1.2,0.64,1) ${delay}ms`}`,
-        boxShadow: `0 2px 0 rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03)`,
-      }}
+    <div
+      className="min-h-[100dvh] flex flex-col relative overflow-hidden"
+      style={{ background: "#06070a" }}
     >
-      {/* ── Artwork panel ── */}
-      <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/8" }}>
-        <img
-          src={mode.image}
-          alt={mode.label}
-          loading="eager"
-          draggable={false}
-          style={{
-            width: "100%", height: "100%",
-            objectFit: "cover", objectPosition: "center top",
-            display: "block",
-            transform: pressed ? "scale(1.03)" : "scale(1)",
-            transition: "transform 0.4s ease",
-          }}
+      <style>{`
+        @keyframes qhub-in { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes qhub-card-swap { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
+        @keyframes qhub-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+        @keyframes qhub-sheet-in { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
+      `}</style>
+
+      {/* Ambient glow behind card */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          top: "38%", left: "50%", transform: "translate(-50%,-50%)",
+          width: 320, height: 320,
+          background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`,
+          filter: "blur(40px)",
+          transition: "background 0.4s ease",
+        }}
+      />
+
+      {/* ── Header ── */}
+      <div
+        className="shrink-0 px-4 pt-4 pb-4"
+        style={{
+          paddingTop: "calc(env(safe-area-inset-top) + 16px)",
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(-12px)",
+          transition: "opacity 0.35s ease, transform 0.4s ease",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          {/* Back */}
+          <button
+            onClick={() => navigate("/")}
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <ArrowLeft className="w-4 h-4 text-white" />
+          </button>
+
+          {/* Game type selector — tappable pill */}
+          <button
+            onClick={() => setShowTypeSheet(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl flex-1 active:scale-[0.97] transition-transform"
+            style={{
+              background: `${accent}14`,
+              border: `1.5px solid ${accent}45`,
+              boxShadow: `0 0 16px ${accent}18`,
+            }}
+          >
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent, animation: "qhub-pulse 1.6s ease-in-out infinite" }} />
+            <span className="text-[14px] font-extrabold text-white flex-1 text-left">{GAME_TYPES.find(t => t.id === gameType)?.label}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+          </button>
+
+          {/* Live badge */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl shrink-0"
+            style={{
+              background: "rgba(16,185,129,0.1)",
+              border: "1px solid rgba(16,185,129,0.25)",
+            }}
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "qhub-pulse 1.4s ease-in-out infinite" }} />
+            <span className="text-[10px] font-black text-emerald-400 tracking-widest uppercase">Live</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Squad size + Mode dropdowns ── */}
+      <div
+        className="px-4 pb-4 flex gap-3"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(10px)",
+          transition: "opacity 0.35s ease 60ms, transform 0.4s ease 60ms",
+        }}
+      >
+        <Dropdown
+          label="Size"
+          options={squadOpts}
+          value={squadSize}
+          onChange={handleSquadChange}
+          accent={accent}
         />
-        <div className="absolute inset-0" style={{
-          background: `linear-gradient(to bottom, transparent 20%, rgba(13,15,20,0.7) 70%, #0d0f14 100%)`
-        }} />
-        <div className="absolute inset-0" style={{ background: mode.gradient }} />
-
-        {/* Type badge */}
-        <div
-          className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-          style={{
-            background: `${mode.accent}22`,
-            border: `1px solid ${mode.accent}55`,
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: mode.accent }} />
-          <span className="text-[10px] font-black tracking-[0.15em] uppercase" style={{ color: mode.accent }}>
-            {mode.short}
-          </span>
-        </div>
-
-        {/* Title on image */}
-        <div className="absolute bottom-3 left-4 right-4">
-          <p className="text-[11px] font-bold tracking-wider uppercase mb-1" style={{ color: `${mode.accent}cc` }}>
-            {mode.tagline}
-          </p>
-          <h2
-            className="font-heading font-black text-white leading-none"
-            style={{ fontSize: 24, letterSpacing: "-0.01em", textShadow: "0 2px 12px rgba(0,0,0,0.9)" }}
-          >
-            {mode.label}
-          </h2>
-        </div>
+        <Dropdown
+          label="Mode"
+          options={modeOpts}
+          value={currentMode?.id ?? ""}
+          onChange={setModeId}
+          accent={accent}
+        />
       </div>
 
-      {/* ── Content panel ── */}
-      <div className="px-4 pt-3 pb-4">
-        <p className="text-[12px] text-zinc-400 leading-relaxed mb-4">
-          {mode.desc}
-        </p>
+      {/* ── Prize pool carousel card ── */}
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-4 pb-4"
+        style={{
+          opacity: visible ? 1 : 0,
+          transition: "opacity 0.4s ease 120ms",
+        }}
+      >
+        <div className="w-full flex items-center gap-3">
+          {/* Left arrow */}
+          <button
+            onClick={prevPrize}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <ChevronLeft className="w-5 h-5 text-zinc-400" />
+          </button>
 
-        {/* Stats strip */}
-        <div
-          className="flex items-stretch gap-0 mb-4 overflow-hidden"
-          style={{ borderRadius: 12, border: `1px solid rgba(255,255,255,0.06)` }}
-        >
-          {mode.stats.map(({ icon: Icon, value, label }, i) => (
+          {/* Card */}
+          <div
+            key={prizeIdx}
+            className="flex-1 rounded-3xl overflow-hidden relative"
+            style={{
+              background: "linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
+              border: `1.5px solid ${accent}35`,
+              boxShadow: `0 4px 40px ${accent}14, 0 0 0 1px rgba(255,255,255,0.03) inset`,
+              animation: "qhub-card-swap 0.22s ease both",
+            }}
+          >
+            {/* Top neon line */}
             <div
-              key={label}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5"
-              style={{
-                borderRight: i < mode.stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                background: "rgba(255,255,255,0.025)",
-              }}
-            >
-              <Icon className="w-3.5 h-3.5 mb-0.5" style={{ color: mode.accent }} strokeWidth={2} />
-              <span className="text-[15px] font-black text-white leading-none tabular-nums">{value}</span>
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-500 mt-0.5">{label}</span>
+              className="absolute top-0 left-0 right-0 h-[1.5px]"
+              style={{ background: `linear-gradient(90deg, transparent 0%, ${accent}80 50%, transparent 100%)` }}
+            />
+
+            {/* Trophy + Prize amount */}
+            <div className="flex flex-col items-center pt-7 pb-5 gap-2">
+              <div
+                className="w-16 h-16 rounded-3xl flex items-center justify-center mb-1"
+                style={{
+                  background: `${accent}14`,
+                  border: `1.5px solid ${accent}35`,
+                  boxShadow: `0 0 24px ${accent}20`,
+                }}
+              >
+                <Trophy className="w-7 h-7" style={{ color: accent }} strokeWidth={1.8} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <DiamondIcon size={18} />
+                <span className="text-[36px] font-black text-white leading-none tabular-nums">{pool.prize}</span>
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Prize Pool</span>
             </div>
-          ))}
-        </div>
 
-        {/* Mode pills */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {mode.modes.map(m => (
-            <span
-              key={m.label}
-              className="text-[10px] font-bold px-2.5 py-1 rounded-lg"
-              style={{
-                background: m.live ? mode.accentDim : "rgba(255,255,255,0.04)",
-                color: m.live ? `${mode.accent}cc` : "rgba(255,255,255,0.25)",
-                border: `1px solid ${m.live ? `${mode.accent}25` : "rgba(255,255,255,0.08)"}`,
-              }}
-            >
-              {m.label}{!m.live && " · soon"}
-            </span>
-          ))}
-        </div>
+            {/* Divider */}
+            <div className="mx-5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
-        {/* CTA button */}
-        <div
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl"
-          style={{
-            background: mode.comingSoon
-              ? "rgba(255,255,255,0.04)"
-              : `linear-gradient(135deg, ${mode.accent} 0%, ${mode.accent}cc 100%)`,
-            boxShadow: mode.comingSoon
-              ? "none"
-              : `0 4px 24px ${mode.accentGlow.replace("0.55", "0.35")}, 0 1px 0 rgba(255,255,255,0.15) inset`,
-            border: mode.comingSoon ? "1px solid rgba(255,255,255,0.08)" : "none",
-            transform: pressed && !mode.comingSoon ? "scale(0.97)" : "scale(1)",
-            transition: "transform 0.12s ease",
-          }}
-        >
-          <span
-            className="font-heading font-black tracking-wide uppercase"
-            style={{ fontSize: 14, color: mode.comingSoon ? "rgba(255,255,255,0.3)" : "#fff" }}
+            {/* Stats row */}
+            <div className="grid grid-cols-3 divide-x divide-white/[0.05] px-2 py-4">
+              {[
+                { label: "Entry", value: pool.entry, icon: <DiamondIcon size={12} /> },
+                { label: "Prize", value: pool.prize, icon: <DiamondIcon size={12} /> },
+                { label: "Active", value: pool.activePlayers, icon: <Users className="w-3 h-3 text-emerald-400" strokeWidth={2} /> },
+              ].map(({ label, value, icon }) => (
+                <div key={label} className="flex flex-col items-center gap-1 py-1">
+                  <div className="flex items-center gap-1">
+                    {icon}
+                    <span className="text-[18px] font-black text-white tabular-nums leading-none">{value}</span>
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom shimmer */}
+            <div
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-px"
+              style={{ background: `linear-gradient(90deg, transparent, ${accent}60, transparent)` }}
+            />
+          </div>
+
+          {/* Right arrow */}
+          <button
+            onClick={nextPrize}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            {mode.comingSoon ? "Coming Soon" : `Enter ${mode.short}`}
-          </span>
-          {!mode.comingSoon && <ChevronRight className="w-4 h-4 text-white" strokeWidth={3} />}
+            <ChevronRight className="w-5 h-5 text-zinc-400" />
+          </button>
+        </div>
+
+        {/* Dot indicators */}
+        <div className="flex items-center gap-1.5 mt-4">
+          {PRIZE_POOLS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPrizeIdx(i)}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: i === prizeIdx ? 20 : 6,
+                height: 6,
+                background: i === prizeIdx ? accent : "rgba(255,255,255,0.15)",
+                boxShadow: i === prizeIdx ? `0 0 8px ${accent}80` : "none",
+              }}
+            />
+          ))}
         </div>
       </div>
-    </button>
+
+      {/* ── Join button ── */}
+      <div
+        className="shrink-0 px-4 pb-8"
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(12px)",
+          transition: "opacity 0.35s ease 200ms, transform 0.4s ease 200ms",
+        }}
+      >
+        <button
+          onClick={handleJoin}
+          disabled={isComingSoon}
+          className="w-full flex flex-col items-center justify-center gap-0.5 py-4 rounded-3xl active:scale-[0.97] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            background: isComingSoon
+              ? "rgba(255,255,255,0.04)"
+              : `linear-gradient(135deg, ${accent} 0%, ${accent}bb 100%)`,
+            boxShadow: isComingSoon
+              ? "none"
+              : `0 6px 32px ${accent}45, 0 1px 0 rgba(255,255,255,0.2) inset`,
+            border: isComingSoon ? "1px solid rgba(255,255,255,0.08)" : "none",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+            <span
+              className="font-heading font-black tracking-wide uppercase"
+              style={{ fontSize: 15, color: isComingSoon ? "rgba(255,255,255,0.3)" : "#fff" }}
+            >
+              {isComingSoon ? "Coming Soon" : `Join Any ${gameType.toUpperCase()}`}
+            </span>
+          </div>
+          {!isComingSoon && (
+            <span className="text-[10px] font-semibold text-white/60">
+              {currentMode?.label} · Entry {pool.entry} 💎
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── Game type bottom sheet ── */}
+      {showTypeSheet && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={() => setShowTypeSheet(false)}
+          />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
+            style={{
+              background: "rgba(12,14,20,0.98)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderBottom: "none",
+              animation: "qhub-sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)",
+            }}
+          >
+            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 mb-5" />
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-600 px-5 mb-3">Game Type</p>
+            {GAME_TYPES.map((gt) => (
+              <button
+                key={gt.id}
+                onClick={() => !gt.comingSoon && handleTypeChange(gt.id)}
+                className="w-full flex items-center justify-between px-5 py-4 transition-colors"
+                style={{
+                  background: gt.id === gameType ? "rgba(255,255,255,0.05)" : "transparent",
+                  opacity: gt.comingSoon ? 0.4 : 1,
+                  cursor: gt.comingSoon ? "not-allowed" : "pointer",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: gt.id === "cs" ? "rgba(34,211,238,0.12)" : "rgba(249,115,22,0.12)",
+                      border: `1px solid ${gt.id === "cs" ? "rgba(34,211,238,0.25)" : "rgba(249,115,22,0.25)"}`,
+                    }}
+                  >
+                    <Zap className="w-4 h-4" style={{ color: gt.id === "cs" ? "#22d3ee" : "#f97316" }} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <span className="text-[14px] font-extrabold text-white block">{gt.label}</span>
+                    {gt.comingSoon && <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Coming Soon</span>}
+                  </div>
+                </div>
+                {gt.id === gameType && (
+                  <div className="w-2 h-2 rounded-full" style={{ background: accent }} />
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
