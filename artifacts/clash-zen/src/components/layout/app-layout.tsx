@@ -54,7 +54,7 @@ function DiamondGem3D({ size = 22, flash = false }: { size?: number; flash?: boo
   );
 }
 
-const NAV_ROUTES = ["/", "/matches", "/leaderboard", "/history", "/profile"];
+const NAV_ROUTES = ["/", "/leaderboard", "/matches", "/history", "/profile"];
 
 function getNavIndex(path: string): number {
   const exact = NAV_ROUTES.indexOf(path);
@@ -284,8 +284,8 @@ export function BottomNav() {
 
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/matches", icon: CalendarDays, label: "Matches" },
     { href: "/leaderboard", icon: Trophy, label: "Rank" },
+    { href: "/matches", icon: CalendarDays, label: "Matches" },
     { href: "/history", icon: Clock, label: "History" },
     { href: "/profile", icon: User, label: "Profile" },
   ];
