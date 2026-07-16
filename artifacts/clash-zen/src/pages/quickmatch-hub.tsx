@@ -29,32 +29,32 @@ const SQUAD_OPTIONS: Record<string, { id: string; label: string }[]> = {
 const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; comingSoon?: boolean; random?: boolean }[]>> = {
   cs: {
     solo:  [
-      { id: "any",     label: "Any (Random)",   random: true       },
+      { id: "any",     label: "No Preference",  random: true       },
       { id: "duel",    label: "Normal 1v1"                         },
       { id: "healing", label: "Healing Battle"                     },
       { id: "knife",   label: "Knife Fight"                        },
     ],
     duo:   [
-      { id: "any",  label: "Any (Random)", random: true            },
+      { id: "any",  label: "No Preference", random: true            },
       { id: "duel", label: "2v2 Duel",     comingSoon: true        },
     ],
     squad: [
-      { id: "any",         label: "Any (Random)", random: true     },
+      { id: "any",         label: "No Preference", random: true    },
       { id: "clash-squad", label: "CS 4v4"                        },
     ],
   },
   br: {
     solo:  [
-      { id: "any",          label: "Any (Random)", random: true    },
+      { id: "any",          label: "No Preference", random: true    },
       { id: "solo-drop",    label: "Solo Drop",    comingSoon: true },
       { id: "zone-control", label: "Zone Control", comingSoon: true },
     ],
     duo:   [
-      { id: "any",      label: "Any (Random)", random: true        },
+      { id: "any",      label: "No Preference", random: true       },
       { id: "duo-rush", label: "Duo Rush",     comingSoon: true    },
     ],
     squad: [
-      { id: "any",        label: "Any (Random)", random: true      },
+      { id: "any",        label: "No Preference", random: true     },
       { id: "squad-wipe", label: "Squad Wipe",   comingSoon: true  },
     ],
   },
