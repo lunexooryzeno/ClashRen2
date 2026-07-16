@@ -26,30 +26,36 @@ const SQUAD_OPTIONS: Record<string, { id: string; label: string }[]> = {
   ],
 };
 
-const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; comingSoon?: boolean }[]>> = {
+const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; comingSoon?: boolean; random?: boolean }[]>> = {
   cs: {
     solo:  [
-      { id: "duel",    label: "Normal 1v1"     },
-      { id: "healing", label: "Healing Battle" },
-      { id: "knife",   label: "Knife Fight"    },
+      { id: "any",     label: "Any (Random)",   random: true       },
+      { id: "duel",    label: "Normal 1v1"                         },
+      { id: "healing", label: "Healing Battle"                     },
+      { id: "knife",   label: "Knife Fight"                        },
     ],
     duo:   [
-      { id: "duel", label: "2v2 Duel", comingSoon: true },
+      { id: "any",  label: "Any (Random)", random: true            },
+      { id: "duel", label: "2v2 Duel",     comingSoon: true        },
     ],
     squad: [
-      { id: "clash-squad", label: "CS 4v4" },
+      { id: "any",         label: "Any (Random)", random: true     },
+      { id: "clash-squad", label: "CS 4v4"                        },
     ],
   },
   br: {
     solo:  [
+      { id: "any",          label: "Any (Random)", random: true    },
       { id: "solo-drop",    label: "Solo Drop",    comingSoon: true },
       { id: "zone-control", label: "Zone Control", comingSoon: true },
     ],
     duo:   [
-      { id: "duo-rush", label: "Duo Rush", comingSoon: true },
+      { id: "any",      label: "Any (Random)", random: true        },
+      { id: "duo-rush", label: "Duo Rush",     comingSoon: true    },
     ],
     squad: [
-      { id: "squad-wipe", label: "Squad Wipe", comingSoon: true },
+      { id: "any",        label: "Any (Random)", random: true      },
+      { id: "squad-wipe", label: "Squad Wipe",   comingSoon: true  },
     ],
   },
 };
@@ -212,7 +218,16 @@ export default function QuickMatchHub() {
     if (isComingSoon) return;
     sessionStorage.setItem("qm_entry", String(pool.entry));
     sessionStorage.setItem("qm_prize", String(pool.prize));
-    navigate(`/quickmatch/${gameType}/${currentMode?.id ?? "duel"}`);
+    let targetMode = currentMode?.id ?? "duel";
+    if (targetMode === "any") {
+      const liveModes = modeOpts.filter(m => !m.random && !m.comingSoon);
+      if (liveModes.length > 0) {
+        targetMode = liveModes[Math.floor(Math.random() * liveModes.length)].id;
+      } else {
+        targetMode = "duel";
+      }
+    }
+    navigate(`/quickmatch/${gameType}/${targetMode}`);
   };
 
   return (
