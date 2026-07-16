@@ -1,3 +1,4 @@
+import { Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CoinIconProps {
@@ -8,14 +9,14 @@ interface CoinIconProps {
   height?: number;
 }
 
-export function CoinIcon({ className, style, width, height }: CoinIconProps) {
-  const size = width ?? height ?? 16;
+export function CoinIcon({ className, strokeWidth = 2, style, width, height }: CoinIconProps) {
   return (
-    <span
-      style={{ fontSize: size, lineHeight: 1, ...style }}
-      className={cn("text-amber-400 font-bold inline-flex items-center justify-center", className)}
-    >
-      ₹
-    </span>
+    <Coins
+      className={cn("text-amber-400", className)}
+      strokeWidth={strokeWidth}
+      style={style}
+      width={width}
+      height={height}
+    />
   );
 }
