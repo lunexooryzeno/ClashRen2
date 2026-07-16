@@ -164,7 +164,7 @@ export default function QuickMatchQueue() {
   const handleCancel = async () => {
     stopPolling();
     await leaveQueue();
-    navigate(`/quickmatch/${typeKey}`);
+    navigate("/quickmatch");
   };
 
   // "Join Room" — claim the slot, exit the queue, enter the room screen
@@ -457,7 +457,7 @@ export default function QuickMatchQueue() {
             onClick={async () => {
               stopPolling();
               await leaveQueue();
-              navigate(`/quickmatch/${typeKey}`);
+              navigate("/quickmatch");
             }}
             className="w-full py-3 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
             style={{
