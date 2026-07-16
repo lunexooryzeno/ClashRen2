@@ -1,4 +1,3 @@
-import { CircleDollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CoinIconProps {
@@ -10,13 +9,26 @@ interface CoinIconProps {
 }
 
 export function CoinIcon({ className, strokeWidth = 2, style, width, height }: CoinIconProps) {
+  const size = width ?? height ?? 24;
   return (
-    <CircleDollarSign
-      className={cn("text-amber-400", className)}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
       strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={size}
+      height={size}
       style={style}
-      width={width}
-      height={height}
-    />
+      className={cn("text-amber-400", className)}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 7h8" />
+      <path d="M8 11h8" />
+      <path d="M8 7c5 0 5 4 0 4" />
+      <path d="M8 11l5.5 5" />
+    </svg>
   );
 }
