@@ -1,4 +1,4 @@
-import { Coins } from "lucide-react";
+import { Gem } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CoinIconProps {
@@ -11,7 +11,7 @@ interface CoinIconProps {
 
 export function CoinIcon({ className, strokeWidth = 2, style, width, height }: CoinIconProps) {
   return (
-    <Coins
+    <Gem
       className={cn("text-amber-400", className)}
       strokeWidth={strokeWidth}
       style={style}
