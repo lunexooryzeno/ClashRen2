@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { ArrowLeft, Trophy, Users, ChevronDown, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const PRIZE_POOLS = [
   { entry: 12, prize: 20, activePlayers: 18 },
@@ -146,35 +147,31 @@ function Dropdown({
   );
 }
 
-function DiamondIcon({ size = 14 }: { size?: number }) {
+function CoinIcon({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <defs>
-        <linearGradient id="qh-dg-c" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#e0f2fe" />
-          <stop offset="60%" stopColor="#60a5fa" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-        <linearGradient id="qh-dg-l" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#2563eb" /><stop offset="100%" stopColor="#1e3a8a" />
-        </linearGradient>
-        <linearGradient id="qh-dg-r" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#60a5fa" /><stop offset="100%" stopColor="#1d4ed8" />
-        </linearGradient>
+        <radialGradient id="qh-coin-bg" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="50%" stopColor="#facc15" />
+          <stop offset="100%" stopColor="#ca8a04" />
+        </radialGradient>
+        <radialGradient id="qh-coin-inner" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#fde68a" />
+          <stop offset="100%" stopColor="#d97706" />
+        </radialGradient>
       </defs>
-      <polygon points="12,2 5,8 12,6.5 19,8" fill="url(#qh-dg-c)" />
-      <polygon points="5,8 12,6.5 9,14" fill="url(#qh-dg-l)" opacity="0.95" />
-      <polygon points="19,8 12,6.5 15,14" fill="url(#qh-dg-r)" opacity="0.9" />
-      <polygon points="5,8 9,14 12,22" fill="url(#qh-dg-l)" opacity="0.8" />
-      <polygon points="19,8 15,14 12,22" fill="url(#qh-dg-r)" opacity="0.75" />
-      <polygon points="9,14 15,14 12,22" fill="#1e3a8a" />
-      <polygon points="7,8.5 10,7.2 9.2,10" fill="white" opacity="0.45" />
+      <circle cx="12" cy="12" r="11" fill="url(#qh-coin-bg)" />
+      <circle cx="12" cy="12" r="8.5" fill="url(#qh-coin-inner)" />
+      <text x="12" y="16.5" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#92400e" fontFamily="serif">₹</text>
+      <ellipse cx="9" cy="9" rx="2.5" ry="1.2" fill="white" opacity="0.3" transform="rotate(-30 9 9)" />
     </svg>
   );
 }
 
 export default function QuickMatchHub() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
 
   const [gameType, setGameType] = useState<"cs" | "br">("cs");
   const [squadSize, setSquadSize] = useState("solo");
@@ -395,7 +392,7 @@ export default function QuickMatchHub() {
                 <Trophy className="w-7 h-7" style={{ color: accent }} strokeWidth={1.8} />
               </div>
               <div className="flex items-center gap-1.5">
-                <DiamondIcon size={18} />
+                <CoinIcon size={22} />
                 <span className="text-[36px] font-black text-white leading-none tabular-nums">{pool.prize}</span>
               </div>
               <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Prize Pool</span>
@@ -407,8 +404,8 @@ export default function QuickMatchHub() {
             {/* Stats row */}
             <div className="grid grid-cols-3 divide-x divide-white/[0.05] px-2 py-4">
               {[
-                { label: "Entry", value: pool.entry, icon: <DiamondIcon size={12} /> },
-                { label: "Prize", value: pool.prize, icon: <DiamondIcon size={12} /> },
+                { label: "Entry", value: pool.entry, icon: <CoinIcon size={14} /> },
+                { label: "Prize", value: pool.prize, icon: <CoinIcon size={14} /> },
                 { label: "Active", value: pool.activePlayers, icon: <Users className="w-3 h-3 text-emerald-400" strokeWidth={2} /> },
               ].map(({ label, value, icon }) => (
                 <div key={label} className="flex flex-col items-center gap-1 py-1">
@@ -453,6 +450,16 @@ export default function QuickMatchHub() {
               }}
             />
           ))}
+        </div>
+
+        {/* Real user balance */}
+        <div className="flex items-center gap-2 mt-4 px-4 py-2.5 rounded-2xl"
+          style={{ background: "rgba(250,204,21,0.07)", border: "1px solid rgba(250,204,21,0.18)" }}>
+          <CoinIcon size={16} />
+          <span className="text-[12px] font-bold text-yellow-300">Your Balance:</span>
+          <span className="text-[13px] font-black text-white tabular-nums ml-auto">
+            {(user?.diamondBalance ?? 0).toLocaleString()} coins
+          </span>
         </div>
       </div>
 
@@ -502,8 +509,8 @@ export default function QuickMatchHub() {
                 {isComingSoon ? "Coming Soon" : "Find Match"}
               </span>
               {!isComingSoon && (
-                <span className="text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.65)" }}>
-                  {currentMode?.id === "any" ? "Any mode" : currentMode?.label} · ₹{pool.entry} entry
+                <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  {currentMode?.id === "any" ? "Any mode" : currentMode?.label} · <CoinIcon size={11} /> {pool.entry} entry
                 </span>
               )}
             </div>
