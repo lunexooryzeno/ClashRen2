@@ -118,21 +118,22 @@ export default function QuickMatchQueue() {
       try {
         const stats = await apiFetch<QueueStats>("/quickmatch/stats");
         setQueueCount(stats[typeKey]?.modes?.[modeId] ?? 0);
-      } catch { /* ignore poll errors */ }
+      } catch { /* ignore */ }
 
-      // Check if phone host has posted real room credentials
+      // Check if this player has been matched and credentials are ready
       try {
-        const room = await apiFetch<{
+        const match = await apiFetch<{
           status: string;
+          matchId?: string;
           roomId?: string;
           password?: string;
-        }>("/phone-host/room");
-        if (room.status === "ready" && room.roomId && room.password) {
+        }>("/quickmatch/match");
+        if (match.status === "ready" && match.roomId && match.password) {
           stopPolling();
           setPhase("found");
           setMatchInfo({
-            roomId: room.roomId,
-            password: room.password,
+            roomId: match.roomId,
+            password: match.password,
             mapName: meta.mapName,
             format: meta.format,
             maxPlayers: meta.maxPlayers,

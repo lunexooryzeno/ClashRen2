@@ -1,6 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { requireSuperAdmin } from "../middlewares/auth.js";
+import { attachCredentials } from "../lib/quickmatch-matches.js";
 
 const router = Router();
 
@@ -186,6 +187,9 @@ router.post("/phone-host/credentials", (req, res) => {
     receivedAt: new Date().toISOString(),
     extra: Object.keys(extra).length ? extra : undefined,
   };
+
+  // Attach to any pending quickmatch waiting for a room
+  attachCredentials(String(roomId), String(password));
 
   if (currentSession) {
     currentSession.credentials = creds;
