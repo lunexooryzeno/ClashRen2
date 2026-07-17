@@ -300,19 +300,6 @@ export default function QuickMatchHub() {
             <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
           </button>
 
-          {/* Online players badge */}
-          <div
-            className="flex items-center gap-1.5 px-3 py-2 rounded-2xl shrink-0"
-            style={{
-              background: "rgba(16,185,129,0.1)",
-              border: "1px solid rgba(16,185,129,0.25)",
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "qhub-pulse 1.4s ease-in-out infinite" }} />
-            <span className="text-[11px] font-black text-emerald-400 tabular-nums">
-              {onlineCount !== null && onlineCount > 0 ? `${onlineCount} online` : "Live"}
-            </span>
-          </div>
         </div>
       </div>
 
