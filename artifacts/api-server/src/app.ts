@@ -79,13 +79,32 @@ app.use(
   })
 );
 
-// Global rate limit — 600 requests per 15 minutes per IP
+// Global rate limit — 1500 requests per 15 minutes per IP
 // Admin requests (X-Super-Admin-Token) are skipped: they are already
 // session-authenticated and should never hit a public IP cap.
+// High-frequency polling endpoints (/quickmatch/stats, /quickmatch/match)
+// are also skipped here and covered by their own generous limiter below.
+const QUICKMATCH_POLL_PATHS = new Set(["/api/quickmatch/stats", "/api/quickmatch/match"]);
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 600,
+    max: 1500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests. Please try again later." },
+    skip: (req) =>
+      !!req.headers["x-super-admin-token"] ||
+      QUICKMATCH_POLL_PATHS.has(req.path),
+  })
+);
+
+// Generous limiter for quickmatch polling — these endpoints are hit ~2× per
+// 2.5 s while a player is in queue, so allow up to 6 000 per 15 min (~6.7/s).
+app.use(
+  ["/api/quickmatch/stats", "/api/quickmatch/match"],
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 6000,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests. Please try again later." },
