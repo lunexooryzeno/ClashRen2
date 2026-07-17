@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ArrowLeft, Users, Clock, Copy, Check, Shield, Crosshair,
   Heart, Scissors, Target, Wind, Map as MapIcon, X, Swords, CheckCircle2,
+  Zap, RotateCcw, Cpu, KeyRound,
 } from "lucide-react";
 import { apiFetch, apiPost } from "@/lib/api";
 
@@ -42,12 +43,26 @@ interface MatchInfo {
   maxPlayers: number;
 }
 
+interface PlayerInfo {
+  userId: string;
+  inGameName: string;
+  profilePicture?: string | null;
+  uid?: string | null;
+}
+
 interface QueueStats {
   cs: { total: number; modes: Record<string, number> };
   br: { total: number; modes: Record<string, number> };
 }
 
-type Phase = "searching" | "found" | "joined";
+type RoomStatus =
+  | "opponent_found"
+  | "creating_room"
+  | "booting_game"
+  | "waiting_credentials"
+  | "ready";
+
+type Phase = "searching" | "preparing" | "found" | "joined";
 
 const STATUS_MESSAGES = [
   "Searching for opponent…",
@@ -55,6 +70,65 @@ const STATUS_MESSAGES = [
   "Matching skill levels…",
   "Almost there…",
 ];
+
+const ROOM_STEPS: { key: RoomStatus | "ready"; label: string; Icon: React.ElementType }[] = [
+  { key: "opponent_found",     label: "Opponent Found",       Icon: Zap      },
+  { key: "creating_room",      label: "Creating Room",        Icon: RotateCcw },
+  { key: "booting_game",       label: "Booting Game",         Icon: Cpu       },
+  { key: "waiting_credentials",label: "Waiting for Credentials", Icon: KeyRound },
+  { key: "ready",              label: "Room Ready!",          Icon: CheckCircle2 },
+];
+
+const STEP_ORDER: RoomStatus[] = [
+  "opponent_found",
+  "creating_room",
+  "booting_game",
+  "waiting_credentials",
+  "ready",
+];
+
+function stepIndex(s: RoomStatus | null): number {
+  if (!s) return -1;
+  const i = STEP_ORDER.indexOf(s);
+  return i === -1 ? 0 : i;
+}
+
+function Avatar({
+  src,
+  name,
+  size = 64,
+  accent,
+}: { src?: string | null; name: string; size?: number; accent: string }) {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  return (
+    <div
+      className="rounded-full flex items-center justify-center overflow-hidden shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: src ? "transparent" : `${accent}28`,
+        border: `2px solid ${accent}55`,
+        boxShadow: `0 0 20px ${accent}30`,
+      }}
+    >
+      {src ? (
+        <img src={src} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        <span
+          className="font-black"
+          style={{ fontSize: size * 0.32, color: accent }}
+        >
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function QuickMatchQueue() {
   const params = useParams<{ type: string; mode: string }>();
@@ -73,6 +147,10 @@ export default function QuickMatchQueue() {
   const [visible, setVisible] = useState(false);
   const [statusIdx, setStatusIdx] = useState(0);
   const [joining, setJoining] = useState(false);
+  const [mePlayer, setMePlayer] = useState<PlayerInfo | null>(null);
+  const [opponent, setOpponent] = useState<PlayerInfo | null>(null);
+  const [roomStatus, setRoomStatus] = useState<RoomStatus | null>(null);
+  const [matchId, setMatchId] = useState<string | null>(null);
 
   const leftRef = useRef(false);
   const pollIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,7 +188,7 @@ export default function QuickMatchQueue() {
     return () => clearInterval(id);
   }, [phase]);
 
-  // Join queue + poll queue stats + poll phone-host room credentials
+  // Join queue + poll
   useEffect(() => {
     apiPost("/quickmatch/search/join", { gameType: typeKey, modeId }).catch(() => {});
 
@@ -120,16 +198,29 @@ export default function QuickMatchQueue() {
         setQueueCount(stats[typeKey]?.modes?.[modeId] ?? 0);
       } catch { /* ignore */ }
 
-      // Check if this player has been matched and credentials are ready
       try {
         const match = await apiFetch<{
           status: string;
           matchId?: string;
           roomId?: string;
           password?: string;
+          roomStatus?: RoomStatus;
+          me?: PlayerInfo;
+          opponent?: PlayerInfo;
         }>("/quickmatch/match");
-        if (match.status === "ready" && match.roomId && match.password) {
+
+        if (match.status === "waiting_room") {
+          if (match.me)       setMePlayer(match.me);
+          if (match.opponent) setOpponent(match.opponent);
+          if (match.roomStatus) setRoomStatus(match.roomStatus);
+          if (match.matchId)  setMatchId(match.matchId);
+          setPhase("preparing");
+        } else if (match.status === "ready" && match.roomId && match.password) {
           stopPolling();
+          if (match.me)       setMePlayer(match.me);
+          if (match.opponent) setOpponent(match.opponent);
+          if (match.matchId)  setMatchId(match.matchId);
+          setRoomStatus("ready");
           setPhase("found");
           setMatchInfo({
             roomId: match.roomId,
@@ -142,15 +233,13 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     };
     poll();
-    pollIdRef.current = setInterval(poll, 3000);
+    pollIdRef.current = setInterval(poll, 2500);
 
-    return () => {
-      stopPolling();
-    };
+    return () => { stopPolling(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Leave queue on unmount if still searching (e.g. browser back)
+  // Leave queue on unmount if still searching
   useEffect(() => {
     return () => {
       if (phase === "searching") leaveQueue();
@@ -163,11 +252,10 @@ export default function QuickMatchQueue() {
     navigate("/quickmatch");
   };
 
-  // "Join Room" — claim the slot, exit the queue, enter the room screen
   const handleJoinRoom = async () => {
     if (joining) return;
     setJoining(true);
-    await leaveQueue(); // exit queue — slot is claimed
+    await leaveQueue();
     setPhase("joined");
     setJoining(false);
   };
@@ -181,6 +269,7 @@ export default function QuickMatchQueue() {
 
   const Icon = meta.Icon;
   const glow = `${accent}35`;
+  const currentStepIdx = stepIndex(roomStatus);
 
   return (
     <div
@@ -218,6 +307,22 @@ export default function QuickMatchQueue() {
           70% { transform: scale(1.08) rotate(2deg); }
           100%{ transform: scale(1) rotate(0deg);    opacity: 1; }
         }
+        @keyframes step-ping {
+          0%   { transform: scale(1); opacity: 1; }
+          60%  { transform: scale(1.9); opacity: 0; }
+          100% { transform: scale(1.9); opacity: 0; }
+        }
+        @keyframes preparing-in {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes vs-glow {
+          0%, 100% { box-shadow: 0 0 24px ${accent}40; }
+          50%      { box-shadow: 0 0 48px ${accent}70; }
+        }
+        @keyframes icon-spin {
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
       {/* Background glow */}
@@ -233,7 +338,7 @@ export default function QuickMatchQueue() {
       >
         <div className="flex items-center justify-between">
           {phase === "joined" ? (
-            <div className="w-9 h-9" /> /* spacer — no back button when in room */
+            <div className="w-9 h-9" />
           ) : (
             <button
               onClick={handleCancel}
@@ -338,7 +443,229 @@ export default function QuickMatchQueue() {
         </div>
       )}
 
-      {/* ── MATCH FOUND ── */}
+      {/* ── PREPARING (opponent found, room being set up) ── */}
+      {phase === "preparing" && (
+        <div
+          className="flex-1 flex flex-col items-center px-5 pb-10"
+          style={{ animation: "preparing-in 0.5s ease both" }}
+        >
+          {/* "Match Found" badge */}
+          <div
+            className="mt-3 mb-5 px-5 py-2 rounded-full flex items-center gap-2"
+            style={{
+              background: `${accent}20`,
+              border: `1.5px solid ${accent}55`,
+              animation: "vs-glow 2s ease-in-out infinite",
+            }}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ background: accent, animation: "live-pulse 1s ease-in-out infinite" }} />
+            <span className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>
+              Opponent Found!
+            </span>
+          </div>
+
+          {/* Player VS card */}
+          <div
+            className="w-full rounded-3xl overflow-hidden mb-5"
+            style={{
+              background: `linear-gradient(135deg, ${accent}0c 0%, rgba(255,255,255,0.02) 100%)`,
+              border: `1px solid ${accent}28`,
+            }}
+          >
+            <div className="flex items-center justify-between px-4 py-4 gap-3">
+              {/* Me */}
+              <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                <Avatar
+                  src={mePlayer?.profilePicture}
+                  name={mePlayer?.inGameName ?? "You"}
+                  size={60}
+                  accent={accent}
+                />
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-[13px] font-extrabold text-white truncate px-1">
+                    {mePlayer?.inGameName ?? "You"}
+                  </p>
+                  {mePlayer?.uid && (
+                    <p className="text-[10px] font-mono text-zinc-500 truncate">UID {mePlayer.uid}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* VS */}
+              <div
+                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background: `${accent}18`,
+                  border: `1.5px solid ${accent}45`,
+                  boxShadow: `0 0 18px ${accent}30`,
+                }}
+              >
+                <span className="text-[11px] font-black tracking-widest" style={{ color: accent }}>VS</span>
+              </div>
+
+              {/* Opponent */}
+              <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                <Avatar
+                  src={opponent?.profilePicture}
+                  name={opponent?.inGameName ?? "Opponent"}
+                  size={60}
+                  accent={accent}
+                />
+                <div className="text-center min-w-0 w-full">
+                  <p className="text-[13px] font-extrabold text-white truncate px-1">
+                    {opponent?.inGameName ?? "Opponent"}
+                  </p>
+                  {opponent?.uid && (
+                    <p className="text-[10px] font-mono text-zinc-500 truncate">UID {opponent.uid}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Mode / map strip */}
+            <div
+              className="px-5 py-2 flex items-center gap-2 justify-center"
+              style={{ background: `${accent}08`, borderTop: `1px solid ${accent}18` }}
+            >
+              <Icon className="w-3.5 h-3.5" style={{ color: accent }} strokeWidth={2} />
+              <span className="text-[11px] font-bold text-zinc-400">{meta.name} · {meta.mapName}</span>
+            </div>
+          </div>
+
+          {/* Room preparation timeline */}
+          <div
+            className="w-full rounded-3xl overflow-hidden"
+            style={{
+              background: "rgba(255,255,255,0.025)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            <div
+              className="px-5 py-3 flex items-center gap-2"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <span className="text-[11px] font-black tracking-widest uppercase text-zinc-500">Preparing Room</span>
+            </div>
+
+            <div className="px-5 py-4 flex flex-col gap-0">
+              {ROOM_STEPS.map((step, i) => {
+                const isActive  = i === currentStepIdx;
+                const isDone    = i < currentStepIdx;
+                const StepIcon  = step.Icon;
+
+                return (
+                  <div key={step.key} className="flex items-start gap-3.5">
+                    {/* Left: icon + connector */}
+                    <div className="flex flex-col items-center" style={{ width: 28, paddingTop: 2 }}>
+                      <div className="relative flex items-center justify-center" style={{ width: 28, height: 28 }}>
+                        {/* Ping ring for active step */}
+                        {isActive && (
+                          <div
+                            className="absolute rounded-full"
+                            style={{
+                              inset: -2,
+                              background: `${accent}30`,
+                              animation: "step-ping 1.6s ease-out infinite",
+                            }}
+                          />
+                        )}
+                        <div
+                          className="relative rounded-full flex items-center justify-center"
+                          style={{
+                            width: 28,
+                            height: 28,
+                            background: isDone
+                              ? `${accent}30`
+                              : isActive
+                                ? `${accent}22`
+                                : "rgba(255,255,255,0.04)",
+                            border: `1.5px solid ${
+                              isDone ? accent : isActive ? `${accent}aa` : "rgba(255,255,255,0.1)"
+                            }`,
+                            transition: "all 0.4s ease",
+                          }}
+                        >
+                          {isDone ? (
+                            <Check
+                              className="w-3.5 h-3.5"
+                              style={{ color: accent }}
+                              strokeWidth={2.5}
+                            />
+                          ) : (
+                            <StepIcon
+                              className="w-3.5 h-3.5"
+                              style={{
+                                color: isActive ? accent : "rgba(255,255,255,0.2)",
+                                animation: isActive && step.key === "creating_room"
+                                  ? "icon-spin 1.4s linear infinite"
+                                  : undefined,
+                              }}
+                              strokeWidth={2}
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Connector line */}
+                      {i < ROOM_STEPS.length - 1 && (
+                        <div
+                          style={{
+                            width: 1.5,
+                            height: 22,
+                            marginTop: 2,
+                            background: isDone
+                              ? accent
+                              : `rgba(255,255,255,0.08)`,
+                            transition: "background 0.4s ease",
+                            borderRadius: 2,
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Right: text */}
+                    <div className="flex-1 pb-4" style={{ paddingTop: 4 }}>
+                      <p
+                        className="text-[13px] font-bold leading-tight"
+                        style={{
+                          color: isDone
+                            ? accent
+                            : isActive
+                              ? "rgba(255,255,255,0.92)"
+                              : "rgba(255,255,255,0.22)",
+                          transition: "color 0.4s ease",
+                        }}
+                      >
+                        {step.label}
+                        {isActive && (
+                          <span
+                            className="ml-1.5 text-[11px] font-semibold"
+                            style={{ color: `${accent}bb` }}
+                          >
+                            …
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Subtle cancel */}
+          <button
+            onClick={handleCancel}
+            className="mt-5 flex items-center gap-2 px-6 py-3 rounded-2xl active:scale-95 transition-transform"
+            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}
+          >
+            <X className="w-3.5 h-3.5 text-red-500/70" strokeWidth={2.5} />
+            <span className="text-[12px] font-bold text-red-500/70">Leave Match</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── MATCH FOUND (credentials ready) ── */}
       {phase === "found" && matchInfo && (
         <div
           className="flex-1 flex flex-col items-center px-5 pb-10"
@@ -346,23 +673,40 @@ export default function QuickMatchQueue() {
         >
           {/* Badge */}
           <div
-            className="mt-4 mb-5 px-5 py-2 rounded-full flex items-center gap-2"
+            className="mt-4 mb-4 px-5 py-2 rounded-full flex items-center gap-2"
             style={{ background: `${accent}20`, border: `1.5px solid ${accent}55`, boxShadow: `0 0 24px ${accent}35` }}
           >
             <span className="w-2 h-2 rounded-full" style={{ background: accent, animation: "live-pulse 1s ease-in-out infinite" }} />
-            <span className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>Match Found!</span>
+            <span className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>Room Ready!</span>
           </div>
 
-          {/* Icon */}
-          <div
-            className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4"
-            style={{ background: `${accent}18`, border: `2px solid ${accent}45`, boxShadow: `0 0 40px ${glow}` }}
-          >
-            <Icon className="w-9 h-9" style={{ color: accent }} strokeWidth={1.6} />
-          </div>
-
-          <h2 className="font-heading text-2xl font-black text-white tracking-tight mb-0.5">{meta.name}</h2>
-          <p className="text-[12px] text-zinc-500 mb-5">{matchInfo.mapName} · {matchInfo.format}</p>
+          {/* Compact player VS row */}
+          {(mePlayer || opponent) && (
+            <div
+              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl mb-4 gap-2"
+              style={{
+                background: `${accent}0a`,
+                border: `1px solid ${accent}22`,
+                animation: "slide-up 0.4s ease 0.05s both",
+              }}
+            >
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={36} accent={accent} />
+                <div className="min-w-0">
+                  <p className="text-[12px] font-bold text-white truncate">{mePlayer?.inGameName ?? "You"}</p>
+                  {mePlayer?.uid && <p className="text-[10px] font-mono text-zinc-600 truncate">UID {mePlayer.uid}</p>}
+                </div>
+              </div>
+              <span className="text-[10px] font-black text-zinc-600 shrink-0 px-1">VS</span>
+              <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
+                <div className="text-right min-w-0">
+                  <p className="text-[12px] font-bold text-white truncate">{opponent?.inGameName ?? "Opponent"}</p>
+                  {opponent?.uid && <p className="text-[10px] font-mono text-zinc-600 truncate">UID {opponent.uid}</p>}
+                </div>
+                <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={36} accent={accent} />
+              </div>
+            </div>
+          )}
 
           {/* Room details card */}
           <div
@@ -383,7 +727,6 @@ export default function QuickMatchQueue() {
             </div>
 
             <div className="px-5 py-4 flex flex-col gap-4">
-              {/* Room ID */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-0.5">Room ID</p>
@@ -400,7 +743,6 @@ export default function QuickMatchQueue() {
 
               <div className="h-px" style={{ background: `${accent}15` }} />
 
-              {/* Password */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-0.5">Password</p>
@@ -417,7 +759,6 @@ export default function QuickMatchQueue() {
 
               <div className="h-px" style={{ background: `${accent}15` }} />
 
-              {/* Map + slots */}
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-0.5">Map</p>
@@ -431,7 +772,7 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          {/* Join Room CTA — claims slot and enters room screen */}
+          {/* Join Room CTA */}
           <button
             onClick={handleJoinRoom}
             disabled={joining}
@@ -448,7 +789,6 @@ export default function QuickMatchQueue() {
             </span>
           </button>
 
-          {/* Secondary: back to modes */}
           <button
             onClick={async () => {
               stopPolling();
@@ -473,7 +813,6 @@ export default function QuickMatchQueue() {
           className="flex-1 flex flex-col items-center px-5 pb-10"
           style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}
         >
-          {/* Success icon */}
           <div
             className="mt-6 mb-4 flex items-center justify-center"
             style={{ animation: "joined-in 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}
@@ -491,7 +830,21 @@ export default function QuickMatchQueue() {
             Open Free Fire and enter the room credentials below
           </p>
 
-          {/* Credentials — large, easy to read */}
+          {/* Opponent reminder */}
+          {opponent && (
+            <div
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-4"
+              style={{ background: `${accent}0a`, border: `1px solid ${accent}20` }}
+            >
+              <Avatar src={opponent.profilePicture} name={opponent.inGameName} size={36} accent={accent} />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-0.5">Your Opponent</p>
+                <p className="text-[13px] font-bold text-white truncate">{opponent.inGameName}</p>
+                {opponent.uid && <p className="text-[10px] font-mono text-zinc-600">UID {opponent.uid}</p>}
+              </div>
+            </div>
+          )}
+
           <div
             className="w-full rounded-3xl overflow-hidden mb-5"
             style={{
@@ -511,7 +864,6 @@ export default function QuickMatchQueue() {
             </div>
 
             <div className="px-5 py-5 flex flex-col gap-5">
-              {/* Room ID — large */}
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-1">Room ID</p>
                 <div className="flex items-center justify-between">
@@ -521,16 +873,13 @@ export default function QuickMatchQueue() {
                     className="w-10 h-10 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                     style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}
                   >
-                    {copied === "room"
-                      ? <Check className="w-4 h-4" style={{ color: accent }} />
-                      : <Copy className="w-4 h-4" style={{ color: accent }} />}
+                    {copied === "room" ? <Check className="w-4 h-4" style={{ color: accent }} /> : <Copy className="w-4 h-4" style={{ color: accent }} />}
                   </button>
                 </div>
               </div>
 
               <div className="h-px" style={{ background: `${accent}18` }} />
 
-              {/* Password — large */}
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-1">Password</p>
                 <div className="flex items-center justify-between">
@@ -540,16 +889,13 @@ export default function QuickMatchQueue() {
                     className="w-10 h-10 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                     style={{ background: `${accent}20`, border: `1px solid ${accent}40` }}
                   >
-                    {copied === "pass"
-                      ? <Check className="w-4 h-4" style={{ color: accent }} />
-                      : <Copy className="w-4 h-4" style={{ color: accent }} />}
+                    {copied === "pass" ? <Check className="w-4 h-4" style={{ color: accent }} /> : <Copy className="w-4 h-4" style={{ color: accent }} />}
                   </button>
                 </div>
               </div>
 
               <div className="h-px" style={{ background: `${accent}18` }} />
 
-              {/* Format + slots row */}
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-0.5">Format</p>
@@ -563,7 +909,6 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          {/* Done — go home */}
           <button
             onClick={() => navigate("/matches")}
             className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
@@ -575,7 +920,6 @@ export default function QuickMatchQueue() {
             <span className="text-[15px] font-extrabold text-white tracking-wide">Done</span>
           </button>
 
-          {/* Find another match */}
           <button
             onClick={() => navigate(`/quickmatch/${typeKey}`)}
             className="w-full py-3 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"

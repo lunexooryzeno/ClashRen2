@@ -1,10 +1,14 @@
 import { Router, type IRouter } from "express";
+import { eq, or } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
 import { getQueueStats, joinQueue, leaveQueue, tryMatch } from "../lib/quickmatch-queue.js";
 import {
   createMatch,
   getMatchForPlayer,
   dismissMatch,
   hasPendingRoomRequest,
+  getRoomStatus,
+  type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
 import { requireAuth } from "../middlewares/auth.js";
 
@@ -20,9 +24,31 @@ const MODE_MACRO_ACTION: Record<string, string> = {
 async function fireMacroDroid(path: string): Promise<void> {
   try {
     await fetch(MACRO_BASE + path, { method: "GET" });
-  } catch {
-    // best effort
-  }
+  } catch { /* best effort */ }
+}
+
+async function fetchPlayers(userIds: string[]): Promise<PlayerProfile[]> {
+  const ids = userIds.map(Number).filter(Boolean);
+  if (!ids.length) return userIds.map((id) => ({ userId: id, inGameName: "Player" }));
+  const rows = await db
+    .select({
+      id: usersTable.id,
+      inGameName: usersTable.inGameName,
+      profilePicture: usersTable.profilePicture,
+      uid: usersTable.uid,
+    })
+    .from(usersTable)
+    .where(or(...ids.map((id) => eq(usersTable.id, id))));
+
+  return userIds.map((uid) => {
+    const row = rows.find((r) => String(r.id) === uid);
+    return {
+      userId: uid,
+      inGameName: row?.inGameName ?? "Player",
+      profilePicture: row?.profilePicture ?? null,
+      uid: row?.uid ?? null,
+    };
+  });
 }
 
 router.get("/quickmatch/stats", (_req, res) => {
@@ -45,22 +71,21 @@ function validateQueueBody(
     return null;
   }
   if (!VALID_GAME_TYPES.has(gameType)) {
-    res.status(400).json({ error: `Invalid gameType. Must be one of: ${[...VALID_GAME_TYPES].join(", ")}` });
+    res.status(400).json({ error: `Invalid gameType.` });
     return null;
   }
   if (!VALID_MODE_IDS.has(modeId)) {
-    res.status(400).json({ error: `Invalid modeId. Must be one of: ${[...VALID_MODE_IDS].join(", ")}` });
+    res.status(400).json({ error: `Invalid modeId.` });
     return null;
   }
   return { gameType, modeId };
 }
 
-router.post("/quickmatch/search/join", requireAuth, (req, res) => {
+router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
   const userId = String(req.user!.userId);
   const valid = validateQueueBody(req.body, res);
   if (!valid) return;
 
-  // If player is already in a match, return it
   const existingMatch = getMatchForPlayer(userId);
   if (existingMatch) {
     res.json({ ok: true, matched: true, matchId: existingMatch.id });
@@ -69,13 +94,13 @@ router.post("/quickmatch/search/join", requireAuth, (req, res) => {
 
   joinQueue(userId, valid.gameType, valid.modeId);
 
-  // Try to form a match
   const macroPath = MODE_MACRO_ACTION[valid.modeId];
   if (macroPath && !hasPendingRoomRequest()) {
     const playerIds = tryMatch(valid.gameType, valid.modeId);
     if (playerIds) {
-      createMatch(playerIds, valid.gameType, valid.modeId);
-      fireMacroDroid(macroPath); // async, fire and forget
+      const players = await fetchPlayers(playerIds);
+      createMatch(players, valid.gameType, valid.modeId);
+      fireMacroDroid(macroPath);
       res.json({ ok: true, matched: true });
       return;
     }
@@ -92,7 +117,6 @@ router.post("/quickmatch/search/leave", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Poll for the current player's match status
 router.get("/quickmatch/match", requireAuth, (req, res) => {
   const userId = String(req.user!.userId);
   const match = getMatchForPlayer(userId);
@@ -100,7 +124,12 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
     res.json({ status: "none" });
     return;
   }
-  if (match.status === "credentials_ready" && match.credentials) {
+
+  const roomStatus = getRoomStatus(match);
+  const opponent = match.players.find((p) => p.userId !== userId) ?? null;
+  const me = match.players.find((p) => p.userId === userId) ?? null;
+
+  if (roomStatus === "ready" && match.credentials) {
     res.json({
       status: "ready",
       matchId: match.id,
@@ -108,13 +137,24 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
       password: match.credentials.password,
       gameType: match.gameType,
       modeId: match.modeId,
+      roomStatus,
+      me,
+      opponent,
     });
     return;
   }
-  res.json({ status: "waiting_room", matchId: match.id });
+
+  res.json({
+    status: "waiting_room",
+    matchId: match.id,
+    gameType: match.gameType,
+    modeId: match.modeId,
+    roomStatus,
+    me,
+    opponent,
+  });
 });
 
-// Player dismisses match after joining the room
 router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
   const { matchId } = req.body as { matchId?: string };
   if (matchId) dismissMatch(matchId);

@@ -1,5 +1,12 @@
 import crypto from "crypto";
 
+export interface PlayerProfile {
+  userId: string;
+  inGameName: string;
+  profilePicture?: string | null;
+  uid?: string | null;
+}
+
 export interface MatchCredentials {
   roomId: string;
   password: string;
@@ -11,13 +18,14 @@ export interface QuickMatch {
   gameType: string;
   modeId: string;
   playerIds: string[];
+  players: PlayerProfile[];
   status: "waiting_room" | "credentials_ready" | "expired";
   createdAt: string;
   credentials?: MatchCredentials;
 }
 
 const MAX_HISTORY = 50;
-const MATCH_TTL_MS = 15 * 60 * 1000; // 15 min
+const MATCH_TTL_MS = 15 * 60 * 1000;
 
 let activeMatches: QuickMatch[] = [];
 const matchHistory: QuickMatch[] = [];
@@ -25,7 +33,7 @@ const matchHistory: QuickMatch[] = [];
 function expireStale() {
   const now = Date.now();
   activeMatches = activeMatches.filter((m) => {
-    if (m.status === "credentials_ready") return true; // keep until players dismiss
+    if (m.status === "credentials_ready") return true;
     const age = now - new Date(m.createdAt).getTime();
     if (age > MATCH_TTL_MS) {
       m.status = "expired";
@@ -37,8 +45,25 @@ function expireStale() {
   });
 }
 
+// Time-based room preparation steps (ms since match created)
+export type RoomStatus =
+  | "opponent_found"
+  | "creating_room"
+  | "booting_game"
+  | "waiting_credentials"
+  | "ready";
+
+export function getRoomStatus(match: QuickMatch): RoomStatus {
+  if (match.status === "credentials_ready") return "ready";
+  const age = Date.now() - new Date(match.createdAt).getTime();
+  if (age < 4_000)  return "opponent_found";
+  if (age < 12_000) return "creating_room";
+  if (age < 22_000) return "booting_game";
+  return "waiting_credentials";
+}
+
 export function createMatch(
-  playerIds: string[],
+  players: PlayerProfile[],
   gameType: string,
   modeId: string,
 ): QuickMatch {
@@ -47,7 +72,8 @@ export function createMatch(
     id: crypto.randomUUID(),
     gameType,
     modeId,
-    playerIds,
+    playerIds: players.map((p) => p.userId),
+    players,
     status: "waiting_room",
     createdAt: new Date().toISOString(),
   };
