@@ -113,6 +113,7 @@ const AdminAllMatchesPage = lazy(() => import("@/pages/admin-all-matches"));
 const MyMatchDetailPage   = lazy(() => import("@/pages/my-match-detail"));
 const ApiKeysAdminPage    = lazy(() => import("@/pages/api-keys-admin"));
 const UtrTransactionsPage = lazy(() => import("@/pages/utr-transactions"));
+const PhoneHostAdminPage  = lazy(() => import("@/pages/phone-host-admin"));
 const JoinSuccessPage        = lazy(() => import("@/pages/join-success"));
 const AboutPage              = lazy(() => import("@/pages/about"));
 const QuickMatchHubPage       = lazy(() => import("@/pages/quickmatch-hub"));
@@ -300,6 +301,7 @@ function Router() {
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management" component={MatchesManagementPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/manage-keys" component={ApiKeysAdminPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/utr-transactions" component={UtrTransactionsPage} />
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/phone-host" component={PhoneHostAdminPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

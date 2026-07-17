@@ -24,6 +24,7 @@ import tournamentUploadRouter from "./tournament-upload.js";
 import slotMatchesRouter from "./slot-matches.js";
 import paymentSessionsRouter from "./payment-sessions.js";
 import quickmatchRouter from "./quickmatch.js";
+import phoneHostRouter from "./phone-host.js";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(tournamentUploadRouter);
 router.use(slotMatchesRouter);
 router.use(paymentSessionsRouter);
 router.use(quickmatchRouter);
+router.use(phoneHostRouter);
 
 export default router;
