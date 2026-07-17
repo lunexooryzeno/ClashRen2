@@ -1,6 +1,7 @@
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Clock, Users, Zap, Swords, Heart, Shield, Scissors, Target, Wind, Crosshair, Map } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 type GameType = "cs" | "br";
 
@@ -250,10 +251,17 @@ export default function QuickMatchModes() {
   }, []);
 
   useEffect(() => {
-    setStats({
-      cs: { total: 8, modes: { duel: 3, healing: 2, "clash-squad": 2, knife: 1 } },
-      br: { total: 5, modes: { "solo-drop": 2, "duo-rush": 1, "squad-wipe": 1, "zone-control": 1 } },
-    });
+    async function fetchStats() {
+      try {
+        const data = await apiFetch<QuickMatchStats>("/quickmatch/stats");
+        setStats(data);
+      } catch {
+        setStats(null);
+      }
+    }
+    fetchStats();
+    const id = setInterval(fetchStats, 8_000);
+    return () => clearInterval(id);
   }, []);
 
   const modeCounts = stats ? stats[typeKey]?.modes ?? null : null;

@@ -31,17 +31,6 @@ const TYPE_LABEL: Record<GameType, string> = {
   br: "Battle Royale",
 };
 
-function generateRoomId(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let id = "FF-";
-  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
-  return id;
-}
-
-function generatePassword(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function formatTime(s: number) { return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }
 
@@ -121,7 +110,7 @@ export default function QuickMatchQueue() {
     return () => clearInterval(id);
   }, [phase]);
 
-  // Join queue + poll + simulate match
+  // Join queue + poll queue stats + poll phone-host room credentials
   useEffect(() => {
     apiPost("/quickmatch/search/join", { gameType: typeKey, modeId }).catch(() => {});
 
@@ -130,26 +119,32 @@ export default function QuickMatchQueue() {
         const stats = await apiFetch<QueueStats>("/quickmatch/stats");
         setQueueCount(stats[typeKey]?.modes?.[modeId] ?? 0);
       } catch { /* ignore poll errors */ }
+
+      // Check if phone host has posted real room credentials
+      try {
+        const room = await apiFetch<{
+          status: string;
+          roomId?: string;
+          password?: string;
+        }>("/phone-host/room");
+        if (room.status === "ready" && room.roomId && room.password) {
+          stopPolling();
+          setPhase("found");
+          setMatchInfo({
+            roomId: room.roomId,
+            password: room.password,
+            mapName: meta.mapName,
+            format: meta.format,
+            maxPlayers: meta.maxPlayers,
+          });
+        }
+      } catch { /* ignore */ }
     };
     poll();
-    pollIdRef.current = setInterval(poll, 2000);
-
-    const delay = 8000 + Math.random() * 9000;
-    const matchTimer = setTimeout(() => {
-      stopPolling();
-      setPhase("found");
-      setMatchInfo({
-        roomId: generateRoomId(),
-        password: generatePassword(),
-        mapName: meta.mapName,
-        format: meta.format,
-        maxPlayers: meta.maxPlayers,
-      });
-    }, delay);
+    pollIdRef.current = setInterval(poll, 3000);
 
     return () => {
       stopPolling();
-      clearTimeout(matchTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

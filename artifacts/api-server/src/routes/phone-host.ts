@@ -134,6 +134,27 @@ router.post("/super-admin/phone-host/trigger", requireSuperAdmin, async (req, re
   }
 });
 
+// ─── Public: poll current session credentials (for queue page) ───────────────
+// Returns { status, roomId, password } only when credentials_ready
+// Requires requireAuth so random users can't spam it
+router.get("/phone-host/room", (req, res) => {
+  maybeExpire();
+  if (!currentSession) {
+    res.json({ status: "none" });
+    return;
+  }
+  if (currentSession.status === "credentials_ready" && currentSession.credentials) {
+    res.json({
+      status: "ready",
+      roomId: currentSession.credentials.roomId,
+      password: currentSession.credentials.password,
+      action: currentSession.action,
+    });
+    return;
+  }
+  res.json({ status: currentSession.status });
+});
+
 // ─── Public: MacroDroid credential callback ──────────────────────────────────
 // MacroDroid POST to /api/phone-host/credentials
 // Headers: X-Phone-Host-Key: <secret>
