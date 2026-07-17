@@ -62,7 +62,7 @@ type RoomStatus =
   | "waiting_credentials"
   | "ready";
 
-type Phase = "searching" | "preparing" | "found" | "joined";
+type Phase = "searching" | "preparing" | "found" | "joined" | "cancelled";
 
 const STATUS_MESSAGES = [
   "Searching for opponent…",
@@ -169,6 +169,10 @@ export default function QuickMatchQueue() {
     try { await apiPost("/quickmatch/search/leave", { gameType: typeKey, modeId }); } catch { /* best effort */ }
   }, [typeKey, modeId, stopPolling]);
 
+  const dismissActiveMatch = useCallback(async (id: string) => {
+    try { await apiPost("/quickmatch/match/dismiss", { matchId: id }); } catch { /* best effort */ }
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);
@@ -229,6 +233,15 @@ export default function QuickMatchQueue() {
             format: meta.format,
             maxPlayers: meta.maxPlayers,
           });
+        } else if (match.status === "none") {
+          // Match was dismissed by the other player while we were in preparing/found
+          setPhase((prev) => {
+            if (prev === "preparing" || prev === "found") {
+              stopPolling();
+              return "cancelled";
+            }
+            return prev;
+          });
         }
       } catch { /* ignore */ }
     };
@@ -248,6 +261,7 @@ export default function QuickMatchQueue() {
 
   const handleCancel = async () => {
     stopPolling();
+    if (matchId) await dismissActiveMatch(matchId);
     await leaveQueue();
     navigate("/quickmatch");
   };
@@ -801,6 +815,42 @@ export default function QuickMatchQueue() {
               border: "1px solid rgba(255,255,255,0.1)",
               animation: "slide-up 0.4s ease 0.32s both",
             }}
+          >
+            <span className="text-[13px] font-bold text-zinc-500">Back to Modes</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── MATCH CANCELLED (opponent left) ── */}
+      {phase === "cancelled" && (
+        <div
+          className="flex-1 flex flex-col items-center justify-center px-5 pb-10"
+          style={{ animation: "found-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both" }}
+        >
+          <div
+            className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
+            style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.35)" }}
+          >
+            <X className="w-9 h-9 text-red-400" strokeWidth={1.6} />
+          </div>
+          <h2 className="font-heading text-2xl font-black text-white tracking-tight mb-2">Match Cancelled</h2>
+          <p className="text-[13px] text-zinc-500 text-center mb-8">
+            Your opponent left before the room was ready.
+          </p>
+          <button
+            onClick={() => navigate(`/quickmatch/${typeKey}/${modeId}`)}
+            className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
+            style={{
+              background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+              boxShadow: `0 8px 32px ${accent}40`,
+            }}
+          >
+            <span className="text-[15px] font-extrabold text-white tracking-wide">Search Again</span>
+          </button>
+          <button
+            onClick={() => navigate("/quickmatch")}
+            className="w-full py-3 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
           >
             <span className="text-[13px] font-bold text-zinc-500">Back to Modes</span>
           </button>
