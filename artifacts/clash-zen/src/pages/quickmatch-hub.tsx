@@ -155,7 +155,7 @@ export default function QuickMatchHub() {
 
   const [gameType, setGameType] = useState<"cs" | "br">("cs");
   const [squadSize, setSquadSize] = useState("solo");
-  const [modeId, setModeId] = useState("duel");
+  const [modeId, setModeId] = useState("any");
   const [prizeIdx, setPrizeIdx] = useState(0);
   const [visible, setVisible] = useState(false);
   const [showTypeSheet, setShowTypeSheet] = useState(false);
@@ -326,7 +326,7 @@ export default function QuickMatchHub() {
         }}
       >
         <Dropdown
-          label="Size"
+          label="Team Size"
           options={squadOpts}
           value={squadSize}
           onChange={handleSquadChange}
