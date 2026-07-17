@@ -32,33 +32,33 @@ const SQUAD_OPTIONS: Record<string, { id: string; label: string }[]> = {
 const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; comingSoon?: boolean; random?: boolean }[]>> = {
   cs: {
     solo:  [
-      { id: "any",     label: "Any (Random)",  random: true       },
-      { id: "duel",    label: "Normal 1v1"                         },
-      { id: "healing", label: "Healing Battle"                     },
-      { id: "knife",   label: "Knife Fight"                        },
+      { id: "any",     label: "Any (Random)",  random: true        },
+      { id: "duel",    label: "Normal 1v1"                          },
+      { id: "healing", label: "Healing Battle", comingSoon: true    },
+      { id: "knife",   label: "Knife Fight",    comingSoon: true    },
     ],
     duo:   [
-      { id: "any",  label: "Any (Random)", random: true            },
-      { id: "duel", label: "2v2 Duel",     comingSoon: true        },
+      { id: "any",  label: "Any (Random)", random: true             },
+      { id: "duel", label: "2v2 Duel",     comingSoon: true         },
     ],
     squad: [
-      { id: "any",         label: "Any (Random)", random: true    },
-      { id: "clash-squad", label: "CS 4v4"                        },
+      { id: "any",         label: "Any (Random)", random: true      },
+      { id: "clash-squad", label: "CS 4v4",       comingSoon: true  },
     ],
   },
   br: {
     solo:  [
-      { id: "any",          label: "Any (Random)", random: true    },
-      { id: "solo-drop",    label: "Solo Drop",    comingSoon: true },
-      { id: "zone-control", label: "Zone Control", comingSoon: true },
+      { id: "any",          label: "Any (Random)", random: true     },
+      { id: "solo-drop",    label: "Solo Drop",    comingSoon: true  },
+      { id: "zone-control", label: "Zone Control", comingSoon: true  },
     ],
     duo:   [
-      { id: "any",      label: "Any (Random)", random: true       },
-      { id: "duo-rush", label: "Duo Rush",     comingSoon: true    },
+      { id: "any",      label: "Any (Random)", random: true        },
+      { id: "duo-rush", label: "Duo Rush",     comingSoon: true     },
     ],
     squad: [
-      { id: "any",        label: "Any (Random)", random: true     },
-      { id: "squad-wipe", label: "Squad Wipe",   comingSoon: true  },
+      { id: "any",        label: "Any (Random)", random: true      },
+      { id: "squad-wipe", label: "Squad Wipe",   comingSoon: true   },
     ],
   },
 };
