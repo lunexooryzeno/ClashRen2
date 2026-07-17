@@ -6,7 +6,7 @@ import {
   Search, RefreshCw, Download, X, Check, AlertTriangle, Crown,
   Activity, Send, Filter, Clock, ArrowUpRight, ArrowDownLeft, Loader2,
   Copy, UserCheck, UserX, ChevronLeft, Settings, Hash, Zap, Database, Menu, Images,
-  KeyRound, CheckCircle2, Target,
+  KeyRound, CheckCircle2, Target, Smartphone,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { motion, AnimatePresence } from "framer-motion";
