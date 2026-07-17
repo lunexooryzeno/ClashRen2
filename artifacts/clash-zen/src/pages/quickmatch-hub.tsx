@@ -160,6 +160,10 @@ export default function QuickMatchHub() {
   const [visible, setVisible] = useState(false);
   const [showTypeSheet, setShowTypeSheet] = useState(false);
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
+  const [queueStats, setQueueStats] = useState<{
+    cs: { total: number; modes: Record<string, number> };
+    br: { total: number; modes: Record<string, number> };
+  } | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
@@ -169,15 +173,19 @@ export default function QuickMatchHub() {
   useEffect(() => {
     async function fetchOnline() {
       try {
-        const stats = await apiFetch<{ cs: { total: number }; br: { total: number } }>("/quickmatch/stats");
+        const stats = await apiFetch<{
+          cs: { total: number; modes: Record<string, number> };
+          br: { total: number; modes: Record<string, number> };
+        }>("/quickmatch/stats");
+        setQueueStats(stats);
         const total = (stats.cs?.total ?? 0) + (stats.br?.total ?? 0);
-        setOnlineCount(total > 0 ? total : Math.floor(Math.random() * 8) + 5);
+        setOnlineCount(total);
       } catch {
-        setOnlineCount(Math.floor(Math.random() * 8) + 5);
+        setOnlineCount(null);
       }
     }
     fetchOnline();
-    const id = setInterval(fetchOnline, 10_000);
+    const id = setInterval(fetchOnline, 8_000);
     return () => clearInterval(id);
   }, []);
 
@@ -186,6 +194,15 @@ export default function QuickMatchHub() {
   const modeOpts = MODE_OPTIONS[gameType][squadSize] ?? [];
   const currentMode = modeOpts.find(m => m.id === modeId) ?? modeOpts[0];
   const isComingSoon = currentMode?.comingSoon ?? false;
+
+  // Real active player count for the current selection
+  const activePlayers = (() => {
+    if (!queueStats) return null;
+    const gt = queueStats[gameType];
+    if (!gt) return 0;
+    if (!currentMode || currentMode.id === "any") return gt.total;
+    return gt.modes[currentMode.id] ?? 0;
+  })();
 
   const accent = gameType === "cs" ? "#22d3ee" : "#f97316";
 
@@ -293,7 +310,7 @@ export default function QuickMatchHub() {
           >
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "qhub-pulse 1.4s ease-in-out infinite" }} />
             <span className="text-[11px] font-black text-emerald-400 tabular-nums">
-              {onlineCount !== null ? `${onlineCount} online` : "Live"}
+              {onlineCount !== null && onlineCount > 0 ? `${onlineCount} online` : "Live"}
             </span>
           </div>
         </div>
@@ -372,7 +389,7 @@ export default function QuickMatchHub() {
                 <Trophy className="w-7 h-7" style={{ color: accent }} strokeWidth={1.8} />
               </div>
               <div className="flex items-center gap-1.5">
-                <CoinIcon size={22} />
+                <CoinIcon width={22} />
                 <span className="text-[36px] font-black text-white leading-none tabular-nums">{pool.prize}</span>
               </div>
               <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Prize Pool</span>
@@ -384,9 +401,9 @@ export default function QuickMatchHub() {
             {/* Stats row */}
             <div className="grid grid-cols-3 divide-x divide-white/[0.05] px-2 py-4">
               {[
-                { label: "Entry", value: pool.entry, icon: <CoinIcon size={14} /> },
-                { label: "Prize", value: pool.prize, icon: <CoinIcon size={14} /> },
-                { label: "Active", value: pool.activePlayers, icon: <Users className="w-3 h-3 text-emerald-400" strokeWidth={2} /> },
+                { label: "Entry", value: pool.entry, icon: <CoinIcon width={14} /> },
+                { label: "Prize", value: pool.prize, icon: <CoinIcon width={14} /> },
+                { label: "Active", value: activePlayers !== null ? activePlayers : "—", icon: <Users className="w-3 h-3 text-emerald-400" strokeWidth={2} /> },
               ].map(({ label, value, icon }) => (
                 <div key={label} className="flex flex-col items-center gap-1 py-1">
                   <div className="flex items-center gap-1">
@@ -435,7 +452,7 @@ export default function QuickMatchHub() {
         {/* Real user balance */}
         <div className="flex items-center gap-2 mt-4 px-4 py-2.5 rounded-2xl"
           style={{ background: "rgba(250,204,21,0.07)", border: "1px solid rgba(250,204,21,0.18)" }}>
-          <CoinIcon size={16} />
+          <CoinIcon width={16} />
           <span className="text-[12px] font-bold text-yellow-300">Your Balance:</span>
           <span className="text-[13px] font-black text-white tabular-nums ml-auto">
             {(user?.diamondBalance ?? 0).toLocaleString()} coins
@@ -490,7 +507,7 @@ export default function QuickMatchHub() {
               </span>
               {!isComingSoon && (
                 <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "rgba(255,255,255,0.65)" }}>
-                  {currentMode?.id === "any" ? "Any mode" : currentMode?.label} · <CoinIcon size={11} /> {pool.entry} entry
+                  {currentMode?.id === "any" ? "Any mode" : currentMode?.label} · <CoinIcon width={11} /> {pool.entry} entry
                 </span>
               )}
             </div>
