@@ -5,6 +5,7 @@ import {
   walletTransactionsTable,
   balanceChangeLogsTable,
   securityFlagsTable,
+  quickmatchVerificationsTable,
 } from "@workspace/db";
 import { notify } from "./push.js";
 import { fetchCsCareerSnapshot } from "./quickmatch-hlgaming.js";
@@ -19,7 +20,7 @@ export const SNAPSHOT_DELAY_MS = 20_000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function creditPlayer(
+export async function creditPlayer(
   userId: number,
   amount: number,
   label: string,
@@ -67,7 +68,8 @@ export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void
         if (snap) {
           setPreSnapshot(match.id, player.userId, snap);
           console.log(
-            `[settlement] Pre-snapshot: player=${player.userId} uid=${player.uid} games=${snap.gamesPlayed} wins=${snap.wins}`,
+            `[settlement] Pre-snapshot: player=${player.userId} uid=${player.uid} ` +
+            `games=${snap.gamesPlayed} wins=${snap.wins}`,
           );
         }
       }),
@@ -84,7 +86,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     `[settlement] Settling match ${match.id} entry=${match.entryFee} prize=${match.prizeAmount}`,
   );
 
-  // Fetch post-snapshots for all players who have a UID
+  // Fetch post-snapshots
   const postSnaps: Record<string, Awaited<ReturnType<typeof fetchCsCareerSnapshot>>> = {};
   await Promise.allSettled(
     match.players
@@ -100,6 +102,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
       }),
   );
 
+  // ── Determine raw outcomes ────────────────────────────────────────────────
   type Outcome = "winner" | "loser" | "no_show" | "leaker";
   const outcomes: Record<string, Outcome> = {};
 
@@ -119,7 +122,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     if (gamesPlayedDelta <= 0) {
       outcomes[player.userId] = "no_show";
     } else if (!actionTaken) {
-      // Stats changed but player never used credentials in-app → credential leak
+      // Played (stats moved) but never used in-app credentials → credential leak
       outcomes[player.userId] = "leaker";
     } else if (winsDelta >= 1) {
       outcomes[player.userId] = "winner";
@@ -128,88 +131,130 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     }
   }
 
-  console.log(`[settlement] Match ${match.id} outcomes:`, outcomes);
+  console.log(`[settlement] Raw outcomes:`, outcomes);
 
   const allNoShow = match.players.every((p) => outcomes[p.userId] === "no_show");
-  const hasWinner = match.players.some((p) => outcomes[p.userId] === "winner");
 
+  // ── Persist verification records ──────────────────────────────────────────
   for (const player of match.players) {
-    const outcome   = outcomes[player.userId] ?? "no_show";
-    const userIdNum = Number(player.userId);
+    const pre  = match.preSnapshots[player.userId];
+    const post = postSnaps[player.userId];
+    const outcome = outcomes[player.userId];
+
+    const statDiff = pre && post ? JSON.stringify({
+      gamesPlayedDelta: post.gamesPlayed - pre.gamesPlayed,
+      winsDelta:        post.wins - pre.wins,
+      killsDelta:       post.kills - pre.kills,
+      damageDelta:      post.damage - pre.damage,
+      deathsDelta:      post.deaths - pre.deaths,
+    }) : null;
+
+    await db.insert(quickmatchVerificationsTable).values({
+      matchId:          match.id,
+      userId:           Number(player.userId),
+      ffUid:            player.uid ?? null,
+      preSnapshotAt:    pre  ? new Date(pre.fetchedAt)  : null,
+      preSnapshotData:  pre  ? JSON.stringify(pre)       : null,
+      postSnapshotAt:   post ? new Date(post.fetchedAt) : null,
+      postSnapshotData: post ? JSON.stringify(post)      : null,
+      statDiff,
+      outcome,
+      rewardGranted: outcome === "winner",
+    }).catch((err) => console.error("[settlement] Failed to persist verification:", err));
+  }
+
+  // ── Process outcomes per player ───────────────────────────────────────────
+  for (const player of match.players) {
+    const outcome       = outcomes[player.userId] ?? "no_show";
+    const opponentObj   = match.players.find((p) => p.userId !== player.userId);
+    const opponentOutcome = opponentObj ? outcomes[opponentObj.userId] : null;
+    const userId        = Number(player.userId);
 
     try {
-      switch (outcome) {
-        case "winner":
-          await creditPlayer(userIdNum, match.prizeAmount, "QuickMatch Prize", "quickmatch_prize");
-          await notify(userIdNum, {
+      if (outcome === "leaker") {
+        // Suspend for 12 hours
+        const suspendedUntil = new Date(Date.now() + 12 * 60 * 60 * 1000);
+        await db
+          .update(usersTable)
+          .set({ tournamentBanned: true, tournamentBannedUntil: suspendedUntil })
+          .where(eq(usersTable.id, userId));
+        await db.insert(securityFlagsTable).values({
+          userId,
+          type: "quickmatch_credential_leak",
+          severity: "high",
+          details: `Stats changed without in-app action. Match ID: ${match.id}`,
+          autoAction: "suspended_12h",
+        });
+        await notify(userId, {
+          type: "quickmatch_suspension",
+          title: "Account Suspended 12h",
+          body: "Credential leak detected. You are suspended from QuickMatch for 12 hours.",
+          url: "/#/quickmatch",
+        });
+
+      } else if (opponentOutcome === "leaker") {
+        // Opponent leaked credentials → refund this player
+        await creditPlayer(userId, match.entryFee, "QuickMatch Leak Cancel Refund", "quickmatch_leakrefund");
+        await notify(userId, {
+          type: "quickmatch_result",
+          title: "Match Refunded",
+          body: `Opponent credential leak detected. Your ${match.entryFee} coin entry fee is refunded.`,
+          url: "/#/quickmatch",
+        });
+
+      } else if (outcome === "winner") {
+        await creditPlayer(userId, match.prizeAmount, "QuickMatch Prize", "quickmatch_prize");
+        await notify(userId, {
+          type: "quickmatch_result",
+          title: "🏆 You Won!",
+          body: `+${match.prizeAmount} coins! Great game.`,
+          url: "/#/quickmatch",
+        });
+
+      } else if (outcome === "loser") {
+        if (opponentOutcome === "no_show") {
+          // Opponent didn't join — match cancelled → refund
+          await creditPlayer(userId, match.entryFee, "QuickMatch Opponent No-Show Refund", "quickmatch_noshowrefund");
+          await notify(userId, {
             type: "quickmatch_result",
-            title: "🏆 You Won!",
-            body: `You won ${match.prizeAmount} coins in QuickMatch. GG!`,
+            title: "Match Refunded",
+            body: `Your opponent didn't join the room. Your ${match.entryFee} coin entry fee is refunded.`,
             url: "/#/quickmatch",
           });
-          break;
-
-        case "loser":
-          await notify(userIdNum, {
+        } else {
+          // Both played — clean loss
+          await notify(userId, {
             type: "quickmatch_result",
             title: "Match Complete",
             body: "Good game! Better luck next time.",
             url: "/#/quickmatch",
           });
-          break;
+        }
 
-        case "no_show":
-          if (allNoShow) {
-            // Both players no-showed — full refund
-            await creditPlayer(
-              userIdNum,
-              match.entryFee,
-              "QuickMatch No-Show Refund",
-              "quickmatch_noshowrefund",
-            );
-            await notify(userIdNum, {
-              type: "quickmatch_result",
-              title: "Match Refunded",
-              body: `Both players didn't show. Your ${match.entryFee} coin entry fee was refunded.`,
-              url: "/#/quickmatch",
-            });
-          } else if (hasWinner) {
-            // Opponent played — no-show's entry is forfeited
-            await notify(userIdNum, {
-              type: "quickmatch_result",
-              title: "No-Show Detected",
-              body: "You didn't join the room in time. Your entry fee was forfeited.",
-              url: "/#/quickmatch",
-            });
-          }
-          break;
-
-        case "leaker": {
-          const suspendedUntil = new Date(Date.now() + 12 * 60 * 60 * 1000);
-          await db
-            .update(usersTable)
-            .set({ tournamentBanned: true, tournamentBannedUntil: suspendedUntil })
-            .where(eq(usersTable.id, userIdNum));
-          await db.insert(securityFlagsTable).values({
-            userId: userIdNum,
-            type: "quickmatch_credential_leak",
-            severity: "high",
-            details: `Stats changed but no in-app action recorded. Match ID: ${match.id}`,
-            autoAction: "suspended_12h",
-          });
-          await notify(userIdNum, {
-            type: "quickmatch_suspension",
-            title: "Account Suspended 12h",
-            body: "Credential leak detected. Suspended from QuickMatch for 12 hours.",
+      } else if (outcome === "no_show") {
+        if (allNoShow) {
+          // Both no-showed — both forfeit, no refund
+          await notify(userId, {
+            type: "quickmatch_result",
+            title: "Match Cancelled",
+            body: "Neither player joined the room. Entry fee forfeited.",
             url: "/#/quickmatch",
           });
-          break;
+        } else {
+          // This player alone no-showed
+          await notify(userId, {
+            type: "quickmatch_result",
+            title: "No-Show Detected",
+            body: "You didn't join the room in time. Entry fee forfeited.",
+            url: "/#/quickmatch",
+          });
         }
       }
     } catch (err) {
-      console.error(`[settlement] Failed to process outcome for player ${userIdNum}:`, err);
+      console.error(`[settlement] Failed to process outcome for player ${userId}:`, err);
     }
   }
 
   dismissMatch(match.id);
+  console.log(`[settlement] Match ${match.id} settled. Outcomes:`, outcomes);
 }

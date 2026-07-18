@@ -1,4 +1,4 @@
-interface SearchEntry {
+export interface SearchEntry {
   userId: string;
   gameType: string;
   modeId: string;
@@ -43,6 +43,19 @@ export function isInQueue(userId: string, gameType: string, modeId: string): boo
   return true;
 }
 
+// Returns all expired entries that should be refunded, then removes them
+export function sweepExpiredEntries(): SearchEntry[] {
+  const now = Date.now();
+  const expired: SearchEntry[] = [];
+  for (const [k, entry] of queue) {
+    if (now - entry.joinedAt > SEARCH_TTL_MS) {
+      expired.push({ ...entry });
+      queue.delete(k);
+    }
+  }
+  return expired;
+}
+
 const MODE_REQUIRED: Record<string, number> = {
   duel: 2,
   healing: 2,
@@ -54,9 +67,11 @@ const MODE_REQUIRED: Record<string, number> = {
   "zone-control": 2,
 };
 
+// Only matches players with the same entryFee to prevent economic mismatches
 export function tryMatch(
   gameType: string,
   modeId: string,
+  entryFee: number,
 ): string[] | null {
   const required = MODE_REQUIRED[modeId] ?? 2;
   const now = Date.now();
@@ -64,6 +79,7 @@ export function tryMatch(
 
   for (const [k, entry] of queue) {
     if (entry.gameType !== gameType || entry.modeId !== modeId) continue;
+    if (entry.entryFee !== entryFee) continue;
     if (now - entry.joinedAt > SEARCH_TTL_MS) {
       queue.delete(k);
       continue;

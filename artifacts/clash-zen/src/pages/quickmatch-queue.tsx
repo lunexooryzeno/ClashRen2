@@ -151,6 +151,7 @@ export default function QuickMatchQueue() {
   const [joinWindowSecs, setJoinWindowSecs] = useState<number | null>(null);
   const [entryFee, setEntryFee]     = useState(0);
   const [prizeAmount, setPrizeAmount] = useState(0);
+  const [cancelReason, setCancelReason] = useState<string | null>(null);
 
   const leftRef    = useRef(false);
   const pollIdRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -234,7 +235,12 @@ export default function QuickMatchQueue() {
       modeId,
       entryFee: storedEntry,
       prizeAmount: storedPrize,
-    }).catch(() => {});
+    }).catch((err: Error) => {
+      // 402 = insufficient balance; 403 = banned; any other error
+      const msg = err?.message ?? "Unable to join match";
+      setCancelReason(msg);
+      setPhase("cancelled");
+    });
 
     const poll = async () => {
       try {
@@ -893,9 +899,11 @@ export default function QuickMatchQueue() {
           >
             <X className="w-9 h-9 text-red-400" strokeWidth={1.6} />
           </div>
-          <h2 className="font-heading text-2xl font-black text-white tracking-tight mb-2">Match Cancelled</h2>
+          <h2 className="font-heading text-2xl font-black text-white tracking-tight mb-2">
+            {cancelReason ? "Cannot Join Match" : "Match Cancelled"}
+          </h2>
           <p className="text-[13px] text-zinc-500 text-center mb-8">
-            Your opponent left before the room was ready.
+            {cancelReason ?? "Your opponent left before the room was ready."}
           </p>
           <button
             onClick={() => navigate(`/quickmatch/${typeKey}/${modeId}`)}
