@@ -195,39 +195,30 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
     return;
   }
 
-  // Check quickmatch ban (reuses tournamentBanned)
+  // Check quickmatch-specific ban
   const userRow = await db.query.usersTable.findFirst({
     where: eq(usersTable.id, userIdNum),
     columns: {
       id: true,
       diamondBalance: true,
-      tournamentBanned: true,
-      tournamentBannedUntil: true,
+      quickmatchBannedUntil: true,
     },
   });
   if (!userRow) {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  if (userRow.tournamentBanned) {
-    const banUntil = userRow.tournamentBannedUntil;
-    if (!banUntil || banUntil > new Date()) {
-      res.status(403).json({
-        error: "You are suspended from QuickMatch",
-        bannedUntil: banUntil?.toISOString() ?? null,
-      });
-      return;
-    }
-    // Ban expired — auto-lift
-    await db
-      .update(usersTable)
-      .set({ tournamentBanned: false, tournamentBannedUntil: null })
-      .where(eq(usersTable.id, userIdNum));
+  if (userRow.quickmatchBannedUntil && userRow.quickmatchBannedUntil > new Date()) {
+    res.status(403).json({
+      error: "You are suspended from QuickMatch",
+      bannedUntil: userRow.quickmatchBannedUntil.toISOString(),
+    });
+    return;
   }
 
   // Balance check + deduction (DB transaction)
   if (entryFee > 0) {
-    let joinError: string | null = null;
+    let joinError: "user_not_found" | "insufficient_balance" | null = null;
     await db.transaction(async (tx: any) => {
       const uRes = await tx.execute(
         sql`SELECT id, diamond_balance FROM users WHERE id = ${userIdNum} FOR UPDATE`,
@@ -235,9 +226,9 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
       const lockedUser = ((uRes as any).rows ?? uRes)[0] as
         | { id: number; diamond_balance: number }
         | undefined;
-      if (!lockedUser) { joinError = "User not found"; return; }
+      if (!lockedUser) { joinError = "user_not_found"; return; }
       if (lockedUser.diamond_balance < entryFee) {
-        joinError = `Insufficient coins. Need ${entryFee}, have ${lockedUser.diamond_balance}`;
+        joinError = "insufficient_balance";
         return;
       }
       await tx
@@ -260,9 +251,13 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
         source: "quickmatch_join",
       });
     });
-    if (joinError) {
-      // HTTP 402 = payment required (standard for insufficient funds)
-      res.status(402).json({ error: joinError, code: "insufficient_balance" });
+    if (joinError === "user_not_found") {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (joinError === "insufficient_balance") {
+      // HTTP 402 = payment required
+      res.status(402).json({ error: "insufficient_balance" });
       return;
     }
   }

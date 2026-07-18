@@ -34,6 +34,7 @@ export const usersTable = pgTable("users", {
   tournamentBanned: boolean("tournament_banned").notNull().default(false),
   tournamentBannedAt: timestamp("tournament_banned_at"),
   tournamentBannedUntil: timestamp("tournament_banned_until"),
+  quickmatchBannedUntil: timestamp("quickmatch_banned_until"),
   withdrawalBanned: boolean("withdrawal_banned").notNull().default(false),
   withdrawalBannedAt: timestamp("withdrawal_banned_at"),
   topupBanned: boolean("topup_banned").notNull().default(false),
