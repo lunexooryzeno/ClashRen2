@@ -1,0 +1,213 @@
+{
+  "source": "Free Fire Player Stats",
+  "result": {
+    "meta": {
+      "author": "HL GAMING OFFICIAL",
+      "website": "hlgamingofficial.com",
+      "timestamp": "2025-06-23T05:58:55.033Z"
+    },
+    "data": {
+      "BR_CAREER": {
+        "Duo": {
+          "account_id": 12345678,
+          "deaths": 81,
+          "games_played": 95,
+          "help_ups": 12,
+          "kills": 222,
+          "knockdowns": 167,
+          "one_game_most_kills": 31,
+          "top_5": 45,
+          "total_damage_taken": 69400,
+          "total_distance_travelled": "321696 metres",
+          "total_headshots_kills": 18,
+          "total_survival_time": "55504 seconds",
+          "vechicle_eliminations": 8,
+          "wins": 14
+        },
+        "Solo": {
+          "account_id": 12345678,
+          "deaths": 279,
+          "games_played": 377,
+          "kills": 1273,
+          "one_game_most_kills": 34,
+          "top_10": 220,
+          "total_damage_taken": 352207,
+          "total_distance_travelled": "1387695 metres",
+          "total_headshots_kills": 162,
+          "total_survival_time": "229158 seconds",
+          "vechicle_eliminations": 24,
+          "wins": 98
+        },
+        "Squad": {
+          "account_id": 12345678,
+          "deaths": 1976,
+          "games_played": 3549,
+          "help_ups": 1735,
+          "kills": 9406,
+          "knockdowns": 8187,
+          "one_game_most_kills": 23,
+          "top_3": 2252,
+          "total_damage_taken": 4736184,
+          "total_distance_travelled": "14784601 metres",
+          "total_headshots_kills": 824,
+          "total_survival_time": "2577369 seconds",
+          "vechicle_eliminations": 18,
+          "wins": 1573
+        }
+      },
+      "BR_CLASSIC": {
+        "Duo": {
+          "account_id": 12345678,
+          "deaths": 3,
+          "games_played": 4,
+          "help_ups": 0,
+          "kills": 9,
+          "knockdowns": 9,
+          "one_game_most_kills": 5,
+          "top_5": 4,
+          "total_damage_taken": 2814,
+          "total_distance_travelled": "13103 metres",
+          "total_headshots_kills": 0,
+          "total_survival_time": "2660 seconds",
+          "vechicle_eliminations": 0,
+          "wins": 1
+        },
+        "Solo": {
+          "account_id": 0,
+          "deaths": 0,
+          "games_played": 0,
+          "kills": 0,
+          "one_game_most_kills": 0,
+          "top_10": 0,
+          "total_damage_taken": 0,
+          "total_distance_travelled": "0 metres",
+          "total_headshots_kills": 0,
+          "total_survival_time": "0 seconds",
+          "vechicle_eliminations": 0,
+          "wins": 0
+        },
+        "Squad": {
+          "account_id": 0,
+          "deaths": 0,
+          "games_played": 0,
+          "help_ups": 0,
+          "kills": 0,
+          "knockdowns": 0,
+          "one_game_most_kills": 0,
+          "top_3": 0,
+          "total_damage_taken": 0,
+          "total_distance_travelled": "0 metres",
+          "total_headshots_kills": 0,
+          "total_survival_time": "0 seconds",
+          "vechicle_eliminations": 0,
+          "wins": 0
+        }
+      },
+      "BR_RANKED": {
+        "Duo": {
+          "account_id": 12345678,
+          "deaths": 0,
+          "games_played": 0,
+          "help_ups": 0,
+          "kills": 0,
+          "knockdowns": 0,
+          "one_game_most_kills": 0,
+          "top_5": 0,
+          "total_damage_taken": 0,
+          "total_distance_travelled": "0 metres",
+          "total_headshots_kills": 0,
+          "total_survival_time": "0 seconds",
+          "vechicle_eliminations": 0,
+          "wins": 0
+        },
+        "Solo": {
+          "account_id": 12345678,
+          "deaths": 6,
+          "games_played": 8,
+          "kills": 19,
+          "one_game_most_kills": 6,
+          "top_10": 5,
+          "total_damage_taken": 5121,
+          "total_distance_travelled": "38637 metres",
+          "total_headshots_kills": 1,
+          "total_survival_time": "4948 seconds",
+          "vechicle_eliminations": 0,
+          "wins": 2
+        },
+        "Squad": {
+          "account_id": 12345678,
+          "deaths": 56,
+          "games_played": 66,
+          "help_ups": 13,
+          "kills": 134,
+          "knockdowns": 158,
+          "one_game_most_kills": 13,
+          "top_3": 23,
+          "total_damage_taken": 65242,
+          "total_distance_travelled": "301287 metres",
+          "total_headshots_kills": 6,
+          "total_survival_time": "41377 seconds",
+          "vechicle_eliminations": 0,
+          "wins": 10
+        }
+      },
+      "CS_CAREER": {
+        "account_id": 12345678,
+        "assists": 3891,
+        "damage": 3563207,
+        "deaths": 4876,
+        "double_kills": 1351,
+        "games_played": 1780,
+        "headshots": 633,
+        "kills": 7180,
+        "knockdowns": 8548,
+        "mvp_count": 554,
+        "quadra_kills": 69,
+        "revives": 1086,
+        "triple_kills": 402,
+        "wins": 1132
+      },
+      "CS_CLASSIC": {
+        "account_id": 12345678,
+        "assists": 0,
+        "damage": 134,
+        "deaths": 10,
+        "double_kills": 0,
+        "games_played": 2,
+        "headshots": 0,
+        "kills": 0,
+        "knockdowns": 0,
+        "mvp_count": 0,
+        "quadra_kills": 0,
+        "revives": 0,
+        "triple_kills": 0,
+        "wins": 0
+      },
+      "CS_RANKED": {
+        "account_id": 12345678,
+        "assists": 113,
+        "damage": 88571,
+        "deaths": 148,
+        "double_kills": 31,
+        "games_played": 51,
+        "headshots": 17,
+        "kills": 182,
+        "knockdowns": 226,
+        "max_damage_one_game": 4157,
+        "max_kills_one_game": 9,
+        "mvp_count": 21,
+        "quadra_kills": 0,
+        "revives": 38,
+        "throwing_kills": 2,
+        "triple_kills": 9,
+        "winning_streak": 6,
+        "wins": 31
+      }
+    }
+  },
+  "usage": {
+    "usedToday": 11,
+    "dailyLimit": 25,
+    "remainingToday": 14
+  }
+}
