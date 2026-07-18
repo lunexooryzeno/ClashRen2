@@ -14,6 +14,10 @@ function key(userId: string, gameType: string, modeId: string): string {
   return `${userId}:${gameType}:${modeId}`;
 }
 
+function isExpired(entry: SearchEntry): boolean {
+  return Date.now() - entry.joinedAt > SEARCH_TTL_MS;
+}
+
 export function joinQueue(userId: string, gameType: string, modeId: string, entryFee = 0): void {
   queue.set(key(userId, gameType, modeId), {
     userId,
@@ -36,19 +40,17 @@ export function getQueueEntryFee(userId: string, gameType: string, modeId: strin
 export function isInQueue(userId: string, gameType: string, modeId: string): boolean {
   const entry = queue.get(key(userId, gameType, modeId));
   if (!entry) return false;
-  if (Date.now() - entry.joinedAt > SEARCH_TTL_MS) {
-    queue.delete(key(userId, gameType, modeId));
-    return false;
-  }
+  // NOTE: do NOT delete here — sweepExpiredEntries() is the sole deletion path for TTL refunds
+  if (isExpired(entry)) return false;
   return true;
 }
 
-// Returns all expired entries that should be refunded, then removes them
+// Sole deletion path for TTL-expired entries.
+// Returns removed entries so the caller can issue wallet refunds.
 export function sweepExpiredEntries(): SearchEntry[] {
-  const now = Date.now();
   const expired: SearchEntry[] = [];
   for (const [k, entry] of queue) {
-    if (now - entry.joinedAt > SEARCH_TTL_MS) {
+    if (isExpired(entry)) {
       expired.push({ ...entry });
       queue.delete(k);
     }
@@ -67,23 +69,21 @@ const MODE_REQUIRED: Record<string, number> = {
   "zone-control": 2,
 };
 
-// Only matches players with the same entryFee to prevent economic mismatches
+// Only matches players with the same entryFee to prevent economic mismatches.
+// Does NOT delete expired entries — leaves them for sweepExpiredEntries.
 export function tryMatch(
   gameType: string,
   modeId: string,
   entryFee: number,
 ): string[] | null {
   const required = MODE_REQUIRED[modeId] ?? 2;
-  const now = Date.now();
   const eligible: SearchEntry[] = [];
 
-  for (const [k, entry] of queue) {
+  for (const entry of queue.values()) {
     if (entry.gameType !== gameType || entry.modeId !== modeId) continue;
     if (entry.entryFee !== entryFee) continue;
-    if (now - entry.joinedAt > SEARCH_TTL_MS) {
-      queue.delete(k);
-      continue;
-    }
+    // Skip expired — sweepExpiredEntries handles deletion/refund
+    if (isExpired(entry)) continue;
     eligible.push(entry);
     if (eligible.length === required) break;
   }
@@ -101,8 +101,6 @@ export function getQueueStats(): {
   cs: { total: number; modes: Record<string, number> };
   br: { total: number; modes: Record<string, number> };
 } {
-  const now = Date.now();
-
   const cs: Record<string, number> = {
     duel: 0,
     healing: 0,
@@ -116,11 +114,9 @@ export function getQueueStats(): {
     "zone-control": 0,
   };
 
-  for (const [k, entry] of queue) {
-    if (now - entry.joinedAt > SEARCH_TTL_MS) {
-      queue.delete(k);
-      continue;
-    }
+  for (const entry of queue.values()) {
+    // Skip expired — sweepExpiredEntries handles deletion/refund
+    if (isExpired(entry)) continue;
     if (entry.gameType === "cs" && entry.modeId in cs) {
       cs[entry.modeId]++;
     } else if (entry.gameType === "br" && entry.modeId in br) {

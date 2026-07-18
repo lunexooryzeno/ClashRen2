@@ -200,9 +200,9 @@ export default function QuickMatchQueue() {
 
   const trackAction = useCallback(async (action: string) => {
     try {
-      await apiPost("/quickmatch/match/action", { action });
+      await apiPost("/quickmatch/match/action", { action, matchId });
     } catch { /* best effort */ }
-  }, []);
+  }, [matchId]);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
@@ -337,9 +337,12 @@ export default function QuickMatchQueue() {
   };
 
   const handleOpenInFF = async () => {
-    if (!matchInfo?.openInFfUrl) return;
-    await trackAction("open_in_ff");
-    window.open(matchInfo.openInFfUrl, "_blank");
+    if (!matchInfo) return;
+    // Use phone-host provided URL or construct fallback deep link from credentials
+    const url = matchInfo.openInFfUrl
+      ?? `freefire://customroom?roomid=${encodeURIComponent(matchInfo.roomId)}&password=${encodeURIComponent(matchInfo.password)}`;
+    await trackAction("open_ff");
+    window.open(url, "_blank");
   };
 
   function copyText(text: string, which: "room" | "pass") {
@@ -347,7 +350,7 @@ export default function QuickMatchQueue() {
       setCopied(which);
       setTimeout(() => setCopied(null), 2500);
     });
-    const action = which === "room" ? "copy_room_id" : "copy_password";
+    const action = which === "room" ? "copy_room" : "copy_pass";
     trackAction(action);
   }
 

@@ -17,14 +17,21 @@ import {
 } from "./quickmatch-matches.js";
 
 export const SNAPSHOT_DELAY_MS = 20_000;
+// Join-window: players must act within this many ms of credentials arriving
+const JOIN_WINDOW_MS = 20_000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Credit a player's wallet with the given amount.
+ * Use txType "prize" for winnings, "withdraw_refund" for any refund.
+ */
 export async function creditPlayer(
   userId: number,
   amount: number,
   label: string,
   source: string,
+  txType: "prize" | "withdraw_refund" = "prize",
 ): Promise<void> {
   if (amount <= 0) return;
   await db.transaction(async (tx: any) => {
@@ -41,7 +48,7 @@ export async function creditPlayer(
       .where(eq(usersTable.id, userId));
     await tx.insert(walletTransactionsTable).values({
       userId,
-      type: "prize",
+      type: txType,
       amount,
       label,
     });
@@ -102,6 +109,19 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
       }),
   );
 
+  // ── 20-second join-window deadline ───────────────────────────────────────
+  const windowDeadline = match.credentialsReadyAt
+    ? new Date(match.credentialsReadyAt).getTime() + JOIN_WINDOW_MS
+    : null;
+
+  // Returns true only if the player acted within the join window
+  const withinWindow = (userId: string): boolean => {
+    const at = match.actionTaken[userId];
+    if (!at) return false;
+    if (!windowDeadline) return true;
+    return new Date(at).getTime() <= windowDeadline;
+  };
+
   // ── Determine raw outcomes ────────────────────────────────────────────────
   type Outcome = "winner" | "loser" | "no_show" | "leaker";
   const outcomes: Record<string, Outcome> = {};
@@ -109,7 +129,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   for (const player of match.players) {
     const pre         = match.preSnapshots[player.userId];
     const post        = postSnaps[player.userId];
-    const actionTaken = !!match.actionTaken[player.userId];
+    const actedInTime = withinWindow(player.userId);
 
     if (!pre || !post) {
       outcomes[player.userId] = "no_show";
@@ -121,8 +141,8 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
     if (gamesPlayedDelta <= 0) {
       outcomes[player.userId] = "no_show";
-    } else if (!actionTaken) {
-      // Played (stats moved) but never used in-app credentials → credential leak
+    } else if (!actedInTime) {
+      // Stats moved but player never used in-app credentials within the window
       outcomes[player.userId] = "leaker";
     } else if (winsDelta >= 1) {
       outcomes[player.userId] = "winner";
@@ -137,8 +157,8 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
   // ── Persist verification records ──────────────────────────────────────────
   for (const player of match.players) {
-    const pre  = match.preSnapshots[player.userId];
-    const post = postSnaps[player.userId];
+    const pre     = match.preSnapshots[player.userId];
+    const post    = postSnaps[player.userId];
     const outcome = outcomes[player.userId];
 
     const statDiff = pre && post ? JSON.stringify({
@@ -165,10 +185,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
   // ── Process outcomes per player ───────────────────────────────────────────
   for (const player of match.players) {
-    const outcome       = outcomes[player.userId] ?? "no_show";
-    const opponentObj   = match.players.find((p) => p.userId !== player.userId);
+    const outcome         = outcomes[player.userId] ?? "no_show";
+    const opponentObj     = match.players.find((p) => p.userId !== player.userId);
     const opponentOutcome = opponentObj ? outcomes[opponentObj.userId] : null;
-    const userId        = Number(player.userId);
+    const userId          = Number(player.userId);
 
     try {
       if (outcome === "leaker") {
@@ -182,7 +202,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
           userId,
           type: "quickmatch_credential_leak",
           severity: "high",
-          details: `Stats changed without in-app action. Match ID: ${match.id}`,
+          details: `Stats changed without in-app action within join window. Match ID: ${match.id}`,
           autoAction: "suspended_12h",
         });
         await notify(userId, {
@@ -193,8 +213,8 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         });
 
       } else if (opponentOutcome === "leaker") {
-        // Opponent leaked credentials → refund this player
-        await creditPlayer(userId, match.entryFee, "QuickMatch Leak Cancel Refund", "quickmatch_leakrefund");
+        // Opponent leaked → refund this player's entry fee
+        await creditPlayer(userId, match.entryFee, "QuickMatch Leak Cancel Refund", "quickmatch_leakrefund", "withdraw_refund");
         await notify(userId, {
           type: "quickmatch_result",
           title: "Match Refunded",
@@ -203,7 +223,8 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         });
 
       } else if (outcome === "winner") {
-        await creditPlayer(userId, match.prizeAmount, "QuickMatch Prize", "quickmatch_prize");
+        // Prize payout — use "prize" transaction type
+        await creditPlayer(userId, match.prizeAmount, "QuickMatch Prize", "quickmatch_prize", "prize");
         await notify(userId, {
           type: "quickmatch_result",
           title: "🏆 You Won!",
@@ -213,8 +234,8 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
       } else if (outcome === "loser") {
         if (opponentOutcome === "no_show") {
-          // Opponent didn't join — match cancelled → refund
-          await creditPlayer(userId, match.entryFee, "QuickMatch Opponent No-Show Refund", "quickmatch_noshowrefund");
+          // Opponent no-showed → match cancelled → refund
+          await creditPlayer(userId, match.entryFee, "QuickMatch Opponent No-Show Refund", "quickmatch_noshowrefund", "withdraw_refund");
           await notify(userId, {
             type: "quickmatch_result",
             title: "Match Refunded",
@@ -222,7 +243,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             url: "/#/quickmatch",
           });
         } else {
-          // Both played — clean loss
+          // Both played — clean loss, entry forfeited
           await notify(userId, {
             type: "quickmatch_result",
             title: "Match Complete",
@@ -241,7 +262,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             url: "/#/quickmatch",
           });
         } else {
-          // This player alone no-showed
+          // Only this player no-showed
           await notify(userId, {
             type: "quickmatch_result",
             title: "No-Show Detected",

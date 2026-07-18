@@ -402,13 +402,14 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
 // ─── Track join-intent action ─────────────────────────────────────────────────
 router.post("/quickmatch/match/action", requireAuth, (req, res) => {
   const userId = String(req.user!.userId);
-  const { action } = req.body as { action?: string };
-  if (!action || !["copy_room_id", "copy_password", "open_in_ff"].includes(action)) {
-    res.status(400).json({ error: "Invalid action. Use: copy_room_id, copy_password, open_in_ff" });
+  const { action, matchId: reqMatchId } = req.body as { action?: string; matchId?: string };
+  if (!action || !["copy_room", "copy_pass", "open_ff"].includes(action)) {
+    res.status(400).json({ error: "Invalid action. Use: copy_room, copy_pass, open_ff" });
     return;
   }
-  const match = getMatchForPlayer(userId);
-  if (!match) {
+  // Prefer matchId from body; fall back to player's active match
+  const match = (reqMatchId ? getMatchById(reqMatchId) : null) ?? getMatchForPlayer(userId);
+  if (!match || !match.playerIds.includes(userId)) {
     res.status(404).json({ error: "No active match" });
     return;
   }
