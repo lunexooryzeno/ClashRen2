@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, unique } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 
 export const quickmatchVerificationsTable = pgTable("quickmatch_verifications", {
@@ -14,6 +14,8 @@ export const quickmatchVerificationsTable = pgTable("quickmatch_verifications", 
   outcome: text("outcome"),
   rewardGranted: boolean("reward_granted").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (t) => ({
+  uniqVerifMatchPlayer: unique("uq_qm_verif_match_user").on(t.matchId, t.userId),
+}));
 
 export type QuickmatchVerification = typeof quickmatchVerificationsTable.$inferSelect;

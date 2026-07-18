@@ -18,14 +18,17 @@ function isExpired(entry: SearchEntry): boolean {
   return Date.now() - entry.joinedAt > SEARCH_TTL_MS;
 }
 
-export function joinQueue(userId: string, gameType: string, modeId: string, entryFee = 0): void {
-  queue.set(key(userId, gameType, modeId), {
-    userId,
-    gameType,
-    modeId,
-    joinedAt: Date.now(),
-    entryFee,
-  });
+/**
+ * Add (or replace) a player in the queue.
+ * Returns the previous expired entry for this slot, if any — the caller MUST
+ * issue a wallet refund for that entry to prevent fee loss on rejoin.
+ */
+export function joinQueue(userId: string, gameType: string, modeId: string, entryFee = 0): SearchEntry | null {
+  const k = key(userId, gameType, modeId);
+  const existing = queue.get(k);
+  const expiredEntry = (existing && isExpired(existing)) ? { ...existing } : null;
+  queue.set(k, { userId, gameType, modeId, joinedAt: Date.now(), entryFee });
+  return expiredEntry;
 }
 
 export function leaveQueue(userId: string, gameType: string, modeId: string): void {

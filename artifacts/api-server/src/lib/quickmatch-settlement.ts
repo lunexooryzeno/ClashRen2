@@ -23,8 +23,8 @@ const JOIN_WINDOW_MS = 20_000;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Credit a player's wallet with the given amount.
- * Use txType "prize" for winnings, "withdraw_refund" for any refund.
+ * Credit a player's wallet.
+ * txType "prize" = winnings; "withdraw_refund" = any refund.
  */
 export async function creditPlayer(
   userId: number,
@@ -64,7 +64,7 @@ export async function creditPlayer(
   });
 }
 
-// ─── Pre-snapshot (called when credentials arrive) ────────────────────────────
+// ─── Pre-snapshot: persisted immediately to DB when credentials arrive ────────
 
 export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void> {
   await Promise.allSettled(
@@ -72,13 +72,28 @@ export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void
       .filter((p) => !!p.uid)
       .map(async (player) => {
         const snap = await fetchCsCareerSnapshot(player.uid!);
-        if (snap) {
-          setPreSnapshot(match.id, player.userId, snap);
-          console.log(
-            `[settlement] Pre-snapshot: player=${player.userId} uid=${player.uid} ` +
-            `games=${snap.gamesPlayed} wins=${snap.wins}`,
-          );
-        }
+        if (!snap) return;
+
+        setPreSnapshot(match.id, player.userId, snap);
+        console.log(
+          `[settlement] Pre-snapshot: player=${player.userId} uid=${player.uid} ` +
+          `games=${snap.gamesPlayed} wins=${snap.wins}`,
+        );
+
+        // Persist immediately — upsert so credential re-attach is idempotent
+        await db.insert(quickmatchVerificationsTable).values({
+          matchId:         match.id,
+          userId:          Number(player.userId),
+          ffUid:           player.uid ?? null,
+          preSnapshotAt:   new Date(snap.fetchedAt),
+          preSnapshotData: JSON.stringify(snap),
+        }).onConflictDoUpdate({
+          target: [quickmatchVerificationsTable.matchId, quickmatchVerificationsTable.userId],
+          set: {
+            preSnapshotAt:   new Date(snap.fetchedAt),
+            preSnapshotData: JSON.stringify(snap),
+          },
+        }).catch((err) => console.error("[settlement] Failed to persist pre-snapshot:", err));
       }),
   );
 }
@@ -114,7 +129,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     ? new Date(match.credentialsReadyAt).getTime() + JOIN_WINDOW_MS
     : null;
 
-  // Returns true only if the player acted within the join window
   const withinWindow = (userId: string): boolean => {
     const at = match.actionTaken[userId];
     if (!at) return false;
@@ -155,7 +169,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
   const allNoShow = match.players.every((p) => outcomes[p.userId] === "no_show");
 
-  // ── Persist verification records ──────────────────────────────────────────
+  // ── Upsert verification records (update pre-existing rows or insert) ──────
   for (const player of match.players) {
     const pre     = match.preSnapshots[player.userId];
     const post    = postSnaps[player.userId];
@@ -180,7 +194,16 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
       statDiff,
       outcome,
       rewardGranted: outcome === "winner",
-    }).catch((err) => console.error("[settlement] Failed to persist verification:", err));
+    }).onConflictDoUpdate({
+      target: [quickmatchVerificationsTable.matchId, quickmatchVerificationsTable.userId],
+      set: {
+        postSnapshotAt:   post ? new Date(post.fetchedAt) : null,
+        postSnapshotData: post ? JSON.stringify(post)      : null,
+        statDiff,
+        outcome,
+        rewardGranted: outcome === "winner",
+      },
+    }).catch((err) => console.error("[settlement] Failed to upsert verification:", err));
   }
 
   // ── Process outcomes per player ───────────────────────────────────────────
@@ -192,7 +215,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
     try {
       if (outcome === "leaker") {
-        // Suspend for 12 hours
         const suspendedUntil = new Date(Date.now() + 12 * 60 * 60 * 1000);
         await db
           .update(usersTable)
@@ -213,7 +235,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         });
 
       } else if (opponentOutcome === "leaker") {
-        // Opponent leaked → refund this player's entry fee
         await creditPlayer(userId, match.entryFee, "QuickMatch Leak Cancel Refund", "quickmatch_leakrefund", "withdraw_refund");
         await notify(userId, {
           type: "quickmatch_result",
@@ -223,7 +244,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         });
 
       } else if (outcome === "winner") {
-        // Prize payout — use "prize" transaction type
         await creditPlayer(userId, match.prizeAmount, "QuickMatch Prize", "quickmatch_prize", "prize");
         await notify(userId, {
           type: "quickmatch_result",
@@ -234,7 +254,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
       } else if (outcome === "loser") {
         if (opponentOutcome === "no_show") {
-          // Opponent no-showed → match cancelled → refund
           await creditPlayer(userId, match.entryFee, "QuickMatch Opponent No-Show Refund", "quickmatch_noshowrefund", "withdraw_refund");
           await notify(userId, {
             type: "quickmatch_result",
@@ -243,7 +262,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             url: "/#/quickmatch",
           });
         } else {
-          // Both played — clean loss, entry forfeited
           await notify(userId, {
             type: "quickmatch_result",
             title: "Match Complete",
@@ -254,7 +272,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
       } else if (outcome === "no_show") {
         if (allNoShow) {
-          // Both no-showed — both forfeit, no refund
           await notify(userId, {
             type: "quickmatch_result",
             title: "Match Cancelled",
@@ -262,7 +279,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             url: "/#/quickmatch",
           });
         } else {
-          // Only this player no-showed
           await notify(userId, {
             type: "quickmatch_result",
             title: "No-Show Detected",

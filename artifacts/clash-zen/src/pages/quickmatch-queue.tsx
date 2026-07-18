@@ -852,33 +852,28 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          {/* Open in FF button (if deep link available) */}
-          {matchInfo.openInFfUrl && (
-            <button
-              onClick={handleOpenInFF}
-              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
-              style={{
-                background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
-                boxShadow: `0 8px 32px ${accent}45`,
-                animation: "slide-up 0.4s ease 0.2s both",
-              }}
-            >
-              <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
-              <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
-            </button>
-          )}
+          {/* Open in Free Fire — always shown; uses provided URL or fallback deep link */}
+          <button
+            onClick={handleOpenInFF}
+            className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
+            style={{
+              background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+              boxShadow: `0 8px 32px ${accent}45`,
+              animation: "slide-up 0.4s ease 0.2s both",
+            }}
+          >
+            <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
+            <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
+          </button>
 
-          {/* Join Room CTA */}
+          {/* Join Room CTA — secondary action */}
           <button
             onClick={handleJoinRoom}
             disabled={joining}
             className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3 disabled:opacity-70"
             style={{
-              background: matchInfo.openInFfUrl
-                ? "rgba(255,255,255,0.06)"
-                : `linear-gradient(135deg, ${accent}, ${accent}bb)`,
-              border: matchInfo.openInFfUrl ? "1px solid rgba(255,255,255,0.12)" : "none",
-              boxShadow: matchInfo.openInFfUrl ? "none" : `0 8px 32px ${accent}45`,
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
               animation: "slide-up 0.4s ease 0.25s both",
             }}
           >
@@ -1040,20 +1035,18 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          {/* Open in FF (if available) */}
-          {matchInfo.openInFfUrl && (
-            <button
-              onClick={handleOpenInFF}
-              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
-              style={{
-                background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
-                boxShadow: `0 8px 32px ${accent}40`,
-              }}
-            >
-              <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
-              <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
-            </button>
-          )}
+          {/* Open in Free Fire — always shown; uses provided URL or fallback deep link */}
+          <button
+            onClick={handleOpenInFF}
+            className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
+            style={{
+              background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+              boxShadow: `0 8px 32px ${accent}40`,
+            }}
+          >
+            <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
+            <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
+          </button>
 
           <button
             onClick={() => navigate("/")}

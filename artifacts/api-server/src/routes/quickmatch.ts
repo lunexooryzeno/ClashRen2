@@ -267,8 +267,12 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
     }
   }
 
-  // Enqueue player
-  joinQueue(userId, valid.gameType, valid.modeId, entryFee);
+  // Enqueue player — may return an expired entry that must be refunded
+  const expiredEntry = joinQueue(userId, valid.gameType, valid.modeId, entryFee);
+  if (expiredEntry && expiredEntry.entryFee > 0) {
+    refundQueueEntry(Number(userId), expiredEntry.entryFee, "QuickMatch Queue Timeout Refund")
+      .catch((err) => console.error("[quickmatch] Expired-entry refund failed:", err));
+  }
 
   // Attempt match-making — only match players with same entry fee
   if (MODE_MACRO_SUPPORTED.has(valid.modeId) && !hasPendingRoomRequest()) {
@@ -363,9 +367,9 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
   const opponentRaw = match.players.find((p) => p.userId !== userId) ?? null;
   const meRaw       = match.players.find((p) => p.userId === userId)  ?? null;
 
-  // Strip UID from opponent (keep own UID for display purposes)
+  // Strip UIDs from both players — UIDs must never be client-facing
   const opponent = opponentRaw ? { ...opponentRaw, uid: null } : null;
-  const me       = meRaw;
+  const me       = meRaw       ? { ...meRaw,       uid: null } : null;
 
   if (roomStatus === "ready" && match.credentials) {
     res.json({
