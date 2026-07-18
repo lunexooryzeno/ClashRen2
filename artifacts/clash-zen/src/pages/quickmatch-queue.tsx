@@ -3,8 +3,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ArrowLeft, Users, Clock, Copy, Check, Shield, Crosshair,
   Heart, Scissors, Target, Wind, Map as MapIcon, X, Swords, CheckCircle2,
-  Zap, RotateCcw, Cpu, KeyRound,
+  Zap, RotateCcw, Cpu, KeyRound, ExternalLink,
 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { apiFetch, apiPost } from "@/lib/api";
 
 type GameType = "cs" | "br";
@@ -19,12 +20,12 @@ const MODE_META: Record<string, {
 }> = {
   duel:           { name: "1v1 Duel",       format: "1v1",  accent: "#ef4444", Icon: Crosshair, mapName: "Bermuda Duel Zone",  maxPlayers: 2  },
   healing:        { name: "Healing Battle",  format: "1v1",  accent: "#ec4899", Icon: Heart,     mapName: "Purgatory Arena",    maxPlayers: 2  },
-  "clash-squad":  { name: "Clash Squad",    format: "4v4",  accent: "#f97316", Icon: Shield,    mapName: "Bermuda Clash Zone", maxPlayers: 8  },
-  knife:          { name: "Knife Fight",    format: "1v1",  accent: "#a78bfa", Icon: Scissors,  mapName: "Kalahari Pit",       maxPlayers: 2  },
-  "solo-drop":    { name: "Solo Drop",      format: "Solo", accent: "#3b82f6", Icon: Target,    mapName: "Bermuda Classic",    maxPlayers: 12 },
-  "duo-rush":     { name: "Duo Rush",       format: "2v2",  accent: "#06b6d4", Icon: Users,     mapName: "Purgatory Rush",     maxPlayers: 4  },
-  "squad-wipe":   { name: "Squad Wipe",     format: "4v4",  accent: "#8b5cf6", Icon: Swords,    mapName: "Kalahari Showdown",  maxPlayers: 8  },
-  "zone-control": { name: "Zone Control",   format: "Solo", accent: "#22c55e", Icon: MapIcon,   mapName: "Alpine Zone",        maxPlayers: 10 },
+  "clash-squad":  { name: "Clash Squad",     format: "4v4",  accent: "#f97316", Icon: Shield,    mapName: "Bermuda Clash Zone", maxPlayers: 8  },
+  knife:          { name: "Knife Fight",     format: "1v1",  accent: "#a78bfa", Icon: Scissors,  mapName: "Kalahari Pit",       maxPlayers: 2  },
+  "solo-drop":    { name: "Solo Drop",       format: "Solo", accent: "#3b82f6", Icon: Target,    mapName: "Bermuda Classic",    maxPlayers: 12 },
+  "duo-rush":     { name: "Duo Rush",        format: "2v2",  accent: "#06b6d4", Icon: Users,     mapName: "Purgatory Rush",     maxPlayers: 4  },
+  "squad-wipe":   { name: "Squad Wipe",      format: "4v4",  accent: "#8b5cf6", Icon: Swords,    mapName: "Kalahari Showdown",  maxPlayers: 8  },
+  "zone-control": { name: "Zone Control",    format: "Solo", accent: "#22c55e", Icon: MapIcon,   mapName: "Alpine Zone",        maxPlayers: 10 },
 };
 
 const TYPE_LABEL: Record<GameType, string> = {
@@ -41,6 +42,8 @@ interface MatchInfo {
   mapName: string;
   format: string;
   maxPlayers: number;
+  openInFfUrl: string | null;
+  credentialsReadyAt: string | null;
 }
 
 interface PlayerInfo {
@@ -72,11 +75,11 @@ const STATUS_MESSAGES = [
 ];
 
 const ROOM_STEPS: { key: RoomStatus | "ready"; label: string; Icon: React.ElementType }[] = [
-  { key: "opponent_found",     label: "Opponent Found",       Icon: Zap      },
-  { key: "creating_room",      label: "Creating Room",        Icon: RotateCcw },
-  { key: "booting_game",       label: "Booting Game",         Icon: Cpu       },
-  { key: "waiting_credentials",label: "Waiting for Credentials", Icon: KeyRound },
-  { key: "ready",              label: "Room Ready!",          Icon: CheckCircle2 },
+  { key: "opponent_found",      label: "Opponent Found",          Icon: Zap       },
+  { key: "creating_room",       label: "Creating Room",           Icon: RotateCcw },
+  { key: "booting_game",        label: "Booting Game",            Icon: Cpu       },
+  { key: "waiting_credentials", label: "Waiting for Credentials", Icon: KeyRound  },
+  { key: "ready",               label: "Room Ready!",             Icon: CheckCircle2 },
 ];
 
 const STEP_ORDER: RoomStatus[] = [
@@ -86,6 +89,8 @@ const STEP_ORDER: RoomStatus[] = [
   "waiting_credentials",
   "ready",
 ];
+
+const JOIN_WINDOW_SECONDS = 20;
 
 function stepIndex(s: RoomStatus | null): number {
   if (!s) return -1;
@@ -99,12 +104,7 @@ function Avatar({
   size = 64,
   accent,
 }: { src?: string | null; name: string; size?: number; accent: string }) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
   return (
     <div
       className="rounded-full flex items-center justify-center overflow-hidden shrink-0"
@@ -119,10 +119,7 @@ function Avatar({
       {src ? (
         <img src={src} alt={name} className="w-full h-full object-cover" />
       ) : (
-        <span
-          className="font-black"
-          style={{ fontSize: size * 0.32, color: accent }}
-        >
+        <span className="font-black" style={{ fontSize: size * 0.32, color: accent }}>
           {initials}
         </span>
       )}
@@ -135,25 +132,29 @@ export default function QuickMatchQueue() {
   const [, navigate] = useLocation();
 
   const typeKey = (params.type ?? "cs") as GameType;
-  const modeId = params.mode ?? "duel";
-  const meta = MODE_META[modeId] ?? MODE_META["duel"];
-  const accent = meta.accent;
+  const modeId  = params.mode ?? "duel";
+  const meta    = MODE_META[modeId] ?? MODE_META["duel"];
+  const accent  = meta.accent;
 
-  const [phase, setPhase] = useState<Phase>("searching");
-  const [elapsed, setElapsed] = useState(0);
+  const [phase, setPhase]           = useState<Phase>("searching");
+  const [elapsed, setElapsed]       = useState(0);
   const [queueCount, setQueueCount] = useState<number | null>(null);
-  const [matchInfo, setMatchInfo] = useState<MatchInfo | null>(null);
-  const [copied, setCopied] = useState<"room" | "pass" | null>(null);
-  const [visible, setVisible] = useState(false);
-  const [statusIdx, setStatusIdx] = useState(0);
-  const [joining, setJoining] = useState(false);
-  const [mePlayer, setMePlayer] = useState<PlayerInfo | null>(null);
-  const [opponent, setOpponent] = useState<PlayerInfo | null>(null);
+  const [matchInfo, setMatchInfo]   = useState<MatchInfo | null>(null);
+  const [copied, setCopied]         = useState<"room" | "pass" | null>(null);
+  const [visible, setVisible]       = useState(false);
+  const [statusIdx, setStatusIdx]   = useState(0);
+  const [joining, setJoining]       = useState(false);
+  const [mePlayer, setMePlayer]     = useState<PlayerInfo | null>(null);
+  const [opponent, setOpponent]     = useState<PlayerInfo | null>(null);
   const [roomStatus, setRoomStatus] = useState<RoomStatus | null>(null);
-  const [matchId, setMatchId] = useState<string | null>(null);
+  const [matchId, setMatchId]       = useState<string | null>(null);
+  const [joinWindowSecs, setJoinWindowSecs] = useState<number | null>(null);
+  const [entryFee, setEntryFee]     = useState(0);
+  const [prizeAmount, setPrizeAmount] = useState(0);
 
-  const leftRef = useRef(false);
-  const pollIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const leftRef    = useRef(false);
+  const pollIdRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const windowIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollIdRef.current) {
@@ -162,15 +163,44 @@ export default function QuickMatchQueue() {
     }
   }, []);
 
+  const stopJoinWindow = useCallback(() => {
+    if (windowIdRef.current) {
+      clearInterval(windowIdRef.current);
+      windowIdRef.current = null;
+    }
+  }, []);
+
+  const startJoinWindow = useCallback((credentialsReadyAt: string | null) => {
+    const start = credentialsReadyAt ? new Date(credentialsReadyAt).getTime() : Date.now();
+    const update = () => {
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      const remaining = Math.max(0, JOIN_WINDOW_SECONDS - elapsed);
+      setJoinWindowSecs(remaining);
+      if (remaining === 0) stopJoinWindow();
+    };
+    update();
+    windowIdRef.current = setInterval(update, 500);
+  }, [stopJoinWindow]);
+
   const leaveQueue = useCallback(async () => {
     if (leftRef.current) return;
     leftRef.current = true;
     stopPolling();
-    try { await apiPost("/quickmatch/search/leave", { gameType: typeKey, modeId }); } catch { /* best effort */ }
+    try {
+      await apiPost("/quickmatch/search/leave", { gameType: typeKey, modeId });
+    } catch { /* best effort */ }
   }, [typeKey, modeId, stopPolling]);
 
   const dismissActiveMatch = useCallback(async (id: string) => {
-    try { await apiPost("/quickmatch/match/dismiss", { matchId: id }); } catch { /* best effort */ }
+    try {
+      await apiPost("/quickmatch/match/dismiss", { matchId: id });
+    } catch { /* best effort */ }
+  }, []);
+
+  const trackAction = useCallback(async (action: string) => {
+    try {
+      await apiPost("/quickmatch/match/action", { action });
+    } catch { /* best effort */ }
   }, []);
 
   useEffect(() => {
@@ -194,7 +224,17 @@ export default function QuickMatchQueue() {
 
   // Join queue + poll
   useEffect(() => {
-    apiPost("/quickmatch/search/join", { gameType: typeKey, modeId }).catch(() => {});
+    const storedEntry = Number(sessionStorage.getItem("qm_entry") ?? 0);
+    const storedPrize = Number(sessionStorage.getItem("qm_prize") ?? 0);
+    setEntryFee(storedEntry);
+    setPrizeAmount(storedPrize);
+
+    apiPost("/quickmatch/search/join", {
+      gameType: typeKey,
+      modeId,
+      entryFee: storedEntry,
+      prizeAmount: storedPrize,
+    }).catch(() => {});
 
     const poll = async () => {
       try {
@@ -208,10 +248,17 @@ export default function QuickMatchQueue() {
           matchId?: string;
           roomId?: string;
           password?: string;
+          openInFfUrl?: string | null;
           roomStatus?: RoomStatus;
+          credentialsReadyAt?: string | null;
+          entryFee?: number;
+          prizeAmount?: number;
           me?: PlayerInfo;
           opponent?: PlayerInfo;
         }>("/quickmatch/match");
+
+        if (match.entryFee) setEntryFee(match.entryFee);
+        if (match.prizeAmount) setPrizeAmount(match.prizeAmount);
 
         if (match.status === "waiting_room") {
           if (match.me)       setMePlayer(match.me);
@@ -232,9 +279,11 @@ export default function QuickMatchQueue() {
             mapName: meta.mapName,
             format: meta.format,
             maxPlayers: meta.maxPlayers,
+            openInFfUrl: match.openInFfUrl ?? null,
+            credentialsReadyAt: match.credentialsReadyAt ?? null,
           });
+          startJoinWindow(match.credentialsReadyAt ?? null);
         } else if (match.status === "none") {
-          // Match was dismissed by the other player while we were in preparing/found
           setPhase((prev) => {
             if (prev === "preparing" || prev === "found") {
               stopPolling();
@@ -248,7 +297,10 @@ export default function QuickMatchQueue() {
     poll();
     pollIdRef.current = setInterval(poll, 2500);
 
-    return () => { stopPolling(); };
+    return () => {
+      stopPolling();
+      stopJoinWindow();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -260,7 +312,10 @@ export default function QuickMatchQueue() {
   }, [phase, leaveQueue]);
 
   const handleCancel = async () => {
+    // Block cancel once match is formed (preparing or found)
+    if (phase === "preparing" || phase === "found") return;
     stopPolling();
+    stopJoinWindow();
     if (matchId) await dismissActiveMatch(matchId);
     await leaveQueue();
     navigate("/quickmatch");
@@ -269,9 +324,16 @@ export default function QuickMatchQueue() {
   const handleJoinRoom = async () => {
     if (joining) return;
     setJoining(true);
+    stopJoinWindow();
     await leaveQueue();
     setPhase("joined");
     setJoining(false);
+  };
+
+  const handleOpenInFF = async () => {
+    if (!matchInfo?.openInFfUrl) return;
+    await trackAction("open_in_ff");
+    window.open(matchInfo.openInFfUrl, "_blank");
   };
 
   function copyText(text: string, which: "room" | "pass") {
@@ -279,11 +341,14 @@ export default function QuickMatchQueue() {
       setCopied(which);
       setTimeout(() => setCopied(null), 2500);
     });
+    const action = which === "room" ? "copy_room_id" : "copy_password";
+    trackAction(action);
   }
 
-  const Icon = meta.Icon;
-  const glow = `${accent}35`;
-  const currentStepIdx = stepIndex(roomStatus);
+  const Icon            = meta.Icon;
+  const glow            = `${accent}35`;
+  const currentStepIdx  = stepIndex(roomStatus);
+  const isMatchLocked   = phase === "preparing" || phase === "found";
 
   return (
     <div
@@ -351,7 +416,8 @@ export default function QuickMatchQueue() {
         style={{ background: "linear-gradient(180deg,#030303 0%,transparent 100%)" }}
       >
         <div className="flex items-center justify-between">
-          {phase === "joined" ? (
+          {/* Show back arrow only when NOT in a locked match */}
+          {(phase === "joined" || isMatchLocked) ? (
             <div className="w-9 h-9" />
           ) : (
             <button
@@ -413,6 +479,24 @@ export default function QuickMatchQueue() {
             </p>
           </div>
           <p className="text-[11px] text-zinc-600 mb-6">{meta.format} · {meta.mapName}</p>
+
+          {/* Prize row */}
+          {entryFee > 0 && (
+            <div className="flex items-center gap-3 mb-5 px-4 py-2.5 rounded-2xl"
+              style={{ background: "rgba(250,204,21,0.07)", border: "1px solid rgba(250,204,21,0.18)" }}>
+              <div className="flex items-center gap-1">
+                <CoinIcon width={14} />
+                <span className="text-[12px] font-bold text-zinc-400">Entry</span>
+                <span className="text-[13px] font-black text-white ml-1">{entryFee}</span>
+              </div>
+              <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.1)" }} />
+              <div className="flex items-center gap-1">
+                <CoinIcon width={14} />
+                <span className="text-[12px] font-bold text-zinc-400">Prize</span>
+                <span className="text-[13px] font-black text-white ml-1">{prizeAmount}</span>
+              </div>
+            </div>
+          )}
 
           {/* Stats row */}
           <div
@@ -489,19 +573,10 @@ export default function QuickMatchQueue() {
             <div className="flex items-center justify-between px-4 py-4 gap-3">
               {/* Me */}
               <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
-                <Avatar
-                  src={mePlayer?.profilePicture}
-                  name={mePlayer?.inGameName ?? "You"}
-                  size={60}
-                  accent={accent}
-                />
+                <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={60} accent={accent} />
                 <div className="text-center min-w-0 w-full">
-                  <p className="text-[13px] font-extrabold text-white truncate px-1">
-                    {mePlayer?.inGameName ?? "You"}
-                  </p>
-                  {mePlayer?.uid && (
-                    <p className="text-[10px] font-mono text-zinc-500 truncate">UID {mePlayer.uid}</p>
-                  )}
+                  <p className="text-[13px] font-extrabold text-white truncate px-1">{mePlayer?.inGameName ?? "You"}</p>
+                  {mePlayer?.uid && <p className="text-[10px] font-mono text-zinc-500 truncate">UID {mePlayer.uid}</p>}
                 </div>
               </div>
 
@@ -519,19 +594,10 @@ export default function QuickMatchQueue() {
 
               {/* Opponent */}
               <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
-                <Avatar
-                  src={opponent?.profilePicture}
-                  name={opponent?.inGameName ?? "Opponent"}
-                  size={60}
-                  accent={accent}
-                />
+                <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={60} accent={accent} />
                 <div className="text-center min-w-0 w-full">
-                  <p className="text-[13px] font-extrabold text-white truncate px-1">
-                    {opponent?.inGameName ?? "Opponent"}
-                  </p>
-                  {opponent?.uid && (
-                    <p className="text-[10px] font-mono text-zinc-500 truncate">UID {opponent.uid}</p>
-                  )}
+                  <p className="text-[13px] font-extrabold text-white truncate px-1">{opponent?.inGameName ?? "Opponent"}</p>
+                  {opponent?.uid && <p className="text-[10px] font-mono text-zinc-500 truncate">UID {opponent.uid}</p>}
                 </div>
               </div>
             </div>
@@ -563,16 +629,14 @@ export default function QuickMatchQueue() {
 
             <div className="px-5 py-4 flex flex-col gap-0">
               {ROOM_STEPS.map((step, i) => {
-                const isActive  = i === currentStepIdx;
-                const isDone    = i < currentStepIdx;
-                const StepIcon  = step.Icon;
+                const isActive = i === currentStepIdx;
+                const isDone   = i < currentStepIdx;
+                const StepIcon = step.Icon;
 
                 return (
                   <div key={step.key} className="flex items-start gap-3.5">
-                    {/* Left: icon + connector */}
                     <div className="flex flex-col items-center" style={{ width: 28, paddingTop: 2 }}>
                       <div className="relative flex items-center justify-center" style={{ width: 28, height: 28 }}>
-                        {/* Ping ring for active step */}
                         {isActive && (
                           <div
                             className="absolute rounded-full"
@@ -588,31 +652,19 @@ export default function QuickMatchQueue() {
                           style={{
                             width: 28,
                             height: 28,
-                            background: isDone
-                              ? `${accent}30`
-                              : isActive
-                                ? `${accent}22`
-                                : "rgba(255,255,255,0.04)",
-                            border: `1.5px solid ${
-                              isDone ? accent : isActive ? `${accent}aa` : "rgba(255,255,255,0.1)"
-                            }`,
+                            background: isDone ? `${accent}30` : isActive ? `${accent}22` : "rgba(255,255,255,0.04)",
+                            border: `1.5px solid ${isDone ? accent : isActive ? `${accent}aa` : "rgba(255,255,255,0.1)"}`,
                             transition: "all 0.4s ease",
                           }}
                         >
                           {isDone ? (
-                            <Check
-                              className="w-3.5 h-3.5"
-                              style={{ color: accent }}
-                              strokeWidth={2.5}
-                            />
+                            <Check className="w-3.5 h-3.5" style={{ color: accent }} strokeWidth={2.5} />
                           ) : (
                             <StepIcon
                               className="w-3.5 h-3.5"
                               style={{
                                 color: isActive ? accent : "rgba(255,255,255,0.2)",
-                                animation: isActive && step.key === "creating_room"
-                                  ? "icon-spin 1.4s linear infinite"
-                                  : undefined,
+                                animation: isActive && step.key === "creating_room" ? "icon-spin 1.4s linear infinite" : undefined,
                               }}
                               strokeWidth={2}
                             />
@@ -620,16 +672,13 @@ export default function QuickMatchQueue() {
                         </div>
                       </div>
 
-                      {/* Connector line */}
                       {i < ROOM_STEPS.length - 1 && (
                         <div
                           style={{
                             width: 1.5,
                             height: 22,
                             marginTop: 2,
-                            background: isDone
-                              ? accent
-                              : `rgba(255,255,255,0.08)`,
+                            background: isDone ? accent : "rgba(255,255,255,0.08)",
                             transition: "background 0.4s ease",
                             borderRadius: 2,
                           }}
@@ -637,27 +686,17 @@ export default function QuickMatchQueue() {
                       )}
                     </div>
 
-                    {/* Right: text */}
                     <div className="flex-1 pb-4" style={{ paddingTop: 4 }}>
                       <p
                         className="text-[13px] font-bold leading-tight"
                         style={{
-                          color: isDone
-                            ? accent
-                            : isActive
-                              ? "rgba(255,255,255,0.92)"
-                              : "rgba(255,255,255,0.22)",
+                          color: isDone ? accent : isActive ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.22)",
                           transition: "color 0.4s ease",
                         }}
                       >
                         {step.label}
                         {isActive && (
-                          <span
-                            className="ml-1.5 text-[11px] font-semibold"
-                            style={{ color: `${accent}bb` }}
-                          >
-                            …
-                          </span>
+                          <span className="ml-1.5 text-[11px] font-semibold" style={{ color: `${accent}bb` }}>…</span>
                         )}
                       </p>
                     </div>
@@ -667,15 +706,14 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          {/* Subtle cancel */}
-          <button
-            onClick={handleCancel}
-            className="mt-5 flex items-center gap-2 px-6 py-3 rounded-2xl active:scale-95 transition-transform"
-            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}
+          {/* Lock notice (no cancel once matched) */}
+          <div
+            className="mt-5 px-4 py-2.5 rounded-2xl flex items-center gap-2"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
           >
-            <X className="w-3.5 h-3.5 text-red-500/70" strokeWidth={2.5} />
-            <span className="text-[12px] font-bold text-red-500/70">Leave Match</span>
-          </button>
+            <Shield className="w-3.5 h-3.5 text-zinc-600" strokeWidth={2} />
+            <span className="text-[11px] font-semibold text-zinc-600">Match locked — cannot cancel now</span>
+          </div>
         </div>
       )}
 
@@ -685,13 +723,32 @@ export default function QuickMatchQueue() {
           className="flex-1 flex flex-col items-center px-5 pb-10"
           style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}
         >
-          {/* Badge */}
-          <div
-            className="mt-4 mb-4 px-5 py-2 rounded-full flex items-center gap-2"
-            style={{ background: `${accent}20`, border: `1.5px solid ${accent}55`, boxShadow: `0 0 24px ${accent}35` }}
-          >
-            <span className="w-2 h-2 rounded-full" style={{ background: accent, animation: "live-pulse 1s ease-in-out infinite" }} />
-            <span className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>Room Ready!</span>
+          {/* Badge + countdown */}
+          <div className="mt-4 mb-4 flex flex-col items-center gap-2">
+            <div
+              className="px-5 py-2 rounded-full flex items-center gap-2"
+              style={{ background: `${accent}20`, border: `1.5px solid ${accent}55`, boxShadow: `0 0 24px ${accent}35` }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: accent, animation: "live-pulse 1s ease-in-out infinite" }} />
+              <span className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>Room Ready!</span>
+            </div>
+
+            {/* Join window countdown */}
+            {joinWindowSecs !== null && joinWindowSecs > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <Clock className="w-3 h-3 text-zinc-500" />
+                <span className="text-[11px] font-bold text-zinc-500 tabular-nums">
+                  Join window: {joinWindowSecs}s
+                </span>
+              </div>
+            )}
+            {joinWindowSecs === 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <span className="text-[11px] font-bold text-red-400">Join window expired</span>
+              </div>
+            )}
           </div>
 
           {/* Compact player VS row */}
@@ -786,37 +843,40 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
+          {/* Open in FF button (if deep link available) */}
+          {matchInfo.openInFfUrl && (
+            <button
+              onClick={handleOpenInFF}
+              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
+              style={{
+                background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+                boxShadow: `0 8px 32px ${accent}45`,
+                animation: "slide-up 0.4s ease 0.2s both",
+              }}
+            >
+              <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
+              <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
+            </button>
+          )}
+
           {/* Join Room CTA */}
           <button
             onClick={handleJoinRoom}
             disabled={joining}
             className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3 disabled:opacity-70"
             style={{
-              background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
-              boxShadow: `0 8px 32px ${accent}45`,
+              background: matchInfo.openInFfUrl
+                ? "rgba(255,255,255,0.06)"
+                : `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+              border: matchInfo.openInFfUrl ? "1px solid rgba(255,255,255,0.12)" : "none",
+              boxShadow: matchInfo.openInFfUrl ? "none" : `0 8px 32px ${accent}45`,
               animation: "slide-up 0.4s ease 0.25s both",
             }}
           >
             <Wind className="w-5 h-5 text-white" strokeWidth={2} />
             <span className="text-[15px] font-extrabold text-white tracking-wide">
-              {joining ? "Joining…" : "Join Room"}
+              {joining ? "Joining…" : "I'm In the Room"}
             </span>
-          </button>
-
-          <button
-            onClick={async () => {
-              stopPolling();
-              await leaveQueue();
-              navigate("/quickmatch");
-            }}
-            className="w-full py-3 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              animation: "slide-up 0.4s ease 0.32s both",
-            }}
-          >
-            <span className="text-[13px] font-bold text-zinc-500">Back to Modes</span>
           </button>
         </div>
       )}
@@ -877,8 +937,18 @@ export default function QuickMatchQueue() {
             You're In!
           </h2>
           <p className="text-[13px] text-zinc-500 mb-6 text-center">
-            Open Free Fire and enter the room credentials below
+            Good luck! Results are settled automatically after the game.
           </p>
+
+          {/* Prize reminder */}
+          {prizeAmount > 0 && (
+            <div className="flex items-center gap-2 mb-4 px-4 py-2.5 rounded-2xl"
+              style={{ background: "rgba(250,204,21,0.07)", border: "1px solid rgba(250,204,21,0.18)" }}>
+              <CoinIcon width={16} />
+              <span className="text-[12px] font-bold text-yellow-300">Win</span>
+              <span className="text-[14px] font-black text-white tabular-nums ml-1">{prizeAmount} coins</span>
+            </div>
+          )}
 
           {/* Opponent reminder */}
           {opponent && (
@@ -959,23 +1029,27 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          <button
-            onClick={() => navigate("/matches")}
-            className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
-            style={{
-              background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
-              boxShadow: `0 8px 32px ${accent}40`,
-            }}
-          >
-            <span className="text-[15px] font-extrabold text-white tracking-wide">Done</span>
-          </button>
+          {/* Open in FF (if available) */}
+          {matchInfo.openInFfUrl && (
+            <button
+              onClick={handleOpenInFF}
+              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
+              style={{
+                background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+                boxShadow: `0 8px 32px ${accent}40`,
+              }}
+            >
+              <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
+              <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
+            </button>
+          )}
 
           <button
-            onClick={() => navigate(`/quickmatch/${typeKey}`)}
+            onClick={() => navigate("/")}
             className="w-full py-3 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
           >
-            <span className="text-[13px] font-bold text-zinc-500">Find Another Match</span>
+            <span className="text-[13px] font-bold text-zinc-500">Back to Home</span>
           </button>
         </div>
       )}

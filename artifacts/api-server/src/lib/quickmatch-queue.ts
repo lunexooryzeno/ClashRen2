@@ -3,6 +3,7 @@ interface SearchEntry {
   gameType: string;
   modeId: string;
   joinedAt: number;
+  entryFee: number;
 }
 
 const SEARCH_TTL_MS = 5 * 60 * 1000;
@@ -13,17 +14,33 @@ function key(userId: string, gameType: string, modeId: string): string {
   return `${userId}:${gameType}:${modeId}`;
 }
 
-export function joinQueue(userId: string, gameType: string, modeId: string): void {
+export function joinQueue(userId: string, gameType: string, modeId: string, entryFee = 0): void {
   queue.set(key(userId, gameType, modeId), {
     userId,
     gameType,
     modeId,
     joinedAt: Date.now(),
+    entryFee,
   });
 }
 
 export function leaveQueue(userId: string, gameType: string, modeId: string): void {
   queue.delete(key(userId, gameType, modeId));
+}
+
+export function getQueueEntryFee(userId: string, gameType: string, modeId: string): number {
+  const entry = queue.get(key(userId, gameType, modeId));
+  return entry?.entryFee ?? 0;
+}
+
+export function isInQueue(userId: string, gameType: string, modeId: string): boolean {
+  const entry = queue.get(key(userId, gameType, modeId));
+  if (!entry) return false;
+  if (Date.now() - entry.joinedAt > SEARCH_TTL_MS) {
+    queue.delete(key(userId, gameType, modeId));
+    return false;
+  }
+  return true;
 }
 
 const MODE_REQUIRED: Record<string, number> = {
@@ -37,8 +54,6 @@ const MODE_REQUIRED: Record<string, number> = {
   "zone-control": 2,
 };
 
-// Pull the first N eligible players out of the queue and return their IDs.
-// Returns null if not enough players are waiting.
 export function tryMatch(
   gameType: string,
   modeId: string,
@@ -59,7 +74,6 @@ export function tryMatch(
 
   if (eligible.length < required) return null;
 
-  // Remove matched players from the queue
   for (const entry of eligible) {
     queue.delete(key(entry.userId, gameType, modeId));
   }

@@ -225,8 +225,18 @@ export default function QuickMatchHub() {
   const prevPrize = () => setPrizeIdx(i => (i - 1 + PRIZE_POOLS.length) % PRIZE_POOLS.length);
   const nextPrize = () => setPrizeIdx(i => (i + 1) % PRIZE_POOLS.length);
 
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+
   const handleJoin = () => {
     if (isComingSoon) return;
+    setBalanceError(null);
+
+    const balance = user?.diamondBalance ?? 0;
+    if (balance < pool.entry) {
+      setBalanceError(`You need ${pool.entry} coins to join. Your balance: ${balance}`);
+      return;
+    }
+
     sessionStorage.setItem("qm_entry", String(pool.entry));
     sessionStorage.setItem("qm_prize", String(pool.prize));
     let targetMode = currentMode?.id ?? "duel";
@@ -457,6 +467,15 @@ export default function QuickMatchHub() {
           transition: "opacity 0.35s ease 200ms, transform 0.4s ease 200ms",
         }}
       >
+        {balanceError && (
+          <div
+            className="w-full mb-3 px-4 py-3 rounded-2xl flex items-center gap-2"
+            style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.30)" }}
+          >
+            <span className="text-[12px] font-bold text-red-400">{balanceError}</span>
+          </div>
+        )}
+
         <button
           onClick={handleJoin}
           disabled={isComingSoon}

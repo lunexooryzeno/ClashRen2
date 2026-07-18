@@ -10,7 +10,18 @@ export interface PlayerProfile {
 export interface MatchCredentials {
   roomId: string;
   password: string;
+  openInFfUrl?: string | null;
   receivedAt: string;
+}
+
+export interface CsCareerSnapshot {
+  gamesPlayed: number;
+  wins: number;
+  kills: number;
+  damage: number;
+  deaths: number;
+  assists: number;
+  fetchedAt: string;
 }
 
 export interface QuickMatch {
@@ -22,6 +33,13 @@ export interface QuickMatch {
   status: "waiting_room" | "credentials_ready" | "expired";
   createdAt: string;
   credentials?: MatchCredentials;
+  entryFee: number;
+  prizeAmount: number;
+  webhookFired: boolean;
+  credentialsReadyAt?: string;
+  actionTaken: Record<string, string>;
+  preSnapshots: Record<string, CsCareerSnapshot>;
+  noShowHandled: boolean;
 }
 
 const MAX_HISTORY = 50;
@@ -45,7 +63,6 @@ function expireStale() {
   });
 }
 
-// Time-based room preparation steps (ms since match created)
 export type RoomStatus =
   | "opponent_found"
   | "creating_room"
@@ -66,6 +83,8 @@ export function createMatch(
   players: PlayerProfile[],
   gameType: string,
   modeId: string,
+  entryFee = 0,
+  prizeAmount = 0,
 ): QuickMatch {
   expireStale();
   const match: QuickMatch = {
@@ -76,6 +95,12 @@ export function createMatch(
     players,
     status: "waiting_room",
     createdAt: new Date().toISOString(),
+    entryFee,
+    prizeAmount,
+    webhookFired: false,
+    actionTaken: {},
+    preSnapshots: {},
+    noShowHandled: false,
   };
   activeMatches.push(match);
   return match;
@@ -92,9 +117,15 @@ export function getMatchForPlayer(userId: string): QuickMatch | null {
   );
 }
 
+export function getMatchById(matchId: string): QuickMatch | null {
+  expireStale();
+  return activeMatches.find((m) => m.id === matchId) ?? null;
+}
+
 export function attachCredentials(
   roomId: string,
   password: string,
+  openInFfUrl?: string | null,
 ): QuickMatch | null {
   expireStale();
   const match = activeMatches.find((m) => m.status === "waiting_room");
@@ -102,10 +133,34 @@ export function attachCredentials(
   match.credentials = {
     roomId,
     password,
+    openInFfUrl: openInFfUrl ?? null,
     receivedAt: new Date().toISOString(),
   };
   match.status = "credentials_ready";
+  match.credentialsReadyAt = new Date().toISOString();
   return match;
+}
+
+export function markWebhookFired(matchId: string): void {
+  const match = activeMatches.find((m) => m.id === matchId);
+  if (match) match.webhookFired = true;
+}
+
+export function markActionTaken(matchId: string, userId: string): void {
+  const match = activeMatches.find((m) => m.id === matchId);
+  if (match && !match.actionTaken[userId]) {
+    match.actionTaken[userId] = new Date().toISOString();
+  }
+}
+
+export function setPreSnapshot(matchId: string, userId: string, snapshot: CsCareerSnapshot): void {
+  const match = activeMatches.find((m) => m.id === matchId);
+  if (match) match.preSnapshots[userId] = snapshot;
+}
+
+export function markNoShowHandled(matchId: string): void {
+  const match = activeMatches.find((m) => m.id === matchId);
+  if (match) match.noShowHandled = true;
 }
 
 export function dismissMatch(matchId: string): void {

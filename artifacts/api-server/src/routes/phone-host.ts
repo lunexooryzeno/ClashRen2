@@ -2,6 +2,11 @@ import { Router } from "express";
 import crypto from "crypto";
 import { requireSuperAdmin } from "../middlewares/auth.js";
 import { attachCredentials } from "../lib/quickmatch-matches.js";
+import {
+  fetchAndStorePreSnapshots,
+  settleQuickMatch,
+  SNAPSHOT_DELAY_MS,
+} from "../lib/quickmatch-settlement.js";
 
 const router = Router();
 
@@ -167,10 +172,11 @@ router.post("/phone-host/credentials", (req, res) => {
     return;
   }
 
-  const { roomId, password, action, ...extra } = req.body as {
+  const { roomId, password, action, openInFfUrl, ...extra } = req.body as {
     roomId?: string;
     password?: string;
     action?: string;
+    openInFfUrl?: string;
     [k: string]: unknown;
   };
 
@@ -189,7 +195,27 @@ router.post("/phone-host/credentials", (req, res) => {
   };
 
   // Attach to any pending quickmatch waiting for a room
-  attachCredentials(String(roomId), String(password));
+  const attachedMatch = attachCredentials(
+    String(roomId),
+    String(password),
+    openInFfUrl ? String(openInFfUrl) : null,
+  );
+
+  // Fire pre-snapshots immediately, then settle after SNAPSHOT_DELAY_MS
+  if (attachedMatch) {
+    console.log(
+      `[phone-host] Credentials attached to match ${attachedMatch.id}. ` +
+      `Fetching pre-snapshots, settlement in ${SNAPSHOT_DELAY_MS / 1000}s.`,
+    );
+    fetchAndStorePreSnapshots(attachedMatch).catch((err) =>
+      console.error("[phone-host] Pre-snapshot error:", err),
+    );
+    setTimeout(() => {
+      settleQuickMatch(attachedMatch).catch((err) =>
+        console.error("[phone-host] Settlement error:", err),
+      );
+    }, SNAPSHOT_DELAY_MS);
+  }
 
   if (currentSession) {
     currentSession.credentials = creds;

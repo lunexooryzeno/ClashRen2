@@ -1,13 +1,23 @@
 import { Router, type IRouter } from "express";
-import { eq, or } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
-import { getQueueStats, joinQueue, leaveQueue, tryMatch } from "../lib/quickmatch-queue.js";
+import { eq, or, sql } from "drizzle-orm";
+import { db, usersTable, walletTransactionsTable, balanceChangeLogsTable } from "@workspace/db";
+import {
+  getQueueStats,
+  joinQueue,
+  leaveQueue,
+  tryMatch,
+  getQueueEntryFee,
+  isInQueue,
+} from "../lib/quickmatch-queue.js";
 import {
   createMatch,
   getMatchForPlayer,
+  getMatchById,
   dismissMatch,
   hasPendingRoomRequest,
   getRoomStatus,
+  markWebhookFired,
+  markActionTaken,
   type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
 import { requireAuth } from "../middlewares/auth.js";
@@ -15,15 +25,37 @@ import { requireAuth } from "../middlewares/auth.js";
 const router: IRouter = Router();
 
 const MACRO_BASE = "https://trigger.macrodroid.com/98315e1f-abce-4c9f-ab7d-87004928eb82";
-const MODE_MACRO_ACTION: Record<string, string> = {
-  duel: "/clashren.host_cs_1v1",
-  healing: "/clashren.host_cs_1v1",
-  knife: "/clashren.host_cs_1v1",
-};
 
-async function fireMacroDroid(path: string): Promise<void> {
+// Known prize pools — must match frontend PRIZE_POOLS
+const PRIZE_POOLS = [
+  { entry: 12, prize: 20 },
+  { entry: 30, prize: 50 },
+  { entry: 42, prize: 70 },
+];
+
+function findPrizePool(entry: number, prize: number) {
+  return PRIZE_POOLS.find((p) => p.entry === entry && p.prize === prize) ?? null;
+}
+
+function buildWebhookUrl(uid1: string | null, uid2: string | null): string {
+  const base = `${MACRO_BASE}/clashren`;
+  const params = new URLSearchParams({
+    game_mode: "89UB",
+    "players_uid(0)": uid1 ?? "",
+    "players_uid(1)": uid2 ?? "",
+  });
+  return `${base}?${params.toString()}`;
+}
+
+async function fireMacroDroidWithUids(
+  matchId: string,
+  uid1: string | null,
+  uid2: string | null,
+): Promise<void> {
+  markWebhookFired(matchId);
+  const webhookUrl = buildWebhookUrl(uid1, uid2);
   try {
-    await fetch(MACRO_BASE + path, { method: "GET" });
+    await fetch(webhookUrl, { method: "GET", signal: AbortSignal.timeout(12_000) });
   } catch { /* best effort */ }
 }
 
@@ -51,9 +83,8 @@ async function fetchPlayers(userIds: string[]): Promise<PlayerProfile[]> {
   });
 }
 
-router.get("/quickmatch/stats", (_req, res) => {
-  res.json(getQueueStats());
-});
+// Modes that currently have MacroDroid support
+const MODE_MACRO_SUPPORTED = new Set(["duel", "healing", "knife"]);
 
 const VALID_GAME_TYPES = new Set(["cs", "br"]);
 const VALID_MODE_IDS = new Set([
@@ -71,36 +102,132 @@ function validateQueueBody(
     return null;
   }
   if (!VALID_GAME_TYPES.has(gameType)) {
-    res.status(400).json({ error: `Invalid gameType.` });
+    res.status(400).json({ error: "Invalid gameType." });
     return null;
   }
   if (!VALID_MODE_IDS.has(modeId)) {
-    res.status(400).json({ error: `Invalid modeId.` });
+    res.status(400).json({ error: "Invalid modeId." });
     return null;
   }
   return { gameType, modeId };
 }
 
+// ─── Join Queue ──────────────────────────────────────────────────────────────
 router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
-  const userId = String(req.user!.userId);
+  const userId    = String(req.user!.userId);
+  const userIdNum = req.user!.userId;
   const valid = validateQueueBody(req.body, res);
   if (!valid) return;
 
+  const rawEntry = Number((req.body as any).entryFee ?? 0);
+  const rawPrize = Number((req.body as any).prizeAmount ?? 0);
+  const entryFee  = isNaN(rawEntry) ? 0 : rawEntry;
+  const prizeAmount = isNaN(rawPrize) ? 0 : rawPrize;
+
+  // Validate prize pool selection
+  if (entryFee > 0 || prizeAmount > 0) {
+    if (!findPrizePool(entryFee, prizeAmount)) {
+      res.status(400).json({ error: "Invalid prize pool selection" });
+      return;
+    }
+  }
+
+  // Already in an active match → return immediately
   const existingMatch = getMatchForPlayer(userId);
   if (existingMatch) {
     res.json({ ok: true, matched: true, matchId: existingMatch.id });
     return;
   }
 
-  joinQueue(userId, valid.gameType, valid.modeId);
+  // Already in queue → idempotent
+  if (isInQueue(userId, valid.gameType, valid.modeId)) {
+    res.json({ ok: true, matched: false, queued: true });
+    return;
+  }
 
-  const macroPath = MODE_MACRO_ACTION[valid.modeId];
-  if (macroPath && !hasPendingRoomRequest()) {
+  // Check quickmatch ban (reuses tournamentBanned)
+  const userRow = await db.query.usersTable.findFirst({
+    where: eq(usersTable.id, userIdNum),
+    columns: {
+      id: true,
+      diamondBalance: true,
+      tournamentBanned: true,
+      tournamentBannedUntil: true,
+    },
+  });
+  if (!userRow) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  if (userRow.tournamentBanned) {
+    const banUntil = userRow.tournamentBannedUntil;
+    if (!banUntil || banUntil > new Date()) {
+      res.status(403).json({
+        error: "You are suspended from QuickMatch",
+        bannedUntil: banUntil?.toISOString() ?? null,
+      });
+      return;
+    }
+    // Ban expired — auto-lift
+    await db
+      .update(usersTable)
+      .set({ tournamentBanned: false, tournamentBannedUntil: null })
+      .where(eq(usersTable.id, userIdNum));
+  }
+
+  // Balance check + deduction (DB transaction)
+  if (entryFee > 0) {
+    let joinError: string | null = null;
+    await db.transaction(async (tx) => {
+      const uRes = await tx.execute(
+        sql`SELECT id, diamond_balance FROM users WHERE id = ${userIdNum} FOR UPDATE`,
+      );
+      const lockedUser = ((uRes as any).rows ?? uRes)[0] as
+        | { id: number; diamond_balance: number }
+        | undefined;
+      if (!lockedUser) { joinError = "User not found"; return; }
+      if (lockedUser.diamond_balance < entryFee) {
+        joinError = `Insufficient coins. Need ${entryFee}, have ${lockedUser.diamond_balance}`;
+        return;
+      }
+      await tx
+        .update(usersTable)
+        .set({ diamondBalance: lockedUser.diamond_balance - entryFee })
+        .where(eq(usersTable.id, userIdNum));
+      await tx.insert(walletTransactionsTable).values({
+        userId: userIdNum,
+        type: "entry",
+        amount: -entryFee,
+        label: `QuickMatch Entry (${valid.gameType.toUpperCase()} ${valid.modeId})`,
+      });
+      await tx.insert(balanceChangeLogsTable).values({
+        userId: userIdNum,
+        adminId: null,
+        amount: -entryFee,
+        balanceBefore: lockedUser.diamond_balance,
+        balanceAfter: lockedUser.diamond_balance - entryFee,
+        reason: "QuickMatch entry fee",
+        source: "quickmatch_join",
+      });
+    });
+    if (joinError) {
+      res.status(400).json({ error: joinError });
+      return;
+    }
+  }
+
+  // Enqueue player
+  joinQueue(userId, valid.gameType, valid.modeId, entryFee);
+
+  // Attempt match-making
+  if (MODE_MACRO_SUPPORTED.has(valid.modeId) && !hasPendingRoomRequest()) {
     const playerIds = tryMatch(valid.gameType, valid.modeId);
     if (playerIds) {
       const players = await fetchPlayers(playerIds);
-      createMatch(players, valid.gameType, valid.modeId);
-      fireMacroDroid(macroPath);
+      const match = createMatch(players, valid.gameType, valid.modeId, entryFee, prizeAmount);
+      const uid1 = players[0]?.uid ?? null;
+      const uid2 = players[1]?.uid ?? null;
+      fireMacroDroidWithUids(match.id, uid1, uid2).catch(() => {});
       res.json({ ok: true, matched: true });
       return;
     }
@@ -109,25 +236,77 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
   res.json({ ok: true, matched: false });
 });
 
-router.post("/quickmatch/search/leave", requireAuth, (req, res) => {
-  const userId = String(req.user!.userId);
+// ─── Leave Queue ─────────────────────────────────────────────────────────────
+router.post("/quickmatch/search/leave", requireAuth, async (req, res) => {
+  const userId    = String(req.user!.userId);
+  const userIdNum = req.user!.userId;
   const valid = validateQueueBody(req.body, res);
   if (!valid) return;
+
+  // Reject if player is in a locked active match
+  const activeMatch = getMatchForPlayer(userId);
+  if (activeMatch) {
+    res.status(409).json({
+      error: "Cannot leave while in an active match",
+      code: "match_locked",
+    });
+    return;
+  }
+
+  const refundAmount = getQueueEntryFee(userId, valid.gameType, valid.modeId);
   leaveQueue(userId, valid.gameType, valid.modeId);
-  res.json({ ok: true });
+
+  // Refund entry fee if applicable
+  if (refundAmount > 0) {
+    try {
+      await db.transaction(async (tx) => {
+        const uRes = await tx.execute(
+          sql`SELECT id, diamond_balance FROM users WHERE id = ${userIdNum} FOR UPDATE`,
+        );
+        const lockedUser = ((uRes as any).rows ?? uRes)[0] as
+          | { id: number; diamond_balance: number }
+          | undefined;
+        if (!lockedUser) return;
+        await tx
+          .update(usersTable)
+          .set({ diamondBalance: lockedUser.diamond_balance + refundAmount })
+          .where(eq(usersTable.id, userIdNum));
+        await tx.insert(walletTransactionsTable).values({
+          userId: userIdNum,
+          type: "withdraw_refund",
+          amount: refundAmount,
+          label: "QuickMatch Queue Exit Refund",
+        });
+        await tx.insert(balanceChangeLogsTable).values({
+          userId: userIdNum,
+          adminId: null,
+          amount: refundAmount,
+          balanceBefore: lockedUser.diamond_balance,
+          balanceAfter: lockedUser.diamond_balance + refundAmount,
+          reason: "QuickMatch queue exit refund",
+          source: "quickmatch_leave",
+        });
+      });
+    } catch (err) {
+      console.error("[quickmatch] Refund failed on leave:", err);
+    }
+  }
+
+  res.json({ ok: true, refunded: refundAmount });
 });
 
+// ─── Poll match status ────────────────────────────────────────────────────────
 router.get("/quickmatch/match", requireAuth, (req, res) => {
   const userId = String(req.user!.userId);
-  const match = getMatchForPlayer(userId);
+  const match  = getMatchForPlayer(userId);
   if (!match) {
     res.json({ status: "none" });
     return;
   }
 
   const roomStatus = getRoomStatus(match);
-  const opponent = match.players.find((p) => p.userId !== userId) ?? null;
-  const me = match.players.find((p) => p.userId === userId) ?? null;
+  const opponent   = match.players.find((p) => p.userId !== userId) ?? null;
+  const me         = match.players.find((p) => p.userId === userId) ?? null;
 
   if (roomStatus === "ready" && match.credentials) {
     res.json({
@@ -135,9 +314,13 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
       matchId: match.id,
       roomId: match.credentials.roomId,
       password: match.credentials.password,
+      openInFfUrl: match.credentials.openInFfUrl ?? null,
       gameType: match.gameType,
       modeId: match.modeId,
       roomStatus,
+      credentialsReadyAt: match.credentialsReadyAt ?? null,
+      entryFee: match.entryFee,
+      prizeAmount: match.prizeAmount,
       me,
       opponent,
     });
@@ -150,15 +333,51 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
     gameType: match.gameType,
     modeId: match.modeId,
     roomStatus,
+    entryFee: match.entryFee,
+    prizeAmount: match.prizeAmount,
     me,
     opponent,
   });
 });
 
-router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
-  const { matchId } = req.body as { matchId?: string };
-  if (matchId) dismissMatch(matchId);
+// ─── Track join-intent action ─────────────────────────────────────────────────
+router.post("/quickmatch/match/action", requireAuth, (req, res) => {
+  const userId = String(req.user!.userId);
+  const { action } = req.body as { action?: string };
+  if (!action || !["copy_room_id", "copy_password", "open_in_ff"].includes(action)) {
+    res.status(400).json({ error: "Invalid action. Use: copy_room_id, copy_password, open_in_ff" });
+    return;
+  }
+  const match = getMatchForPlayer(userId);
+  if (!match) {
+    res.status(404).json({ error: "No active match" });
+    return;
+  }
+  markActionTaken(match.id, userId);
   res.json({ ok: true });
+});
+
+// ─── Dismiss match ────────────────────────────────────────────────────────────
+router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
+  const userId = String(req.user!.userId);
+  const { matchId } = req.body as { matchId?: string };
+
+  if (matchId) {
+    const match = getMatchById(matchId);
+    // Block dismiss when credentials are already ready (match is locked)
+    if (match && match.status === "credentials_ready") {
+      res.status(409).json({ error: "Cannot dismiss a locked match", code: "match_locked" });
+      return;
+    }
+    if (match && match.playerIds.includes(userId)) {
+      dismissMatch(matchId);
+    }
+  }
+  res.json({ ok: true });
+});
+
+router.get("/quickmatch/stats", (_req, res) => {
+  res.json(getQueueStats());
 });
 
 export default router;
