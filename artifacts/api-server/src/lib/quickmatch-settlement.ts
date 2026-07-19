@@ -19,6 +19,8 @@ import {
 export const SNAPSHOT_DELAY_MS = 20_000;
 // Players must take an in-app action within this many ms of credentials arriving
 const JOIN_WINDOW_MS = 20_000;
+// Duration of leak-detection suspension
+const LEAK_BAN_HOURS = 12;
 
 // ─── Wallet helper ────────────────────────────────────────────────────────────
 
@@ -97,7 +99,7 @@ export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void
               preSnapshotData: JSON.stringify(snap),
             },
           })
-          .catch((err) => console.error("[settlement] Failed to persist pre-snapshot:", err));
+          .catch((err: unknown) => console.error("[settlement] Failed to persist pre-snapshot:", err));
       }),
   );
 }
@@ -130,13 +132,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   );
 
   // ── Derive outcomes ───────────────────────────────────────────────────────
-  // "winner"  — stat-verified win within join window
-  // "loser"   — played but did not win
-  // "no_show" — no stat change detected (did not enter the room)
-  type Outcome = "winner" | "loser" | "no_show";
-  const outcomes: Record<string, Outcome> = {};
-
-  // 20-second join-window deadline
+  // 20-second join-window deadline (from when credentials became available)
   const windowDeadline = match.credentialsReadyAt
     ? new Date(match.credentialsReadyAt).getTime() + JOIN_WINDOW_MS
     : null;
@@ -148,39 +144,36 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     return new Date(at).getTime() <= windowDeadline;
   };
 
+  // Outcome classification:
+  //   "winner"  — acted in time + stat-verified win
+  //   "loser"   — acted in time + played but did not win
+  //   "no_show" — did NOT act in time, or no stat change detected
+  //   "leaker"  — stats changed but player did NOT act in-app within window
+  //               (credentials were shared externally)
+  type Outcome = "winner" | "loser" | "no_show" | "leaker";
+  const outcomes: Record<string, Outcome> = {};
+
   for (const player of match.players) {
     const pre  = match.preSnapshots[player.userId];
     const post = postSnaps[player.userId];
+    const statsChanged = pre && post && post.gamesPlayed > pre.gamesPlayed;
+    const inTime = actedInTime(player.userId);
 
-    if (!pre || !post || post.gamesPlayed <= pre.gamesPlayed) {
-      // No stat movement — player did not play
+    if (!statsChanged) {
+      // No stat movement — player did not play (no-show regardless of action)
       outcomes[player.userId] = "no_show";
-      continue;
-    }
-
-    const winsDelta = post.wins - pre.wins;
-    outcomes[player.userId] = winsDelta >= 1 ? "winner" : "loser";
-
-    // Security flag: stats moved but player never used in-app credentials.
-    // NOTE: detecting external credential sharing requires room-participant
-    // data not currently available; flag for manual admin review only.
-    if (!actedInTime(player.userId)) {
-      db.insert(securityFlagsTable)
-        .values({
-          userId:     Number(player.userId),
-          type:       "quickmatch_action_outside_window",
-          severity:   "medium",
-          details:    `Stats changed but in-app action not recorded within ${JOIN_WINDOW_MS / 1000}s window. Match ID: ${match.id}`,
-          autoAction: "flagged",
-        })
-        .catch(() => {});
+    } else if (!inTime) {
+      // Stats changed but player never used in-app credentials within 20s
+      // → credentials were shared externally (leak)
+      outcomes[player.userId] = "leaker";
+    } else {
+      // Acted in time + played
+      const winsDelta = (post?.wins ?? 0) - (pre?.wins ?? 0);
+      outcomes[player.userId] = winsDelta >= 1 ? "winner" : "loser";
     }
   }
 
   console.log(`[settlement] Raw outcomes:`, outcomes);
-
-  const allNoShow = match.players.every((p) => outcomes[p.userId] === "no_show");
-  const anyNoShow = match.players.some((p)  => outcomes[p.userId] === "no_show");
 
   // ── Upsert verification records (update pre rows created in pre-snapshot) ─
   for (const player of match.players) {
@@ -210,7 +203,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         postSnapshotAt:   post ? new Date(post.fetchedAt) : null,
         postSnapshotData: post ? JSON.stringify(post)      : null,
         statDiff,
-        outcome,
+        outcome: outcome === "leaker" ? "no_show" : outcome,
         rewardGranted: outcome === "winner",
       })
       .onConflictDoUpdate({
@@ -219,14 +212,77 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
           postSnapshotAt:   post ? new Date(post.fetchedAt) : null,
           postSnapshotData: post ? JSON.stringify(post)      : null,
           statDiff,
-          outcome,
+          outcome: outcome === "leaker" ? "no_show" : outcome,
           rewardGranted: outcome === "winner",
         },
       })
-      .catch((err) => console.error("[settlement] Failed to upsert verification:", err));
+      .catch((err: unknown) => console.error("[settlement] Failed to upsert verification:", err));
   }
 
-  // ── Coin settlement + notifications ───────────────────────────────────────
+  // ── Leak detection: suspend leaker, cancel, refund victim ─────────────────
+  const leakers  = match.players.filter((p) => outcomes[p.userId] === "leaker");
+  const victims  = match.players.filter((p) => outcomes[p.userId] !== "leaker");
+
+  if (leakers.length > 0) {
+    const banUntil = new Date(Date.now() + LEAK_BAN_HOURS * 60 * 60 * 1000);
+
+    for (const leaker of leakers) {
+      const leakerId = Number(leaker.userId);
+      console.log(`[settlement] Credential leak detected: player=${leakerId}. Suspending until ${banUntil.toISOString()}`);
+
+      // 1. Apply 12-hour QuickMatch suspension
+      await db
+        .update(usersTable)
+        .set({ quickmatchBannedUntil: banUntil })
+        .where(eq(usersTable.id, leakerId))
+        .catch((err: unknown) => console.error("[settlement] Failed to set ban:", err));
+
+      // 2. Insert security flag
+      db.insert(securityFlagsTable)
+        .values({
+          userId:     leakerId,
+          type:       "quickmatch_credential_leak",
+          severity:   "high",
+          details:    `Stats changed but no in-app credential action recorded within ${JOIN_WINDOW_MS / 1000}s. Room credentials likely shared externally. Match ID: ${match.id}. Suspended until ${banUntil.toISOString()}.`,
+          autoAction: "suspended_12h",
+        })
+        .catch(() => {});
+
+      // 3. Notify leaker
+      await notify(leakerId, {
+        type:  "quickmatch_result",
+        title: "Credential Leak — Suspended",
+        body:  `You shared room credentials outside the app. Your QuickMatch access is suspended for ${LEAK_BAN_HOURS} hours.`,
+        url:   "/#/quickmatch",
+      }).catch(() => {});
+    }
+
+    // 4. Refund and notify victims (players who did not leak)
+    for (const victim of victims) {
+      const victimId = Number(victim.userId);
+      if (match.entryFee > 0) {
+        await creditPlayer(
+          victimId,
+          match.entryFee,
+          "QuickMatch Credential Leak Refund",
+          "quickmatch_leak_refund",
+          "withdraw_refund",
+        ).catch((err: unknown) => console.error("[settlement] Failed to refund victim:", err));
+      }
+      await notify(victimId, {
+        type:  "quickmatch_result",
+        title: "Match Cancelled — Opponent Suspended",
+        body:  `Your opponent shared room credentials externally. They've been suspended and your ${match.entryFee > 0 ? `${match.entryFee} coin entry fee has been refunded` : "match has been cancelled"}.`,
+        url:   "/#/quickmatch",
+      }).catch(() => {});
+    }
+
+    dismissMatch(match.id);
+    console.log(`[settlement] Match ${match.id} cancelled due to credential leak.`);
+    return;
+  }
+
+  // ── Standard settlement (no leakers) ─────────────────────────────────────
   //
   // Decision tree:
   //   allNoShow          → both forfeit entry fee (neither played, no refund)
@@ -234,6 +290,9 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   //                          • no-show player  : forfeits entry fee
   //                          • player who played: refunded entry fee (match invalid)
   //   neither no-shows   → both played: winner earns prize, loser keeps nothing
+
+  const allNoShow = match.players.every((p) => outcomes[p.userId] === "no_show");
+  const anyNoShow = match.players.some((p)  => outcomes[p.userId] === "no_show");
 
   for (const player of match.players) {
     const outcome = outcomes[player.userId] ?? "no_show";
