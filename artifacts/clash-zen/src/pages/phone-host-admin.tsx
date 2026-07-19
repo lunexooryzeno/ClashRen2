@@ -4,6 +4,7 @@ import {
   Smartphone, Zap, CheckCircle2, Clock, XCircle, Copy, Check,
   RefreshCw, RotateCcw, ChevronLeft, Shield, Wifi, WifiOff,
   Play, Hash, Lock, ExternalLink, AlertTriangle, Loader2, History,
+  ArrowRight, Globe, KeyRound, FileJson, Info,
 } from "lucide-react";
 
 // ─── Shared super-admin session ───────────────────────────────────────────────
@@ -424,23 +425,96 @@ export default function PhoneHostAdminPage() {
                 </div>
               </div>
 
-              {/* Credential callback */}
-              <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Credential Callback URL</p>
-                <p className="text-[11px] text-zinc-500 mb-1.5">Configure MacroDroid HTTP action to POST room credentials here after hosting:</p>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <code className="text-[11px] text-emerald-300 flex-1 break-all">{config.callbackUrl}</code>
-                  <CopyButton text={config.callbackUrl} />
+              {/* ── Credential Callback — full MacroDroid HTTP Action reference ── */}
+              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                {/* Header */}
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: "rgba(16,185,129,0.15)", background: "rgba(16,185,129,0.08)" }}>
+                  <ArrowRight className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
+                  <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">Credential Callback — MacroDroid HTTP Action</span>
                 </div>
-                <div className="mt-2 p-2.5 rounded-xl text-[11px] space-y-1" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <p className="text-zinc-400 font-semibold">Required headers:</p>
-                  <code className="text-amber-300 block">X-Phone-Host-Key: {"<secret>"}</code>
-                  <p className="text-zinc-400 font-semibold mt-1">JSON body:</p>
-                  <code className="text-zinc-300 block whitespace-pre">{`{
-  "roomId": "123456",
-  "password": "abc123",
-  "action": "host_cs_1v1"
-}`}</code>
+
+                <div className="p-3 space-y-3">
+                  {/* Info note */}
+                  <div className="flex items-start gap-2 p-2 rounded-xl" style={{ background: "rgba(0,0,0,0.25)" }}>
+                    <Info className="w-3.5 h-3.5 text-zinc-500 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      After MacroDroid creates the room in Free Fire, add an <strong className="text-white">HTTP Action</strong> in your macro to POST the credentials below. The server will forward them to waiting players automatically.
+                    </p>
+                  </div>
+
+                  {/* Step 1 — Method + URL */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3 h-3 text-cyan-400" />
+                      <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Step 1 · Endpoint</span>
+                    </div>
+                    <div className="flex items-stretch gap-2">
+                      <div className="flex items-center px-2.5 py-2 rounded-xl shrink-0" style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.25)" }}>
+                        <span className="text-[11px] font-black text-indigo-300">POST</span>
+                      </div>
+                      <div className="flex-1 flex items-center gap-2 px-2.5 py-2 rounded-xl overflow-hidden" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                        <code className="text-[10px] text-emerald-300 flex-1 break-all leading-relaxed">{config.callbackUrl}</code>
+                        <CopyButton text={config.callbackUrl} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 2 — Header */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <KeyRound className="w-3 h-3 text-amber-400" />
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Step 2 · Auth Header</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl space-y-1.5" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="flex items-center justify-between">
+                        <code className="text-[10px] text-zinc-400">Header name</code>
+                        <CopyButton text="X-Phone-Host-Key" label="Copy" />
+                      </div>
+                      <code className="text-[12px] font-bold text-amber-300 block">X-Phone-Host-Key</code>
+                      <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                      <div className="flex items-center justify-between">
+                        <code className="text-[10px] text-zinc-400">Header value — use secret from Security section</code>
+                      </div>
+                      <code className="text-[11px] text-rose-300 block break-all">{newSecret ?? config.secret}</code>
+                      <CopyButton text={newSecret ?? config.secret} label="Copy Secret" />
+                    </div>
+                  </div>
+
+                  {/* Step 3 — Body */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <FileJson className="w-3 h-3 text-violet-400" />
+                      <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Step 3 · JSON Body</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <code className="text-[10px] text-zinc-500">Content-Type: application/json</code>
+                        <CopyButton
+                          text={`{\n  "roomId": "[ROOM_ID_VARIABLE]",\n  "password": "[PASSWORD_VARIABLE]",\n  "action": "host_cs_1v1"\n}`}
+                          label="Copy Body"
+                        />
+                      </div>
+                      <pre className="text-[11px] text-zinc-200 leading-relaxed overflow-x-auto">{`{
+  "roomId":  "[room_id_macro_var]",
+  "password": "[password_macro_var]",
+  "action":  "host_cs_1v1"
+}`}</pre>
+                      <p className="text-[10px] text-zinc-600 mt-2">
+                        Replace <code className="text-amber-200">[room_id_macro_var]</code> and <code className="text-amber-200">[password_macro_var]</code> with the MacroDroid local variables where you store the room ID and password read from the screen.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Expected response */}
+                  <div className="flex items-start gap-2 p-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-bold text-green-400 uppercase tracking-wider mb-0.5">Expected Response</p>
+                      <code className="text-[10px] text-zinc-300">HTTP 200 · </code>
+                      <code className="text-[10px] text-zinc-400">{"{ \"ok\": true }"}</code>
+                      <p className="text-[10px] text-zinc-600 mt-1">Any non-200 means the secret is wrong or the server is down. Check the secret and retry.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
