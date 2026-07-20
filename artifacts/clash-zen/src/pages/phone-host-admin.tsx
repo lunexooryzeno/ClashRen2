@@ -4,7 +4,7 @@ import {
   Smartphone, Zap, CheckCircle2, Clock, XCircle, Copy, Check,
   RefreshCw, RotateCcw, ChevronLeft, Shield, Wifi, WifiOff,
   Play, Hash, Lock, ExternalLink, AlertTriangle, Loader2, History,
-  ArrowRight, Globe, KeyRound, FileJson, Info,
+  ArrowRight, Globe, KeyRound, FileJson, Info, Terminal,
 } from "lucide-react";
 
 // ─── Shared super-admin session ───────────────────────────────────────────────
@@ -502,6 +502,58 @@ export default function PhoneHostAdminPage() {
                       <p className="text-[10px] text-zinc-600 mt-2">
                         Replace <code className="text-amber-200">[room_id_macro_var]</code> and <code className="text-amber-200">[password_macro_var]</code> with the MacroDroid local variables where you store the room ID and password read from the screen.
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Step 4 — cURL reference */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Terminal className="w-3 h-3 text-fuchsia-400" />
+                      <span className="text-[10px] font-black text-fuchsia-400 uppercase tracking-widest">Step 4 · cURL Reference (test / MacroDroid shell action)</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(168,85,247,0.2)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] text-zinc-500">Paste into shell or use in MacroDroid "Run Shell Script" action</span>
+                        <CopyButton
+                          text={[
+                            `curl -X POST "${config.callbackUrl}" \\`,
+                            `  -H "Content-Type: application/json" \\`,
+                            `  -H "X-Phone-Host-Key: ${newSecret ?? config.secret}" \\`,
+                            `  -d '{`,
+                            `    "roomId":    "123456",`,
+                            `    "password":  "abc123",`,
+                            `    "action":    "host_cs_1v1",`,
+                            `    "openInFfUrl": ""`,
+                            `  }'`,
+                          ].join("\n")}
+                          label="Copy cURL"
+                        />
+                      </div>
+                      <pre
+                        className="text-[10px] leading-relaxed overflow-x-auto select-all"
+                        style={{ color: "#d4d4d8", fontFamily: "monospace" }}
+                      >{`curl -X POST "${config.callbackUrl}" \\
+  -H "Content-Type: application/json" \\
+  -H "X-Phone-Host-Key: ${newSecret ?? config.secret}" \\
+  -d '{
+    "roomId":     "123456",
+    "password":   "abc123",
+    "action":     "host_cs_1v1",
+    "openInFfUrl": ""
+  }'`}</pre>
+                      <div className="mt-2.5 space-y-1 border-t pt-2" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                        <p className="text-[10px] text-zinc-500 font-semibold">Fields:</p>
+                        <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[10px]">
+                          <code className="text-amber-300">roomId</code>
+                          <span className="text-zinc-500">Free Fire room ID (required)</span>
+                          <code className="text-amber-300">password</code>
+                          <span className="text-zinc-500">Room password (required)</span>
+                          <code className="text-amber-300">action</code>
+                          <span className="text-zinc-500">Which macro triggered this — e.g. <code className="text-zinc-400">host_cs_1v1</code></span>
+                          <code className="text-amber-300">openInFfUrl</code>
+                          <span className="text-zinc-500">Deep-link to open room in FF app (optional)</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
