@@ -22,7 +22,23 @@ import {
   type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
 import { creditPlayer } from "../lib/quickmatch-settlement.js";
+import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
 import { requireAuth } from "../middlewares/auth.js";
+import type { QuickMatch } from "../lib/quickmatch-matches.js";
+
+// ─── SSE helpers ──────────────────────────────────────────────────────────────
+
+function pushMatchToPlayers(match: QuickMatch, extra: Record<string, unknown> = {}): void {
+  const [p1, p2] = match.players;
+  if (!p1 || !p2) return;
+  const base = { matchId: match.id, createdAt: match.createdAt, entryFee: match.entryFee, prizeAmount: match.prizeAmount, ...extra };
+  pushToUser(Number(p1.userId), "quickmatch_match", { ...base, me: { ...p1, uid: null }, opponent: { ...p2, uid: null } });
+  pushToUser(Number(p2.userId), "quickmatch_match", { ...base, me: { ...p2, uid: null }, opponent: { ...p1, uid: null } });
+}
+
+function broadcastStats(): void {
+  pushBroadcast("quickmatch_stats", getQueueStats());
+}
 
 const router: IRouter = Router();
 
@@ -281,11 +297,15 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
       if (!match.webhookFired) {
         fireMacroDroidWithUids(match.id, uid1, uid2).catch(() => {});
       }
+      // SSE: notify both players immediately — no poll needed
+      pushMatchToPlayers(match, { status: "waiting_room", roomStatus: "opponent_found" });
+      broadcastStats();
       res.json({ ok: true, matched: true });
       return;
     }
   }
 
+  broadcastStats();
   res.json({ ok: true, matched: false });
 });
 
@@ -345,6 +365,7 @@ router.post("/quickmatch/search/leave", requireAuth, async (req, res) => {
     }
   }
 
+  broadcastStats();
   res.json({ ok: true, refunded: refundAmount });
 });
 
@@ -370,6 +391,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
     res.json({
       status: "ready",
       matchId: match.id,
+      createdAt: match.createdAt,
       roomId: match.credentials.roomId,
       password: match.credentials.password,
       openInFfUrl: match.credentials.openInFfUrl ?? null,
@@ -388,6 +410,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
   res.json({
     status: "waiting_room",
     matchId: match.id,
+    createdAt: match.createdAt,
     gameType: match.gameType,
     modeId: match.modeId,
     roomStatus,

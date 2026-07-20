@@ -7,6 +7,7 @@ import {
   settleQuickMatch,
   SNAPSHOT_DELAY_MS,
 } from "../lib/quickmatch-settlement.js";
+import { pushToUser } from "../lib/sse-manager.js";
 
 const router = Router();
 
@@ -215,6 +216,23 @@ router.post("/phone-host/credentials", (req, res) => {
         console.error("[phone-host] Settlement error:", err),
       );
     }, SNAPSHOT_DELAY_MS);
+
+    // SSE: push credentials to both players immediately (zero-latency vs 2.5s poll)
+    const [p1, p2] = attachedMatch.players;
+    const credPayload = {
+      status:             "ready",
+      matchId:            attachedMatch.id,
+      createdAt:          attachedMatch.createdAt,
+      roomStatus:         "ready",
+      roomId:             String(roomId),
+      password:           String(password),
+      openInFfUrl:        openInFfUrl ? String(openInFfUrl) : null,
+      credentialsReadyAt: attachedMatch.credentialsReadyAt ?? null,
+      entryFee:           attachedMatch.entryFee,
+      prizeAmount:        attachedMatch.prizeAmount,
+    };
+    if (p1) pushToUser(Number(p1.userId), "quickmatch_match", { ...credPayload, me: { ...p1, uid: null }, opponent: p2 ? { ...p2, uid: null } : null });
+    if (p2) pushToUser(Number(p2.userId), "quickmatch_match", { ...credPayload, me: { ...p2, uid: null }, opponent: p1 ? { ...p1, uid: null } : null });
   }
 
   if (currentSession) {

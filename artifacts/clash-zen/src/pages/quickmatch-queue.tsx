@@ -119,6 +119,7 @@ export default function QuickMatchQueue() {
   const [opponent, setOpponent]         = useState<PlayerInfo | null>(null);
   const [roomStatus, setRoomStatus]     = useState<RoomStatus | null>(null);
   const [matchId, setMatchId]           = useState<string | null>(null);
+  const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);
   const [joinWindowSecs, setJoinWindowSecs] = useState<number | null>(null);
   const [entryFee, setEntryFee]         = useState(0);
   const [prizeAmount, setPrizeAmount]   = useState(0);
@@ -127,9 +128,11 @@ export default function QuickMatchQueue() {
   const leftRef    = useRef(false);
   const pollIdRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const windowIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sseRef     = useRef<EventSource | null>(null);
 
   const stopPolling    = useCallback(() => { if (pollIdRef.current) { clearInterval(pollIdRef.current); pollIdRef.current = null; } }, []);
   const stopJoinWindow = useCallback(() => { if (windowIdRef.current) { clearInterval(windowIdRef.current); windowIdRef.current = null; } }, []);
+  const closeSse       = useCallback(() => { if (sseRef.current) { sseRef.current.close(); sseRef.current = null; } }, []);
 
   const startJoinWindow = useCallback((credentialsReadyAt: string | null) => {
     const start = credentialsReadyAt ? new Date(credentialsReadyAt).getTime() : Date.now();
@@ -172,6 +175,27 @@ export default function QuickMatchQueue() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Local step computation — replicates server getRoomStatus() every 1s so the
+  // "Preparing Room" steps animate without needing a server round-trip.
+  useEffect(() => {
+    if (phase !== "preparing" || !matchCreatedAt) return;
+    const THRESHOLDS: [number, RoomStatus][] = [
+      [4000,  "opponent_found"],
+      [12000, "creating_room"],
+      [22000, "booting_game"],
+    ];
+    const computeStep = (): RoomStatus => {
+      const age = Date.now() - new Date(matchCreatedAt).getTime();
+      for (const [ms, status] of THRESHOLDS) {
+        if (age < ms) return status;
+      }
+      return "waiting_credentials";
+    };
+    setRoomStatus(computeStep());
+    const id = setInterval(() => setRoomStatus(computeStep()), 1000);
+    return () => clearInterval(id);
+  }, [phase, matchCreatedAt]);
+
   useEffect(() => {
     const storedEntry = Number(sessionStorage.getItem("qm_entry") ?? 0);
     const storedPrize = Number(sessionStorage.getItem("qm_prize") ?? 0);
@@ -184,6 +208,73 @@ export default function QuickMatchQueue() {
         setPhase("cancelled");
       });
 
+    // Shared handler — called by both SSE and poll paths
+    const applyMatchData = (match: {
+      status: string;
+      matchId?: string;
+      createdAt?: string;
+      roomId?: string;
+      password?: string;
+      openInFfUrl?: string | null;
+      roomStatus?: RoomStatus;
+      credentialsReadyAt?: string | null;
+      entryFee?: number;
+      prizeAmount?: number;
+      me?: PlayerInfo;
+      opponent?: PlayerInfo;
+    }, fromSse = false) => {
+      if (match.entryFee)    setEntryFee(match.entryFee);
+      if (match.prizeAmount) setPrizeAmount(match.prizeAmount);
+
+      if (match.status === "waiting_room") {
+        if (match.me)        setMePlayer(match.me);
+        if (match.opponent)  setOpponent(match.opponent);
+        if (match.matchId)   setMatchId(match.matchId);
+        if (match.createdAt) setMatchCreatedAt(match.createdAt);
+        // roomStatus is driven locally by the timer effect — skip overwrite from poll
+        if (fromSse && match.roomStatus) setRoomStatus(match.roomStatus);
+        setPhase("preparing");
+      } else if (match.status === "ready" && match.roomId && match.password) {
+        stopPolling();
+        if (match.me)       setMePlayer(match.me);
+        if (match.opponent) setOpponent(match.opponent);
+        if (match.matchId)  setMatchId(match.matchId);
+        setRoomStatus("ready");
+        setPhase("found");
+        setMatchInfo({
+          roomId: match.roomId,
+          password: match.password,
+          mapName: meta.mapName,
+          format: meta.format,
+          maxPlayers: meta.maxPlayers,
+          openInFfUrl: match.openInFfUrl ?? null,
+          credentialsReadyAt: match.credentialsReadyAt ?? null,
+        });
+        startJoinWindow(match.credentialsReadyAt ?? null);
+      } else if (match.status === "none") {
+        setPhase(prev => {
+          if (prev === "preparing" || prev === "found") { stopPolling(); return "cancelled"; }
+          return prev;
+        });
+      }
+    };
+
+    // ── SSE connection ────────────────────────────────────────────────────────
+    const sse = new EventSource("/api/users/sse", { withCredentials: true });
+    sseRef.current = sse;
+
+    sse.addEventListener("quickmatch_match", (e: MessageEvent) => {
+      try { applyMatchData(JSON.parse(e.data), true); } catch { /* ignore */ }
+    });
+
+    sse.addEventListener("quickmatch_stats", (e: MessageEvent) => {
+      try {
+        const stats = JSON.parse(e.data) as QueueStats;
+        setQueueCount(stats[typeKey]?.modes?.[modeId] ?? 0);
+      } catch { /* ignore */ }
+    });
+
+    // ── 8s fallback poll (SSE handles the fast path) ──────────────────────────
     const poll = async () => {
       try {
         const stats = await apiFetch<QueueStats>("/quickmatch/stats");
@@ -191,58 +282,14 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
 
       try {
-        const match = await apiFetch<{
-          status: string;
-          matchId?: string;
-          roomId?: string;
-          password?: string;
-          openInFfUrl?: string | null;
-          roomStatus?: RoomStatus;
-          credentialsReadyAt?: string | null;
-          entryFee?: number;
-          prizeAmount?: number;
-          me?: PlayerInfo;
-          opponent?: PlayerInfo;
-        }>("/quickmatch/match");
-
-        if (match.entryFee)   setEntryFee(match.entryFee);
-        if (match.prizeAmount) setPrizeAmount(match.prizeAmount);
-
-        if (match.status === "waiting_room") {
-          if (match.me)         setMePlayer(match.me);
-          if (match.opponent)   setOpponent(match.opponent);
-          if (match.roomStatus) setRoomStatus(match.roomStatus);
-          if (match.matchId)    setMatchId(match.matchId);
-          setPhase("preparing");
-        } else if (match.status === "ready" && match.roomId && match.password) {
-          stopPolling();
-          if (match.me)       setMePlayer(match.me);
-          if (match.opponent) setOpponent(match.opponent);
-          if (match.matchId)  setMatchId(match.matchId);
-          setRoomStatus("ready");
-          setPhase("found");
-          setMatchInfo({
-            roomId: match.roomId,
-            password: match.password,
-            mapName: meta.mapName,
-            format: meta.format,
-            maxPlayers: meta.maxPlayers,
-            openInFfUrl: match.openInFfUrl ?? null,
-            credentialsReadyAt: match.credentialsReadyAt ?? null,
-          });
-          startJoinWindow(match.credentialsReadyAt ?? null);
-        } else if (match.status === "none") {
-          setPhase(prev => {
-            if (prev === "preparing" || prev === "found") { stopPolling(); return "cancelled"; }
-            return prev;
-          });
-        }
+        const match = await apiFetch<Parameters<typeof applyMatchData>[0]>("/quickmatch/match");
+        applyMatchData(match, false);
       } catch { /* ignore */ }
     };
 
     poll();
-    pollIdRef.current = setInterval(poll, 2500);
-    return () => { stopPolling(); stopJoinWindow(); };
+    pollIdRef.current = setInterval(poll, 8000);
+    return () => { stopPolling(); stopJoinWindow(); closeSse(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
