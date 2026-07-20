@@ -11,6 +11,7 @@ export interface SystemSettings {
   gameskinboApiKey: string;
   minAccountLevel: number;
   joinWindowSeconds: number;
+  phoneHostSecret: string;
 }
 
 const DEFAULTS: SystemSettings = {
@@ -20,6 +21,7 @@ const DEFAULTS: SystemSettings = {
   gameskinboApiKey: "",
   minAccountLevel: 40,
   joinWindowSeconds: 30,
+  phoneHostSecret: "",
 };
 
 export function getSystemSettings(): SystemSettings {

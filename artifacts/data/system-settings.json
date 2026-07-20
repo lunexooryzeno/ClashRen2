@@ -4,5 +4,6 @@
   "hlGamingApiKey": "TYn6Z8TXjgt0GE1C5Y4huU7YGpGKU1",
   "gameskinboApiKey": "7OpKi-M6uNBGe6hBxb8W3xLTgQFQ1NFM1vwvz9QdTuo",
   "minAccountLevel": 20,
-  "joinWindowSeconds": 30
+  "joinWindowSeconds": 30,
+  "phoneHostSecret": "c405fe906065bb2c699d3bb4c1394354fb1b37b5e4718f7c4b59cfaf8056ce66"
 }

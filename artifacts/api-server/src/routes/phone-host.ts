@@ -8,6 +8,7 @@ import {
   SNAPSHOT_DELAY_MS,
 } from "../lib/quickmatch-settlement.js";
 import { pushToUser } from "../lib/sse-manager.js";
+import { getSystemSettings, saveSystemSettings } from "../lib/systemSettings.js";
 
 const router = Router();
 
@@ -28,8 +29,18 @@ const ACTIONS: Record<string, { label: string; path: string; description: string
 };
 
 // ─── Secret key for credential callback ─────────────────────────────────────
-let phoneHostSecret: string =
-  process.env.PHONE_HOST_SECRET ?? crypto.randomBytes(32).toString("hex");
+// Loaded from persistent settings so it survives server restarts.
+// If no secret exists yet, one is generated once and saved immediately.
+function loadOrCreateSecret(): string {
+  if (process.env.PHONE_HOST_SECRET) return process.env.PHONE_HOST_SECRET;
+  const stored = getSystemSettings().phoneHostSecret;
+  if (stored) return stored;
+  const fresh = crypto.randomBytes(32).toString("hex");
+  saveSystemSettings({ phoneHostSecret: fresh });
+  return fresh;
+}
+
+let phoneHostSecret: string = loadOrCreateSecret();
 
 // ─── In-memory session state ─────────────────────────────────────────────────
 interface HostCredentials {
@@ -91,6 +102,7 @@ router.get("/super-admin/phone-host/config", requireSuperAdmin, (req, res) => {
 // ─── Admin: rotate secret ────────────────────────────────────────────────────
 router.post("/super-admin/phone-host/secret/rotate", requireSuperAdmin, (_req, res) => {
   phoneHostSecret = crypto.randomBytes(32).toString("hex");
+  saveSystemSettings({ phoneHostSecret });
   res.json({ ok: true, secret: phoneHostSecret });
 });
 
