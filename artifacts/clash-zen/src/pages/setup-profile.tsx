@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
