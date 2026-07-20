@@ -15,10 +15,13 @@ import {
   dismissMatch,
   type QuickMatch,
 } from "./quickmatch-matches.js";
+import { getSystemSettings } from "./systemSettings.js";
 
 export const SNAPSHOT_DELAY_MS = 20_000;
-// Players must take an in-app action within this many ms of credentials arriving
-const JOIN_WINDOW_MS = 20_000;
+// Read join window from system settings so admins can tune it live
+function getJoinWindowMs(): number {
+  return (getSystemSettings().joinWindowSeconds ?? 30) * 1000;
+}
 // Duration of leak-detection suspension
 const LEAK_BAN_HOURS = 12;
 
@@ -132,9 +135,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   );
 
   // ── Derive outcomes ───────────────────────────────────────────────────────
-  // 20-second join-window deadline (from when credentials became available)
+  // join-window deadline (from when credentials became available)
+  const joinWindowMs = getJoinWindowMs();
   const windowDeadline = match.credentialsReadyAt
-    ? new Date(match.credentialsReadyAt).getTime() + JOIN_WINDOW_MS
+    ? new Date(match.credentialsReadyAt).getTime() + joinWindowMs
     : null;
 
   const actedInTime = (userId: string): boolean => {
@@ -311,7 +315,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
           userId:     leakerId,
           type:       "quickmatch_credential_leak",
           severity:   "high",
-          details:    `Stats changed but no in-app credential action recorded within ${JOIN_WINDOW_MS / 1000}s. Room credentials likely shared externally. Match ID: ${match.id}. Suspended until ${banUntil.toISOString()}.`,
+          details:    `Stats changed but no in-app credential action recorded within ${getJoinWindowMs() / 1000}s. Room credentials likely shared externally. Match ID: ${match.id}. Suspended until ${banUntil.toISOString()}.`,
           autoAction: "suspended_12h",
         })
         .catch(() => {});

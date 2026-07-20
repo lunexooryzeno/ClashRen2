@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   ChevronLeft, Loader2, Check, Target, AlertTriangle,
-  ShieldCheck, Users, Lock,
+  ShieldCheck, Users, Lock, Clock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,23 +35,33 @@ async function saFetch<T = unknown>(path: string, opts: RequestInit = {}): Promi
   return res.json() as Promise<T>;
 }
 
+interface Settings {
+  minAccountLevel: number;
+  joinWindowSeconds: number;
+}
+
 export default function AdminJoinSettingsPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  const [minLevel, setMinLevel] = useState<number>(40);
-  const [input, setInput] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState<Settings>({ minAccountLevel: 40, joinWindowSeconds: 30 });
+
+  const [levelInput, setLevelInput] = useState("");
+  const [savingLevel, setSavingLevel] = useState(false);
+
+  const [windowInput, setWindowInput] = useState("");
+  const [savingWindow, setSavingWindow] = useState(false);
 
   const load = useCallback(async () => {
     const token = getSAToken();
     if (!token) { navigate(SA_MAIN); return; }
     try {
       setLoading(true);
-      const data = await saFetch<{ minAccountLevel: number }>("/super-admin/system-settings");
-      setMinLevel(data.minAccountLevel);
-      setInput(String(data.minAccountLevel));
+      const data = await saFetch<Settings>("/super-admin/system-settings");
+      setSettings(data);
+      setLevelInput(String(data.minAccountLevel));
+      setWindowInput(String(data.joinWindowSeconds));
     } catch (e: unknown) {
       toast({ title: "Failed to load settings", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -61,31 +71,57 @@ export default function AdminJoinSettingsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleSave() {
-    const val = parseInt(input);
+  async function handleSaveLevel() {
+    const val = parseInt(levelInput);
     if (isNaN(val) || val < 1 || val > 100) {
       toast({ title: "Invalid value", description: "Enter a number between 1 and 100.", variant: "destructive" });
       return;
     }
     try {
-      setSaving(true);
-      const updated = await saFetch<{ minAccountLevel: number }>("/super-admin/system-settings", {
+      setSavingLevel(true);
+      const updated = await saFetch<Settings>("/super-admin/system-settings", {
         method: "PUT",
         body: JSON.stringify({ minAccountLevel: val }),
       });
-      setMinLevel(updated.minAccountLevel);
-      setInput(String(updated.minAccountLevel));
+      setSettings(updated);
+      setLevelInput(String(updated.minAccountLevel));
       toast({ title: "Saved", description: `Minimum account level set to ${updated.minAccountLevel}.` });
     } catch (e: unknown) {
       toast({ title: "Save failed", description: (e as Error).message, variant: "destructive" });
     } finally {
-      setSaving(false);
+      setSavingLevel(false);
     }
   }
 
-  const val = parseInt(input);
-  const isValid = !isNaN(val) && val >= 1 && val <= 100;
-  const isChanged = val !== minLevel;
+  async function handleSaveWindow() {
+    const val = parseInt(windowInput);
+    if (isNaN(val) || val < 5 || val > 300) {
+      toast({ title: "Invalid value", description: "Enter a number between 5 and 300 seconds.", variant: "destructive" });
+      return;
+    }
+    try {
+      setSavingWindow(true);
+      const updated = await saFetch<Settings>("/super-admin/system-settings", {
+        method: "PUT",
+        body: JSON.stringify({ joinWindowSeconds: val }),
+      });
+      setSettings(updated);
+      setWindowInput(String(updated.joinWindowSeconds));
+      toast({ title: "Saved", description: `Join window set to ${updated.joinWindowSeconds}s.` });
+    } catch (e: unknown) {
+      toast({ title: "Save failed", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setSavingWindow(false);
+    }
+  }
+
+  const levelVal = parseInt(levelInput);
+  const levelValid = !isNaN(levelVal) && levelVal >= 1 && levelVal <= 100;
+  const levelChanged = levelVal !== settings.minAccountLevel;
+
+  const windowVal = parseInt(windowInput);
+  const windowValid = !isNaN(windowVal) && windowVal >= 5 && windowVal <= 300;
+  const windowChanged = windowVal !== settings.joinWindowSeconds;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a12 100%)" }}>
@@ -110,7 +146,80 @@ export default function AdminJoinSettingsPage() {
       {/* Body */}
       <div className="flex-1 px-4 py-6 max-w-lg mx-auto w-full space-y-5 pb-16">
 
-        {/* Current status card */}
+        {/* ── JOIN WINDOW ── */}
+        <div
+          className="rounded-3xl overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,158,11,0.2)" }}
+        >
+          <div
+            className="px-4 py-3 flex items-center gap-2"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(245,158,11,0.07)" }}
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-[10px] text-amber-400/80 uppercase tracking-[0.15em] font-bold">Join Window Duration</span>
+          </div>
+          <div className="p-4 space-y-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-zinc-600" />
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-between rounded-2xl px-4 py-4"
+                style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.18)" }}
+              >
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Active Window</p>
+                  <p className="text-4xl font-black text-amber-300 leading-none">{settings.joinWindowSeconds}s</p>
+                </div>
+                <div className="text-right">
+                  <Clock className="w-8 h-8 text-amber-500/40 ml-auto mb-1" />
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">
+                    Time players have to join<br />the room after credentials arrive.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5 block">
+                Set window duration (5–300 seconds)
+              </label>
+              <input
+                type="number"
+                min={5}
+                max={300}
+                value={windowInput}
+                onChange={e => setWindowInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && windowValid && windowChanged) handleSaveWindow(); }}
+                className="w-full h-12 rounded-xl px-4 text-base text-white font-mono outline-none transition-colors"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: `1px solid ${windowValid ? "rgba(245,158,11,0.35)" : "rgba(239,68,68,0.35)"}`,
+                }}
+              />
+              {!windowValid && windowInput !== "" && (
+                <p className="flex items-center gap-1 text-[10px] text-red-400 mt-1.5">
+                  <AlertTriangle className="w-3 h-3" /> Must be between 5 and 300
+                </p>
+              )}
+            </div>
+
+            <button
+              disabled={savingWindow || !windowValid || !windowChanged}
+              onClick={handleSaveWindow}
+              className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
+              style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)", color: "#fcd34d" }}
+            >
+              {savingWindow
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <><Check className="w-4 h-4" /> Save Join Window</>
+              }
+            </button>
+          </div>
+        </div>
+
+        {/* ── MIN ACCOUNT LEVEL ── */}
         <div
           className="rounded-3xl overflow-hidden"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.2)" }}
@@ -122,9 +231,7 @@ export default function AdminJoinSettingsPage() {
             <Lock className="w-3.5 h-3.5 text-indigo-400" />
             <span className="text-[10px] text-indigo-400/80 uppercase tracking-[0.15em] font-bold">Minimum Account Level</span>
           </div>
-
           <div className="p-4 space-y-4">
-            {/* Current level display */}
             {loading ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="w-5 h-5 animate-spin text-zinc-600" />
@@ -136,7 +243,7 @@ export default function AdminJoinSettingsPage() {
               >
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Active Minimum</p>
-                  <p className="text-4xl font-black text-indigo-300 leading-none">Lv. {minLevel}</p>
+                  <p className="text-4xl font-black text-indigo-300 leading-none">Lv. {settings.minAccountLevel}</p>
                 </div>
                 <div className="text-right">
                   <ShieldCheck className="w-8 h-8 text-indigo-500/40 ml-auto mb-1" />
@@ -147,7 +254,6 @@ export default function AdminJoinSettingsPage() {
               </div>
             )}
 
-            {/* Progress visual */}
             {!loading && (
               <div>
                 <div className="flex justify-between text-[10px] text-zinc-600 mb-1.5">
@@ -157,16 +263,12 @@ export default function AdminJoinSettingsPage() {
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${minLevel}%`,
-                      background: "linear-gradient(90deg, #6366f1, #a78bfa)",
-                    }}
+                    style={{ width: `${settings.minAccountLevel}%`, background: "linear-gradient(90deg, #6366f1, #a78bfa)" }}
                   />
                 </div>
               </div>
             )}
 
-            {/* Input */}
             <div>
               <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5 block">
                 Set new minimum (1–100)
@@ -175,30 +277,29 @@ export default function AdminJoinSettingsPage() {
                 type="number"
                 min={1}
                 max={100}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && isValid && isChanged) handleSave(); }}
+                value={levelInput}
+                onChange={e => setLevelInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && levelValid && levelChanged) handleSaveLevel(); }}
                 className="w-full h-12 rounded-xl px-4 text-base text-white font-mono outline-none transition-colors"
                 style={{
                   background: "rgba(255,255,255,0.05)",
-                  border: `1px solid ${isValid ? "rgba(99,102,241,0.35)" : "rgba(239,68,68,0.35)"}`,
+                  border: `1px solid ${levelValid ? "rgba(99,102,241,0.35)" : "rgba(239,68,68,0.35)"}`,
                 }}
               />
-              {!isValid && input !== "" && (
+              {!levelValid && levelInput !== "" && (
                 <p className="flex items-center gap-1 text-[10px] text-red-400 mt-1.5">
                   <AlertTriangle className="w-3 h-3" /> Must be between 1 and 100
                 </p>
               )}
             </div>
 
-            {/* Save button */}
             <button
-              disabled={saving || !isValid || !isChanged}
-              onClick={handleSave}
+              disabled={savingLevel || !levelValid || !levelChanged}
+              onClick={handleSaveLevel}
               className="w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
               style={{ background: "rgba(99,102,241,0.18)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}
             >
-              {saving
+              {savingLevel
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <><Check className="w-4 h-4" /> Save Minimum Level</>
               }
@@ -213,9 +314,9 @@ export default function AdminJoinSettingsPage() {
         >
           <Users className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs text-zinc-500 font-semibold mb-0.5">Who does this affect?</p>
+            <p className="text-xs text-zinc-500 font-semibold mb-0.5">How these work</p>
             <p className="text-[11px] text-zinc-600 leading-relaxed">
-              New players linking their Free Fire UID will be rejected if their account level is below the minimum. Players already registered are not affected.
+              The join window is how long players have to enter the room after credentials are sent. The minimum level blocks new registrations from under-levelled accounts.
             </p>
           </div>
         </div>

@@ -74,7 +74,7 @@ const STEP_ORDER: RoomStatus[] = [
   "opponent_found", "creating_room", "booting_game", "waiting_credentials", "ready",
 ];
 
-const JOIN_WINDOW_SECONDS = 20;
+let JOIN_WINDOW_SECONDS = 30; // overridden by /api/settings/public on mount
 
 function stepIndex(s: RoomStatus | null) {
   if (!s) return -1;
@@ -137,6 +137,13 @@ export default function QuickMatchQueue() {
   const stopPolling    = useCallback(() => { if (pollIdRef.current) { clearInterval(pollIdRef.current); pollIdRef.current = null; } }, []);
   const stopJoinWindow = useCallback(() => { if (windowIdRef.current) { clearInterval(windowIdRef.current); windowIdRef.current = null; } }, []);
   const closeSse       = useCallback(() => { if (sseRef.current) { sseRef.current.close(); sseRef.current = null; } }, []);
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { joinWindowSeconds?: number } | null) => { if (d?.joinWindowSeconds) JOIN_WINDOW_SECONDS = d.joinWindowSeconds; })
+      .catch(() => {});
+  }, []);
 
   const safeNavigate = useCallback((url: string) => {
     navAllowedRef.current = true;

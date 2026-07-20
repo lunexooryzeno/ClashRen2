@@ -10,6 +10,7 @@ export interface SystemSettings {
   hlGamingApiKey: string;
   gameskinboApiKey: string;
   minAccountLevel: number;
+  joinWindowSeconds: number;
 }
 
 const DEFAULTS: SystemSettings = {
@@ -18,6 +19,7 @@ const DEFAULTS: SystemSettings = {
   hlGamingApiKey: "",
   gameskinboApiKey: "",
   minAccountLevel: 40,
+  joinWindowSeconds: 30,
 };
 
 export function getSystemSettings(): SystemSettings {

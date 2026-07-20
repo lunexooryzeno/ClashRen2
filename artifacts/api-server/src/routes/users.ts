@@ -562,7 +562,7 @@ router.patch("/users/complete-profile", requireAuth, async (req, res) => {
 
 router.get("/settings/public", (_req, res) => {
   const s = getSystemSettings();
-  res.json({ minAccountLevel: s.minAccountLevel });
+  res.json({ minAccountLevel: s.minAccountLevel, joinWindowSeconds: s.joinWindowSeconds });
 });
 
 export default router;
