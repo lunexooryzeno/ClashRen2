@@ -164,6 +164,29 @@ export default function QuickMatchHub() {
     cs: { total: number; modes: Record<string, number> };
     br: { total: number; modes: Record<string, number> };
   } | null>(null);
+  const [activeMatch, setActiveMatch] = useState<{
+    matchId: string;
+    gameType: string;
+    modeId: string;
+    status: string;
+  } | null>(null);
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
+
+  // Check if user has an active match on mount
+  useEffect(() => {
+    apiFetch<{ status: string; matchId?: string; gameType?: string; modeId?: string }>("/quickmatch/match")
+      .then(data => {
+        if (data.status !== "none" && data.matchId) {
+          setActiveMatch({
+            matchId: data.matchId,
+            gameType: data.gameType ?? "cs",
+            modeId:   data.modeId   ?? "duel",
+            status:   data.status,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
@@ -231,6 +254,12 @@ export default function QuickMatchHub() {
     if (isComingSoon) return;
     setBalanceError(null);
 
+    // Block if already in an active match
+    if (activeMatch) {
+      setShowBlockedModal(true);
+      return;
+    }
+
     const balance = user?.diamondBalance ?? 0;
     if (balance < pool.entry) {
       setBalanceError(`You need ${pool.entry} coins to join. Your balance: ${balance}`);
@@ -261,7 +290,34 @@ export default function QuickMatchHub() {
         @keyframes qhub-card-swap { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
         @keyframes qhub-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
         @keyframes qhub-sheet-in { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
+        @keyframes qhub-banner-in { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
+
+      {/* ── Active-match resume banner ── */}
+      {activeMatch && (
+        <button
+          onClick={() => navigate(`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`)}
+          className="mx-4 mt-2 flex items-center gap-3 px-4 py-3 rounded-2xl w-[calc(100%-32px)] active:scale-[0.98] transition-transform shrink-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(34,211,238,0.14) 0%, rgba(34,211,238,0.06) 100%)",
+            border: "1.5px solid rgba(34,211,238,0.35)",
+            boxShadow: "0 4px 24px rgba(34,211,238,0.12)",
+            animation: "qhub-banner-in 0.3s ease both",
+          }}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(34,211,238,0.18)", border: "1px solid rgba(34,211,238,0.3)" }}
+          >
+            <Zap className="w-4 h-4 text-cyan-400" strokeWidth={2.2} />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-[12px] font-black uppercase tracking-widest text-cyan-400 leading-none mb-0.5">Active Match</p>
+            <p className="text-[13px] font-bold text-white truncate">Tap to resume your match room</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-cyan-500 shrink-0" />
+        </button>
+      )}
 
       {/* Ambient glow behind card */}
       <div
@@ -536,7 +592,57 @@ export default function QuickMatchHub() {
         </button>
       </div>
 
-      {/* ── Game type bottom sheet ── */}
+      {/* ── Active-match blocked modal ── */}
+      {showBlockedModal && activeMatch && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)" }}
+          onClick={() => setShowBlockedModal(false)}
+        >
+          <div
+            className="w-full rounded-t-3xl px-5 pt-6"
+            style={{
+              background: "rgba(12,14,20,0.98)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              borderBottom: "none",
+              boxShadow: "0 -20px 60px rgba(0,0,0,0.6)",
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
+              animation: "qhub-sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "rgba(34,211,238,0.12)", border: "1.5px solid rgba(34,211,238,0.3)" }}
+            >
+              <Zap className="w-7 h-7 text-cyan-400" strokeWidth={1.6} />
+            </div>
+            <h3 className="text-[18px] font-black text-white text-center mb-1">You're already in a match</h3>
+            <p className="text-[13px] text-zinc-500 text-center mb-6 leading-relaxed px-2">
+              Complete your current match before joining a new one. Go back to your active room to finish it.
+            </p>
+            <button
+              onClick={() => navigate(`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`)}
+              className="w-full py-4 rounded-2xl mb-3 active:scale-[0.97] transition-transform"
+              style={{
+                background: "linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)",
+                boxShadow: "0 8px 32px rgba(34,211,238,0.35)",
+              }}
+            >
+              <span className="text-[15px] font-extrabold text-white">Go to Active Match</span>
+            </button>
+            <button
+              onClick={() => setShowBlockedModal(false)}
+              className="w-full py-3.5 rounded-2xl active:scale-95 transition-transform"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <span className="text-[14px] font-semibold text-zinc-400">Cancel</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {showTypeSheet && (
         <>
           <div

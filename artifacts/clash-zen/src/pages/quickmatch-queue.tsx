@@ -125,14 +125,23 @@ export default function QuickMatchQueue() {
   const [prizeAmount, setPrizeAmount]   = useState(0);
   const [cancelReason, setCancelReason] = useState<string | null>(null);
 
-  const leftRef    = useRef(false);
-  const pollIdRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const windowIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sseRef     = useRef<EventSource | null>(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
+  const leftRef       = useRef(false);
+  const pollIdRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const windowIdRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sseRef        = useRef<EventSource | null>(null);
+  const navAllowedRef = useRef(false);
+  const pendingNavRef = useRef<(() => void) | null>(null);
 
   const stopPolling    = useCallback(() => { if (pollIdRef.current) { clearInterval(pollIdRef.current); pollIdRef.current = null; } }, []);
   const stopJoinWindow = useCallback(() => { if (windowIdRef.current) { clearInterval(windowIdRef.current); windowIdRef.current = null; } }, []);
   const closeSse       = useCallback(() => { if (sseRef.current) { sseRef.current.close(); sseRef.current = null; } }, []);
+
+  const safeNavigate = useCallback((url: string) => {
+    navAllowedRef.current = true;
+    navigate(url);
+  }, [navigate]);
 
   const startJoinWindow = useCallback((credentialsReadyAt: string | null) => {
     const start = credentialsReadyAt ? new Date(credentialsReadyAt).getTime() : Date.now();
@@ -195,6 +204,48 @@ export default function QuickMatchQueue() {
     const id = setInterval(() => setRoomStatus(computeStep()), 1000);
     return () => clearInterval(id);
   }, [phase, matchCreatedAt]);
+
+  // Navigation blocker — active while searching / preparing / found
+  const isBlocking = phase === "searching" || phase === "preparing" || phase === "found";
+  useEffect(() => {
+    if (!isBlocking) return;
+
+    // Browser reload / tab-close → native dialog
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Push a sentinel state so the back button fires popstate instead of navigating
+    window.history.pushState({ _qm: true }, "");
+    const handlePopState = () => {
+      if (navAllowedRef.current) return;
+      // Re-push to prevent the back
+      window.history.pushState({ _qm: true }, "");
+      pendingNavRef.current = () => { navAllowedRef.current = true; window.history.go(-2); };
+      setShowLeaveConfirm(true);
+    };
+    window.addEventListener("popstate", handlePopState);
+
+    // Intercept wouter / in-app pushState calls
+    const origPushState = window.history.pushState.bind(window.history);
+    (window.history as any).__qmOrig = origPushState;
+    (window.history.pushState as any) = function (state: unknown, title: string, url?: string | URL | null) {
+      if (navAllowedRef.current || (state as any)?._qm) {
+        return origPushState(state, title, url);
+      }
+      pendingNavRef.current = () => { navAllowedRef.current = true; origPushState(state, title, url); };
+      setShowLeaveConfirm(true);
+    };
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
+      const orig = (window.history as any).__qmOrig;
+      if (orig) { window.history.pushState = orig; delete (window.history as any).__qmOrig; }
+    };
+  }, [isBlocking]);
 
   useEffect(() => {
     const storedEntry = Number(sessionStorage.getItem("qm_entry") ?? 0);
@@ -302,7 +353,17 @@ export default function QuickMatchQueue() {
     stopPolling(); stopJoinWindow();
     if (matchId) await dismissActiveMatch(matchId);
     await leaveQueue();
-    navigate("/quickmatch");
+    safeNavigate("/quickmatch");
+  };
+
+  const confirmLeave = async () => {
+    setShowLeaveConfirm(false);
+    stopPolling(); stopJoinWindow(); closeSse();
+    if (matchId) await dismissActiveMatch(matchId);
+    await leaveQueue();
+    const pending = pendingNavRef.current;
+    pendingNavRef.current = null;
+    if (pending) { pending(); } else { safeNavigate("/quickmatch"); }
   };
 
   const handleJoinRoom = async () => {
@@ -846,14 +907,14 @@ export default function QuickMatchQueue() {
             {cancelReason ?? "Your opponent left before the room was ready."}
           </p>
           <button
-            onClick={() => navigate(`/quickmatch/${typeKey}/${modeId}`)}
+            onClick={() => safeNavigate(`/quickmatch/${typeKey}/${modeId}`)}
             className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-2.5"
             style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 8px 32px ${accent}40` }}
           >
             <span className="text-[15px] font-extrabold text-white tracking-wide">Search Again</span>
           </button>
           <button
-            onClick={() => navigate("/quickmatch")}
+            onClick={() => safeNavigate("/quickmatch")}
             className="w-full py-3.5 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
@@ -962,12 +1023,60 @@ export default function QuickMatchQueue() {
           </button>
 
           <button
-            onClick={() => navigate("/")}
+            onClick={() => safeNavigate("/")}
             className="w-full py-3.5 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             <span className="text-[13px] font-semibold text-zinc-500">Back to Home</span>
           </button>
+        </div>
+      )}
+
+      {/* ─── Leave-confirm overlay ─── */}
+      {showLeaveConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)" }}
+        >
+          <div
+            className="w-full rounded-t-3xl px-5 pt-6 pb-safe"
+            style={{
+              background: "rgba(12,14,20,0.98)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              borderBottom: "none",
+              boxShadow: "0 -20px 60px rgba(0,0,0,0.6)",
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
+              animation: "qhub-sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+            }}
+          >
+            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.3)" }}
+            >
+              <X className="w-7 h-7 text-red-400" strokeWidth={1.6} />
+            </div>
+            <h3 className="text-[18px] font-black text-white text-center mb-1">Leave matchmaking?</h3>
+            <p className="text-[13px] text-zinc-500 text-center mb-6 leading-relaxed px-2">
+              {phase === "searching"
+                ? "You'll be removed from the queue and your entry fee will be refunded."
+                : "Leaving now will cancel your active match room. This may result in a ban if credentials were already sent."}
+            </p>
+            <button
+              onClick={confirmLeave}
+              className="w-full py-4 rounded-2xl mb-3 active:scale-[0.97] transition-transform"
+              style={{ background: "rgba(239,68,68,0.18)", border: "1.5px solid rgba(239,68,68,0.35)" }}
+            >
+              <span className="text-[15px] font-extrabold text-red-400">Yes, Leave</span>
+            </button>
+            <button
+              onClick={() => { pendingNavRef.current = null; setShowLeaveConfirm(false); }}
+              className="w-full py-3.5 rounded-2xl active:scale-95 transition-transform"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <span className="text-[14px] font-semibold text-zinc-400">Stay in Queue</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
