@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { checkUIDUniqueness, checkFingerprintMultiAccount, checkIPCluster } from "../middleware/anti-multiaccount.js";
 import { checkEmulatorUsage } from "../middleware/suspicious-activity.js";
 import { subscribe, unsubscribe } from "../lib/sse-manager.js";
+import { fetchFreefireProfile } from "../lib/freefireKeys.js";
 
 async function logUserAction(userId: number, action: string, category: string, details?: string) {
   await db.insert(adminLogsTable).values({
@@ -142,7 +143,6 @@ router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
 
   const apiKey = process.env.FREEFIRE_API_KEY;
   const INFO_BASE = "https://developers.freefirecommunity.com/api/v1/info";
-  const STATS_BASE = "https://freefireinfo-zy9l.onrender.com/api/v1/player-stats";
 
   let nickname: string | null = null;
 
@@ -166,16 +166,8 @@ router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
     }
 
     if (!nickname) {
-      const r = await fetch(`${STATS_BASE}?uid=${uidToUse}&server=IND&gamemode=br&matchmode=CAREER`, {
-        signal: AbortSignal.timeout(10000),
-      });
-      if (r.ok) {
-        const raw = await r.json() as { success?: boolean; data?: Record<string, unknown> };
-        const d = raw.data ?? {};
-        if (d.nickname && typeof d.nickname === "string") nickname = d.nickname;
-        else if (d.playerName && typeof d.playerName === "string") nickname = d.playerName;
-        else if (d.name && typeof d.name === "string") nickname = d.name;
-      }
+      const profile = await fetchFreefireProfile(uidToUse, "ind");
+      if (profile?.nickname) nickname = profile.nickname;
     }
   } catch { /* API unreachable */ }
 
