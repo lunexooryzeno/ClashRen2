@@ -88,6 +88,8 @@ export default function SetupProfileScreen() {
   const [fetchError, setFetchError] = useState("");
   const [step, setStep] = useState<Step>("uid");
   const [profile, setProfile] = useState<FetchedProfile | null>(null);
+  const [manualEntry, setManualEntry] = useState(false);
+  const [manualName, setManualName] = useState("");
   const [saving, setSaving] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [pickedTheme, setPickedTheme] = useState(currentTheme ?? "molten");
@@ -117,14 +119,15 @@ export default function SetupProfileScreen() {
       };
 
       if (!res.ok || json.manual || !json.nickname) {
-        haptic.error();
-        setFetchState("error");
-        setFetchError(
-          json.error ??
-          (json.manual
-            ? "Could not find your account. Please check your UID and try again."
-            : "Failed to fetch player data. Please try again.")
-        );
+        if (json.manual || (res.ok && !json.nickname)) {
+          haptic.lightTap?.();
+          setFetchState("idle");
+          setManualEntry(true);
+        } else {
+          haptic.error();
+          setFetchState("error");
+          setFetchError(json.error ?? "Failed to fetch player data. Please try again.");
+        }
         return;
       }
 
@@ -158,6 +161,15 @@ export default function SetupProfileScreen() {
           : "Network error. Check your connection and try again."
       );
     }
+  }
+
+  /* ── Manual name entry (API unavailable) ──────────────────────────────── */
+  function handleManualProceed() {
+    const name = manualName.trim();
+    if (!name) return;
+    haptic.successTap();
+    setProfile({ nickname: name, level: 0, region: "IND", liked: 0, rankingPoints: 0, rank: 0 });
+    setStep("confirm");
   }
 
   /* ── Step 2: confirm → save ────────────────────────────────────────────── */
@@ -316,11 +328,11 @@ export default function SetupProfileScreen() {
 
                 <button
                   type="submit"
-                  disabled={!uidValid || isLoading}
+                  disabled={!uidValid || isLoading || manualEntry}
                   className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
                   style={{
                     background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
-                    boxShadow: uidValid ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
+                    boxShadow: uidValid && !manualEntry ? "0 6px 24px hsl(var(--primary) / 0.35)" : undefined,
                   }}
                 >
                   {isLoading ? (
@@ -333,9 +345,65 @@ export default function SetupProfileScreen() {
                 </button>
               </form>
 
-              <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
-                Your UID is shown in-game under your profile name.
-              </p>
+              {/* Manual name entry — shown when API can't auto-detect */}
+              {manualEntry && (
+                <div
+                  className="rounded-2xl overflow-hidden flex flex-col gap-0"
+                  style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)" }}
+                >
+                  <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary)/0.3))" }} />
+                  <div className="px-4 pt-4 pb-5 flex flex-col gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <Pencil className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-white leading-snug">Enter your in-game name</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
+                          We couldn't auto-fetch your name. Type it exactly as it appears in Free Fire.
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      value={manualName}
+                      onChange={e => setManualName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleManualProceed(); }}
+                      placeholder="Your Free Fire name…"
+                      maxLength={32}
+                      autoFocus
+                      className="w-full h-11 rounded-xl px-4 text-sm text-white font-semibold outline-none transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        border: manualName.trim() ? "1px solid hsl(var(--primary)/0.5)" : "1px solid rgba(255,255,255,0.10)",
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setManualEntry(false); setManualName(""); }}
+                        className="flex-1 h-10 rounded-xl text-zinc-400 font-semibold text-sm flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] hover:text-zinc-300"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> Retry
+                      </button>
+                      <button
+                        onClick={handleManualProceed}
+                        disabled={!manualName.trim()}
+                        className="flex-[2] h-10 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] disabled:opacity-40"
+                        style={{
+                          background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.7))",
+                          boxShadow: manualName.trim() ? "0 4px 16px hsl(var(--primary)/0.3)" : undefined,
+                        }}
+                      >
+                        <Check className="w-3.5 h-3.5" /> Continue
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!manualEntry && (
+                <p className="text-center text-[11px] text-zinc-600 leading-relaxed">
+                  Your UID is shown in-game under your profile name.
+                </p>
+              )}
             </>
           )}
 
@@ -391,47 +459,51 @@ export default function SetupProfileScreen() {
                       <p className="text-lg font-black text-white truncate leading-tight">{profile.nickname}</p>
                       <p className="text-[11px] text-zinc-500 font-mono mt-0.5">UID: {trimmedUid}</p>
                     </div>
-                    <div
-                      className="ml-auto shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold"
-                      style={{
-                        background: "hsl(var(--primary)/0.12)",
-                        border: "1px solid hsl(var(--primary)/0.3)",
-                        color: "hsl(var(--primary))",
-                      }}
-                    >
-                      Lv {profile.level}
-                    </div>
+                    {profile.level > 0 && (
+                      <div
+                        className="ml-auto shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                        style={{
+                          background: "hsl(var(--primary)/0.12)",
+                          border: "1px solid hsl(var(--primary)/0.3)",
+                          color: "hsl(var(--primary))",
+                        }}
+                      >
+                        Lv {profile.level}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Stats row */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <StatChip icon={<Globe className="w-3 h-3" />} label="Region" value={profile.region} />
-                    <StatChip icon={<Heart className="w-3 h-3" />} label="Likes" value={profile.liked.toLocaleString()} />
-                    {/* BR Rank with tier color */}
-                    <div
-                      className="rounded-xl px-2 py-2.5 flex flex-col items-center gap-1 text-center"
-                      style={{
-                        background: `${rankColor(profile.rank)}12`,
-                        border: `1px solid ${rankColor(profile.rank)}30`,
-                      }}
-                    >
-                      <Trophy className="w-3 h-3" style={{ color: rankColor(profile.rank) }} />
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">BR Rank</span>
-                      <span className="text-[11px] font-bold leading-tight" style={{ color: rankColor(profile.rank) }}>
-                        {rankLabel(profile.rank)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {profile.rankingPoints > 0 && (
-                    <div
-                      className="rounded-xl px-3 py-2 flex items-center gap-2"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
-                    >
-                      <Star className="w-3.5 h-3.5 shrink-0" style={{ color: "hsl(var(--primary))" }} />
-                      <span className="text-[11px] text-zinc-400">Ranking Points:</span>
-                      <span className="text-[11px] font-bold text-white ml-auto">{profile.rankingPoints.toLocaleString()}</span>
-                    </div>
+                  {/* Stats row — hidden for manual entry */}
+                  {profile.level > 0 && (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        <StatChip icon={<Globe className="w-3 h-3" />} label="Region" value={profile.region} />
+                        <StatChip icon={<Heart className="w-3 h-3" />} label="Likes" value={profile.liked.toLocaleString()} />
+                        <div
+                          className="rounded-xl px-2 py-2.5 flex flex-col items-center gap-1 text-center"
+                          style={{
+                            background: `${rankColor(profile.rank)}12`,
+                            border: `1px solid ${rankColor(profile.rank)}30`,
+                          }}
+                        >
+                          <Trophy className="w-3 h-3" style={{ color: rankColor(profile.rank) }} />
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">BR Rank</span>
+                          <span className="text-[11px] font-bold leading-tight" style={{ color: rankColor(profile.rank) }}>
+                            {rankLabel(profile.rank)}
+                          </span>
+                        </div>
+                      </div>
+                      {profile.rankingPoints > 0 && (
+                        <div
+                          className="rounded-xl px-3 py-2 flex items-center gap-2"
+                          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                        >
+                          <Star className="w-3.5 h-3.5 shrink-0" style={{ color: "hsl(var(--primary))" }} />
+                          <span className="text-[11px] text-zinc-400">Ranking Points:</span>
+                          <span className="text-[11px] font-bold text-white ml-auto">{profile.rankingPoints.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
