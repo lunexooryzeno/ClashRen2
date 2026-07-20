@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, or, sql } from "drizzle-orm";
+import { and, eq, isNull, isNotNull, or, sql } from "drizzle-orm";
 import { db, usersTable, walletTransactionsTable, balanceChangeLogsTable, quickmatchVerificationsTable } from "@workspace/db";
 import {
   getQueueStats,
@@ -464,6 +464,61 @@ router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
 
 router.get("/quickmatch/stats", (_req, res) => {
   res.json(getQueueStats());
+});
+
+// ─── Pending result check (fires on app open / focus) ─────────────────────────
+router.get("/quickmatch/pending-result", requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+
+  const row = await db.query.quickmatchVerificationsTable.findFirst({
+    where: (t, { and, eq, isNull, isNotNull }) => and(
+      eq(t.userId, userId),
+      isNotNull(t.outcome),
+      isNull(t.notifiedAt),
+    ),
+    orderBy: (t, { desc }) => [desc(t.createdAt)],
+  });
+
+  if (!row) {
+    res.json({ pending: false });
+    return;
+  }
+
+  let resultType = row.outcome ?? "no_show";
+  let coinsEarned = 0;
+  let entryFee = 0;
+  let prizeAmount = 0;
+  try {
+    if (row.statDiff) {
+      const parsed = JSON.parse(row.statDiff) as {
+        resultType?: string; coinsEarned?: number;
+        entryFee?: number; prizeAmount?: number;
+      };
+      resultType  = parsed.resultType  ?? resultType;
+      coinsEarned = parsed.coinsEarned ?? 0;
+      entryFee    = parsed.entryFee    ?? 0;
+      prizeAmount = parsed.prizeAmount ?? 0;
+    }
+  } catch { /* ignore */ }
+
+  res.json({ pending: true, matchId: row.matchId, resultType, coinsEarned, entryFee, prizeAmount });
+});
+
+// ─── Mark QuickMatch result as seen ───────────────────────────────────────────
+router.post("/quickmatch/result/:matchId/seen", requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+  const { matchId } = req.params as { matchId: string };
+
+  await db
+    .update(quickmatchVerificationsTable)
+    .set({ notifiedAt: new Date() })
+    .where(and(
+      eq(quickmatchVerificationsTable.matchId, matchId),
+      eq(quickmatchVerificationsTable.userId, userId),
+    ))
+    .catch(() => {});
+
+  res.json({ ok: true });
 });
 
 // ─── Result page data ─────────────────────────────────────────────────────────

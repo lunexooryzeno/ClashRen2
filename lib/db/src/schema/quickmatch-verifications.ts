@@ -13,6 +13,7 @@ export const quickmatchVerificationsTable = pgTable("quickmatch_verifications", 
   statDiff: text("stat_diff"),
   outcome: text("outcome"),
   rewardGranted: boolean("reward_granted").notNull().default(false),
+  notifiedAt: timestamp("notified_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({
   uniqVerifMatchPlayer: unique("uq_qm_verif_match_user").on(t.matchId, t.userId),

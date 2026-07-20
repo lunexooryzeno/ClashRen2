@@ -8,6 +8,7 @@ import {
   quickmatchVerificationsTable,
 } from "@workspace/db";
 import { notify } from "./push.js";
+import { pushToUser } from "./sse-manager.js";
 import { fetchCsCareerSnapshot } from "./quickmatch-hlgaming.js";
 import {
   setPreSnapshot,
@@ -327,6 +328,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         body:  `You shared room credentials outside the app. Your QuickMatch access is suspended for ${LEAK_BAN_HOURS} hours.`,
         url:   resultUrl,
       }).catch(() => {});
+      pushToUser(leakerId, "quickmatch_result", {
+        matchId: match.id, resultType: "suspended", coinsEarned: 0,
+        entryFee: match.entryFee, prizeAmount: match.prizeAmount,
+      });
     }
 
     // 4. Refund and notify victims (players who did not leak)
@@ -347,6 +352,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         body:  `Your opponent shared room credentials externally. They've been suspended and your ${match.entryFee > 0 ? `${match.entryFee} coin entry fee has been refunded` : "match has been cancelled"}.`,
         url:   resultUrl,
       }).catch(() => {});
+      pushToUser(victimId, "quickmatch_result", {
+        matchId: match.id, resultType: "refund", coinsEarned: match.entryFee,
+        entryFee: match.entryFee, prizeAmount: match.prizeAmount,
+      });
     }
 
     dismissMatch(match.id);
@@ -365,8 +374,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   // (allNoShow / anyNoShow already computed above before upsert)
 
   for (const player of match.players) {
-    const outcome = outcomes[player.userId] ?? "no_show";
-    const userId  = Number(player.userId);
+    const outcome     = outcomes[player.userId] ?? "no_show";
+    const userId      = Number(player.userId);
+    const resultType  = resultTypes[player.userId];
+    const coinsEarned = coinsEarnedMap[player.userId] ?? 0;
 
     try {
       if (allNoShow) {
@@ -377,6 +388,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
           body:  "Neither player joined the room. Entry fee forfeited.",
           url:   resultUrl,
         });
+        pushToUser(userId, "quickmatch_result", {
+          matchId: match.id, resultType, coinsEarned,
+          entryFee: match.entryFee, prizeAmount: match.prizeAmount,
+        });
 
       } else if (anyNoShow) {
         if (outcome === "no_show") {
@@ -386,6 +401,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             title: "No-Show",
             body:  "You didn't join the room in time. Entry fee forfeited.",
             url:   resultUrl,
+          });
+          pushToUser(userId, "quickmatch_result", {
+            matchId: match.id, resultType, coinsEarned,
+            entryFee: match.entryFee, prizeAmount: match.prizeAmount,
           });
         } else {
           // This player showed but opponent didn't — refund entry fee
@@ -403,6 +422,10 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             title: "Match Cancelled — Opponent No-Show",
             body:  `Your opponent didn't join the room. Your ${match.entryFee} coin entry fee has been refunded.`,
             url:   resultUrl,
+          });
+          pushToUser(userId, "quickmatch_result", {
+            matchId: match.id, resultType, coinsEarned,
+            entryFee: match.entryFee, prizeAmount: match.prizeAmount,
           });
         }
 
@@ -422,12 +445,20 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             body:  `+${match.prizeAmount} coins! Great game.`,
             url:   resultUrl,
           });
+          pushToUser(userId, "quickmatch_result", {
+            matchId: match.id, resultType, coinsEarned,
+            entryFee: match.entryFee, prizeAmount: match.prizeAmount,
+          });
         } else {
           await notify(userId, {
             type:  "quickmatch_result",
             title: "Match Complete",
             body:  "Good game! Better luck next time.",
             url:   resultUrl,
+          });
+          pushToUser(userId, "quickmatch_result", {
+            matchId: match.id, resultType, coinsEarned,
+            entryFee: match.entryFee, prizeAmount: match.prizeAmount,
           });
         }
       }
