@@ -45,6 +45,7 @@ interface SystemSettings {
   hlGamingUseruidSet: boolean; hlGamingUseruidPreview: string;
   hlGamingApiKeySet: boolean; hlGamingApiKeyPreview: string;
   gameskinboApiKeySet: boolean; gameskinboApiKeyPreview: string;
+  minAccountLevel: number;
 }
 interface PaymentSettings {
   upiId: string; upiName: string; ratePerDiamond: number;
@@ -83,6 +84,9 @@ export default function ApiKeysAdminPage() {
   const [gameskinboInput, setGameskinboInput] = useState("");
   const [gameskinboVisible, setGameskinboVisible] = useState(false);
   const [savingGameskinbo, setSavingGameskinbo] = useState(false);
+
+  const [minLevelInput, setMinLevelInput] = useState<string>("");
+  const [savingMinLevel, setSavingMinLevel] = useState(false);
 
   const [paySettings, setPaySettings] = useState<PaymentSettings | null>(null);
   const [loadingPay, setLoadingPay] = useState(false);
@@ -179,6 +183,24 @@ export default function ApiKeysAdminPage() {
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) { handleAuthError(navigate); return; }
       toast({ title: "Failed to save HL Gaming credentials", variant: "destructive" });
     } finally { setSavingHl(false); }
+  };
+
+  const handleSaveMinLevel = async () => {
+    const val = parseInt(minLevelInput, 10);
+    if (isNaN(val) || val < 1 || val > 100 || savingMinLevel || !token) return;
+    setSavingMinLevel(true);
+    try {
+      const updated = await apiFetch<SystemSettings>("/super-admin/system-settings", token, {
+        method: "PUT",
+        body: JSON.stringify({ minAccountLevel: val }),
+      });
+      setSysSettings(updated);
+      setMinLevelInput("");
+      toast({ title: `Min account level set to ${updated.minAccountLevel}` });
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) { handleAuthError(navigate); return; }
+      toast({ title: "Failed to save min level", variant: "destructive" });
+    } finally { setSavingMinLevel(false); }
   };
 
   const handleSaveGameskinbo = async () => {
@@ -358,6 +380,51 @@ export default function ApiKeysAdminPage() {
 
       {/* Content */}
       <div className="flex-1 px-4 py-6 max-w-lg mx-auto w-full space-y-5 pb-16">
+
+        {/* ── MIN ACCOUNT LEVEL ── */}
+        <div>
+          <p className="text-[10px] text-zinc-600 uppercase tracking-[0.18em] font-bold mb-3 px-1">Joining Requirements</p>
+          <div className="rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(99,102,241,0.2)", backdropFilter: "blur(12px)" }}>
+            <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(99,102,241,0.07)" }}>
+              <Lock className="w-3.5 h-3.5 text-indigo-400" strokeWidth={2} />
+              <span className="text-[10px] text-indigo-400/80 uppercase tracking-[0.15em] font-bold">Minimum Account Level</span>
+            </div>
+            <div className="p-4 space-y-3">
+              {sysSettings && (
+                <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)" }}>
+                  <div>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-0.5">Current Minimum</p>
+                    <p className="text-2xl font-black text-indigo-300">Lv. {sysSettings.minAccountLevel}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-zinc-600 leading-relaxed">Players below this level<br />cannot register on Clash Ren.</p>
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5 block">Set new minimum (1–100)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={minLevelInput}
+                  onChange={e => setMinLevelInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleSaveMinLevel(); }}
+                  placeholder={`Current: ${sysSettings?.minAccountLevel ?? 40}`}
+                  className="w-full h-11 rounded-xl bg-white/5 border border-white/8 px-3 text-sm text-white font-mono outline-none focus:border-indigo-500/40 transition-colors"
+                />
+              </div>
+              <button
+                disabled={savingMinLevel || !minLevelInput || isNaN(parseInt(minLevelInput)) || parseInt(minLevelInput) < 1 || parseInt(minLevelInput) > 100}
+                onClick={handleSaveMinLevel}
+                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-[0.98]"
+                style={{ background: "rgba(99,102,241,0.18)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}
+              >
+                {savingMinLevel ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Save Min Level</>}
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* ── FREE FIRE API KEY ── */}
         <div>

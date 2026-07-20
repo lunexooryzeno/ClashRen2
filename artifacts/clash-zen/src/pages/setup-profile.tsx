@@ -87,7 +87,15 @@ export default function SetupProfileScreen() {
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState("");
   const [levelTooLow, setLevelTooLow] = useState<{ current: number; required: number } | null>(null);
+  const [minLevel, setMinLevel] = useState(40);
   const [step, setStep] = useState<Step>("uid");
+
+  useEffect(() => {
+    fetch("/api/settings/public", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then((d: { minAccountLevel?: number } | null) => { if (d?.minAccountLevel) setMinLevel(d.minAccountLevel); })
+      .catch(() => {});
+  }, []);
   const [profile, setProfile] = useState<FetchedProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -130,11 +138,11 @@ export default function SetupProfileScreen() {
       }
 
       const playerLevel = json.level ?? 0;
-      if (playerLevel < 40) {
+      if (playerLevel < minLevel) {
         haptic.error();
         setFetchState("error");
         setFetchError("");
-        setLevelTooLow({ current: playerLevel, required: 40 });
+        setLevelTooLow({ current: playerLevel, required: minLevel });
         return;
       }
       setLevelTooLow(null);

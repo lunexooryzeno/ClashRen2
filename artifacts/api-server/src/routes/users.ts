@@ -8,6 +8,7 @@ import { checkUIDUniqueness, checkFingerprintMultiAccount, checkIPCluster } from
 import { checkEmulatorUsage } from "../middleware/suspicious-activity.js";
 import { subscribe, unsubscribe } from "../lib/sse-manager.js";
 import { fetchHlGamingAccount } from "../lib/quickmatch-hlgaming.js";
+import { getSystemSettings } from "../lib/systemSettings.js";
 
 async function logUserAction(userId: number, action: string, category: string, details?: string) {
   await db.insert(adminLogsTable).values({
@@ -557,6 +558,11 @@ router.patch("/users/complete-profile", requireAuth, async (req, res) => {
     token,
     user: { id: user.id, phone: fullPhone, isProfileComplete: true },
   });
+});
+
+router.get("/settings/public", requireAuth, (_req, res) => {
+  const s = getSystemSettings();
+  res.json({ minAccountLevel: s.minAccountLevel });
 });
 
 export default router;

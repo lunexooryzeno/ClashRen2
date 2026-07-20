@@ -9,6 +9,7 @@ export interface SystemSettings {
   hlGamingUseruid: string;
   hlGamingApiKey: string;
   gameskinboApiKey: string;
+  minAccountLevel: number;
 }
 
 const DEFAULTS: SystemSettings = {
@@ -16,6 +17,7 @@ const DEFAULTS: SystemSettings = {
   hlGamingUseruid: "",
   hlGamingApiKey: "",
   gameskinboApiKey: "",
+  minAccountLevel: 40,
 };
 
 export function getSystemSettings(): SystemSettings {

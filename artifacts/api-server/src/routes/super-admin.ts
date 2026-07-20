@@ -1608,18 +1608,20 @@ router.get("/super-admin/system-settings", requireSuperAdmin, (_req, res) => {
     hlGamingApiKeyPreview: mask(s.hlGamingApiKey),
     gameskinboApiKeySet: !!s.gameskinboApiKey,
     gameskinboApiKeyPreview: mask(s.gameskinboApiKey),
+    minAccountLevel: s.minAccountLevel,
   });
 });
 
 // ── PUT /super-admin/system-settings ──────────────────────────────────────────
 router.put("/super-admin/system-settings", requireSuperAdmin, (req, res) => {
-  const { freefireApiKey, hlGamingUseruid, hlGamingApiKey, gameskinboApiKey } =
-    req.body as { freefireApiKey?: string; hlGamingUseruid?: string; hlGamingApiKey?: string; gameskinboApiKey?: string };
+  const { freefireApiKey, hlGamingUseruid, hlGamingApiKey, gameskinboApiKey, minAccountLevel } =
+    req.body as { freefireApiKey?: string; hlGamingUseruid?: string; hlGamingApiKey?: string; gameskinboApiKey?: string; minAccountLevel?: number };
   const updated = saveSystemSettings({
     ...(freefireApiKey !== undefined && { freefireApiKey: freefireApiKey.trim() }),
     ...(hlGamingUseruid !== undefined && { hlGamingUseruid: hlGamingUseruid.trim() }),
     ...(hlGamingApiKey !== undefined && { hlGamingApiKey: hlGamingApiKey.trim() }),
     ...(gameskinboApiKey !== undefined && { gameskinboApiKey: gameskinboApiKey.trim() }),
+    ...(minAccountLevel !== undefined && { minAccountLevel: Math.max(1, Math.min(100, Number(minAccountLevel))) }),
   });
   const mask = (v: string) => v ? `••••••••${v.slice(-4)}` : "";
   res.json({
@@ -1631,6 +1633,7 @@ router.put("/super-admin/system-settings", requireSuperAdmin, (req, res) => {
     hlGamingApiKeyPreview: mask(updated.hlGamingApiKey),
     gameskinboApiKeySet: !!updated.gameskinboApiKey,
     gameskinboApiKeyPreview: mask(updated.gameskinboApiKey),
+    minAccountLevel: updated.minAccountLevel,
   });
 });
 
