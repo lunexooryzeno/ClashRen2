@@ -11,7 +11,7 @@ import { THEME_CATALOG } from "@/lib/themes";
 import {
   Crosshair, Loader2, ChevronRight, AlertCircle, RotateCcw,
   Youtube, ShieldAlert, Palette, Check, User, Star, Trophy,
-  Heart, Globe, ArrowLeft, Pencil, BadgeCheck,
+  Heart, Globe, ArrowLeft, Pencil, BadgeCheck, TrendingUp, Lock,
 } from "lucide-react";
 
 const POST_WELCOME_REDIRECT_KEY = "clash-ren:post-welcome-redirect";
@@ -86,6 +86,7 @@ export default function SetupProfileScreen() {
   const [uid, setUid] = useState("");
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [fetchError, setFetchError] = useState("");
+  const [levelTooLow, setLevelTooLow] = useState<{ current: number; required: number } | null>(null);
   const [step, setStep] = useState<Step>("uid");
   const [profile, setProfile] = useState<FetchedProfile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -132,11 +133,11 @@ export default function SetupProfileScreen() {
       if (playerLevel < 40) {
         haptic.error();
         setFetchState("error");
-        setFetchError(
-          `Your account is Level ${playerLevel}. You need to be at least Level 40 to join Clash Ren. Level up your Free Fire account or use a different account.`
-        );
+        setFetchError("");
+        setLevelTooLow({ current: playerLevel, required: 40 });
         return;
       }
+      setLevelTooLow(null);
 
       haptic.successTap();
       setFetchState("idle");
@@ -304,7 +305,56 @@ export default function SetupProfileScreen() {
                   </p>
                 </div>
 
-                {fetchState === "error" && (
+                {fetchState === "error" && levelTooLow && (
+                  <div
+                    className="rounded-2xl overflow-hidden"
+                    style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.22)" }}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: "1px solid rgba(239,68,68,0.15)", background: "rgba(239,68,68,0.08)" }}>
+                      <Lock className="w-4 h-4 text-red-400 shrink-0" />
+                      <span className="text-sm font-bold text-red-300">Account Level Too Low</span>
+                    </div>
+
+                    {/* Level comparison */}
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      {/* Current */}
+                      <div className="flex-1 rounded-xl py-2.5 px-3 text-center" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                        <p className="text-[10px] uppercase tracking-widest text-red-400/70 font-bold mb-0.5">Your Level</p>
+                        <p className="text-2xl font-black text-red-300">{levelTooLow.current}</p>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-1 shrink-0">
+                        <TrendingUp className="w-4 h-4 text-zinc-500" />
+                        <span className="text-[10px] text-zinc-600 font-bold">NEED</span>
+                      </div>
+
+                      {/* Required */}
+                      <div className="flex-1 rounded-xl py-2.5 px-3 text-center" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
+                        <p className="text-[10px] uppercase tracking-widest text-yellow-400/70 font-bold mb-0.5">Min Level</p>
+                        <p className="text-2xl font-black text-yellow-300">40</p>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="px-4 pb-3">
+                      <div className="h-1.5 rounded-full w-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${Math.min(100, (levelTooLow.current / levelTooLow.required) * 100)}%`,
+                            background: "linear-gradient(90deg, rgba(239,68,68,0.8), rgba(251,191,36,0.8))",
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-zinc-500 mt-2 text-center leading-relaxed">
+                        Level up in Free Fire, then try again with the same UID.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {fetchState === "error" && !levelTooLow && fetchError && (
                   <div
                     className="rounded-xl p-3 flex items-start gap-3"
                     style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}
