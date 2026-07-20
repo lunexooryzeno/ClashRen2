@@ -141,34 +141,11 @@ router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
     return;
   }
 
-  const apiKey = process.env.FREEFIRE_API_KEY;
-  const INFO_BASE = "https://developers.freefirecommunity.com/api/v1/info";
-
   let nickname: string | null = null;
 
   try {
-    if (apiKey) {
-      const r = await fetch(`${INFO_BASE}?region=ind&uid=${uidToUse}`, {
-        headers: {
-          "accept": "*/*",
-          "content-type": "application/json",
-          "referer": "https://developers.freefirecommunity.com/en/dashboard/playground",
-          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          "x-api-key": apiKey,
-        },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (r.ok) {
-        const raw = await r.json() as Record<string, unknown>;
-        const basic = (raw.basicInfo ?? {}) as Record<string, unknown>;
-        if (basic.nickname && typeof basic.nickname === "string") nickname = basic.nickname;
-      }
-    }
-
-    if (!nickname) {
-      const profile = await fetchFreefireProfile(uidToUse, "ind");
-      if (profile?.nickname) nickname = profile.nickname;
-    }
+    const profile = await fetchFreefireProfile(uidToUse, "ind");
+    if (profile?.nickname) nickname = profile.nickname;
   } catch { /* API unreachable */ }
 
   if (!nickname) {
