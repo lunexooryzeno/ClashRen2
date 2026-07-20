@@ -1,8 +1,46 @@
 import { getSystemSettings } from "./systemSettings.js";
 import type { CsCareerSnapshot } from "./quickmatch-matches.js";
 
-const HL_BASE = "https://proapis.hlgamingofficial.com/main/games/freefire/stats/api";
+const HL_BASE    = "https://proapis.hlgamingofficial.com/main/games/freefire/stats/api";
+const HL_ACCOUNT = "https://proapis.hlgamingofficial.com/main/games/freefire/account/api";
 const SNAPSHOT_TIMEOUT_MS = 15_000;
+
+export interface HlGamingProfile {
+  uid: string;
+  nickname: string;
+}
+
+export async function fetchHlGamingAccount(playerUid: string, region = "ind"): Promise<HlGamingProfile | null> {
+  const settings = getSystemSettings();
+  if (!settings.hlGamingUseruid || !settings.hlGamingApiKey) {
+    console.warn("[hlgaming] Missing hlGamingUseruid or hlGamingApiKey — skipping account fetch");
+    return null;
+  }
+
+  const url =
+    `${HL_ACCOUNT}?sectionName=AllData` +
+    `&PlayerUid=${encodeURIComponent(playerUid)}` +
+    `&region=${encodeURIComponent(region)}` +
+    `&useruid=${encodeURIComponent(settings.hlGamingUseruid)}` +
+    `&api=${encodeURIComponent(settings.hlGamingApiKey)}`;
+
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (!resp.ok) {
+      console.warn(`[hlgaming] HTTP ${resp.status} fetching account for UID ${playerUid}`);
+      return null;
+    }
+    const json = await resp.json() as Record<string, unknown>;
+    const data  = (json.data  ?? json)       as Record<string, unknown>;
+    const ai    = (data.AccountInfo ?? data.BasicInfo ?? data.basicInfo ?? {}) as Record<string, unknown>;
+    const name  = ai.AccountName ?? ai.nickname ?? ai.name ?? ai.playerName;
+    if (!name || typeof name !== "string") return null;
+    return { uid: playerUid, nickname: name };
+  } catch (err: unknown) {
+    console.error(`[hlgaming] Error fetching account for UID ${playerUid}:`, err instanceof Error ? err.message : String(err));
+    return null;
+  }
+}
 
 interface HlApiResponse {
   status?: string;

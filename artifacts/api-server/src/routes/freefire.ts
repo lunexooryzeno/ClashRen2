@@ -1,13 +1,11 @@
 import { Router, type IRouter } from "express";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
-import { fetchFreefireProfile } from "../lib/freefireKeys.js";
+import { fetchHlGamingAccount } from "../lib/quickmatch-hlgaming.js";
 import { db } from "@workspace/db";
 import { freefireApiKeysTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 
 const router: IRouter = Router();
-
-export type { NormalizedProfile } from "../lib/freefireKeys.js";
 
 // ── GET /freefire/player ────────────────────────────────────────────────────
 router.get("/freefire/player", requireAuth, async (req, res) => {
@@ -17,7 +15,7 @@ router.get("/freefire/player", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid UID. Must be 8–14 digits." });
   }
 
-  const profile = await fetchFreefireProfile(uid, String(region));
+  const profile = await fetchHlGamingAccount(uid, String(region));
   if (profile) return res.json(profile);
 
   return res.json({ manual: true, uid });

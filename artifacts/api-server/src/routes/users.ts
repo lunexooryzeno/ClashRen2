@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 import { checkUIDUniqueness, checkFingerprintMultiAccount, checkIPCluster } from "../middleware/anti-multiaccount.js";
 import { checkEmulatorUsage } from "../middleware/suspicious-activity.js";
 import { subscribe, unsubscribe } from "../lib/sse-manager.js";
-import { fetchFreefireProfile } from "../lib/freefireKeys.js";
+import { fetchHlGamingAccount } from "../lib/quickmatch-hlgaming.js";
 
 async function logUserAction(userId: number, action: string, category: string, details?: string) {
   await db.insert(adminLogsTable).values({
@@ -144,7 +144,7 @@ router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
   let nickname: string | null = null;
 
   try {
-    const profile = await fetchFreefireProfile(uidToUse, "ind");
+    const profile = await fetchHlGamingAccount(uidToUse, "ind");
     if (profile?.nickname) nickname = profile.nickname;
   } catch { /* API unreachable */ }
 
