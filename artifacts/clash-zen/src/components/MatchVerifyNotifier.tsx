@@ -46,10 +46,14 @@ const RECONNECT_MAX_MS  = 60_000;
 
 export function MatchVerifyNotifier() {
   const { isAuthenticated, user, invalidateUser } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [result, setResult]       = useState<(MatchResult & { isWin: boolean }) | null>(null);
   const [topupResult, setTopupResult] = useState<TopupResult | null>(null);
   const [qmResult, setQmResult]   = useState<QmResult | null>(null);
+
+  // Suppress the QM result popup while the user is actively on the quickmatch page
+  // (they are mid-match; the result will still be stored and show when they leave)
+  const onQuickmatchPage = location.startsWith("/quickmatch");
 
   const esRef             = useRef<EventSource | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,7 +192,8 @@ export function MatchVerifyNotifier() {
 
   // QuickMatch result presentation
   const qmIsWin      = qmResult?.resultType === "win";
-  const qmIsRefund   = qmResult?.resultType === "refund" || qmResult?.resultType === "no_show";
+  const qmIsRefund   = qmResult?.resultType === "refund";
+  const qmIsNoShow   = qmResult?.resultType === "no_show";
   const qmIsSuspend  = qmResult?.resultType === "suspended";
 
   return (
@@ -304,7 +309,7 @@ export function MatchVerifyNotifier() {
 
       {/* ── QuickMatch result card ── */}
       <AnimatePresence>
-        {qmResult && (
+        {qmResult && !onQuickmatchPage && (
           <motion.div
             key="qm-result-card"
             initial={{ opacity: 0, y: 80, scale: 0.92 }}
@@ -346,9 +351,10 @@ export function MatchVerifyNotifier() {
 
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-base leading-tight">
-                    {qmIsWin     ? "QuickMatch Won! 🎉"
+                    {qmIsWin      ? "QuickMatch Won! 🎉"
                      : qmIsSuspend ? "Suspended"
                      : qmIsRefund  ? "Entry Refunded"
+                     : qmIsNoShow  ? "Match Cancelled"
                      :               "QuickMatch Over"}
                   </p>
 
@@ -368,7 +374,10 @@ export function MatchVerifyNotifier() {
                       </span>
                     </div>
                   )}
-                  {!qmIsWin && !qmIsRefund && !qmIsSuspend && (
+                  {qmIsNoShow && (
+                    <p className="text-slate-400 text-sm mt-0.5">You didn't join the room in time.</p>
+                  )}
+                  {!qmIsWin && !qmIsRefund && !qmIsNoShow && !qmIsSuspend && (
                     <p className="text-slate-400 text-sm mt-0.5">Better luck next time!</p>
                   )}
                   {qmIsSuspend && (

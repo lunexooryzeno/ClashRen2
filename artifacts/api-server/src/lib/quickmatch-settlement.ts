@@ -18,7 +18,7 @@ import {
 } from "./quickmatch-matches.js";
 import { getSystemSettings } from "./systemSettings.js";
 
-export const SNAPSHOT_DELAY_MS = 20_000;
+export const SNAPSHOT_DELAY_MS = 15 * 60 * 1000; // 15 minutes — enough for a CS 1v1 to complete
 // Read join window from system settings so admins can tune it live
 function getJoinWindowMs(): number {
   return (getSystemSettings().joinWindowSeconds ?? 30) * 1000;
