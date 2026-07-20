@@ -126,6 +126,8 @@ export default function QuickMatchQueue() {
   const [cancelReason, setCancelReason] = useState<string | null>(null);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [checkingEnd, setCheckingEnd]           = useState(false);
+  const [stillInMatch, setStillInMatch]         = useState(false);
 
   const leftRef       = useRef(false);
   const pollIdRef     = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -382,6 +384,54 @@ export default function QuickMatchQueue() {
     trackAction("joined").catch(() => {});
     setJoining(false);
   };
+
+  // ── App-focus check-end (phase === "joined") ───────────────────────────────
+  // When the player returns to the app after the match, fire check-end.
+  // If stats changed → navigate to result page. If not → show "still in match".
+  const checkingEndRef = useRef(false);
+  useEffect(() => {
+    if (phase !== "joined" || !matchId) return;
+
+    const onVisibility = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (checkingEndRef.current) return; // debounce concurrent calls
+      checkingEndRef.current = true;
+      setCheckingEnd(true);
+      setStillInMatch(false);
+      try {
+        const token = localStorage.getItem("clash_ren_token");
+        const resp = await fetch("/api/quickmatch/match/check-end", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          // Send matchId so the server can scope any DB fallback to this exact match
+          body: JSON.stringify({ matchId }),
+        });
+        if (resp.ok) {
+          const data = await resp.json() as { ended: boolean; matchId?: string };
+          if (data.ended) {
+            safeNavigate(`/quickmatch/result/${data.matchId ?? matchId}`);
+            return;
+          } else {
+            setStillInMatch(true);
+            // Auto-hide the "still in match" toast after 4 s
+            setTimeout(() => setStillInMatch(false), 4000);
+          }
+        }
+      } catch { /* best-effort */ }
+      setCheckingEnd(false);
+      checkingEndRef.current = false;
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    // Also fire once immediately (user may have opened the app after the match)
+    onVisibility();
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, matchId]);
 
   const handleOpenInFF = async () => {
     if (!matchInfo) return;
@@ -946,11 +996,23 @@ export default function QuickMatchQueue() {
             You're In!
           </h2>
 
-          {/* Snapshot captured badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
-            <span className="text-[11px] font-bold text-emerald-400 tracking-wide">Stats snapshot captured</span>
-          </div>
+          {/* Snapshot captured badge / checking status */}
+          {checkingEnd ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}>
+              <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ border: "2px solid rgba(99,102,241,0.3)", borderTopColor: "#818cf8", animation: "icon-spin 0.8s linear infinite" }} />
+              <span className="text-[11px] font-bold text-indigo-400 tracking-wide">Checking match result…</span>
+            </div>
+          ) : stillInMatch ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)" }}>
+              <Clock className="w-3.5 h-3.5 text-amber-400" strokeWidth={2.5} />
+              <span className="text-[11px] font-bold text-amber-400 tracking-wide">Still in match — check back when done</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
+              <span className="text-[11px] font-bold text-emerald-400 tracking-wide">Stats snapshot captured</span>
+            </div>
+          )}
 
           {/* Prize reminder */}
           {prizeAmount > 0 && (

@@ -21,7 +21,7 @@ import {
   markActionTaken,
   type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
-import { creditPlayer } from "../lib/quickmatch-settlement.js";
+import { creditPlayer, checkAndSettleIfEnded } from "../lib/quickmatch-settlement.js";
 import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
 import { notify } from "../lib/push.js";
 import { requireAuth } from "../middlewares/auth.js";
@@ -452,6 +452,63 @@ router.post("/quickmatch/match/action", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── App-open match-end check ─────────────────────────────────────────────────
+// Called when a player brings the app to the foreground after joining the match.
+// Fetches fresh stats and settles immediately if they differ from pre-snapshot.
+// Falls back to DB lookup so that timer-settled matches are also surfaced.
+router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
+  const userId    = String(req.user!.userId);
+  const userIdNum = req.user!.userId;
+  const match     = getMatchForPlayer(userId);
+
+  // ── No active in-memory match ────────────────────────────────────────────
+  // The match may have already been settled by the 15-min timer fallback
+  // (which dismisses it from memory). Scope the lookup to the specific matchId
+  // supplied by the client so we never surface an unrelated historical match.
+  if (!match) {
+    const { matchId: clientMatchId } = req.body as { matchId?: string };
+
+    if (clientMatchId) {
+      // Look up the exact match the client knows about
+      const settled = await db.query.quickmatchVerificationsTable.findFirst({
+        where: (t, { and, eq, isNotNull }) => and(
+          eq(t.matchId, clientMatchId),
+          eq(t.userId, userIdNum),
+          isNotNull(t.outcome),
+        ),
+      }).catch(() => null);
+
+      if (settled) {
+        res.json({ ended: true, matchId: settled.matchId });
+      } else {
+        res.json({ ended: false, reason: "no_active_match" });
+      }
+    } else {
+      // No matchId provided — cannot safely fall back to an arbitrary historical row
+      res.json({ ended: false, reason: "no_active_match" });
+    }
+    return;
+  }
+
+  if (match.status !== "credentials_ready") {
+    // Still in waiting_room (credentials not delivered yet)
+    res.json({ ended: false, reason: "credentials_not_ready" });
+    return;
+  }
+
+  // Always go through checkAndSettleIfEnded — it awaits any in-flight
+  // settlement promise before returning ended:true, guaranteeing that
+  // DB rows exist by the time the client navigates to the result page.
+  // (Do NOT short-circuit on noShowHandled here; that bypasses the await.)
+  try {
+    const ended = await checkAndSettleIfEnded(match);
+    res.json({ ended, matchId: match.id });
+  } catch (err) {
+    console.error("[check-end] Error:", err);
+    res.status(500).json({ error: "Failed to check match end" });
+  }
+});
+
 // ─── Dismiss match (only if no active match) ──────────────────────────────────
 router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
   const userId = String(req.user!.userId);
@@ -590,6 +647,49 @@ router.get("/quickmatch/result/:matchId", requireAuth, async (req, res) => {
     }
   }
 
+  // ── Parse this player's stat deltas ────────────────────────────────────────
+  type StatDiffShape = {
+    resultType?:     string;
+    coinsEarned?:    number;
+    entryFee?:       number;
+    prizeAmount?:    number;
+    opponentUserId?: string | null;
+    opponentName?:   string | null;
+    killsDelta?:     number | null;
+    damageDelta?:    number | null;
+    deathsDelta?:    number | null;
+    assistsDelta?:   number | null;
+  };
+  let myStatDiff: StatDiffShape = {};
+  try {
+    if (row.statDiff) myStatDiff = JSON.parse(row.statDiff) as StatDiffShape;
+  } catch { /* ignore */ }
+
+  // ── Fetch opponent's stat deltas from their verification row ────────────────
+  let opponentKillsDelta:   number | null = null;
+  let opponentDamageDelta:  number | null = null;
+  let opponentDeathsDelta:  number | null = null;
+  let opponentAssistsDelta: number | null = null;
+
+  if (opponentUserId) {
+    const oppVerif = await db.query.quickmatchVerificationsTable.findFirst({
+      where: (t, { and, eq }) => and(
+        eq(t.matchId, matchId),
+        eq(t.userId, Number(opponentUserId)),
+      ),
+    }).catch(() => null);
+
+    if (oppVerif?.statDiff) {
+      try {
+        const oppDiff = JSON.parse(oppVerif.statDiff) as StatDiffShape;
+        opponentKillsDelta   = oppDiff.killsDelta   ?? null;
+        opponentDamageDelta  = oppDiff.damageDelta  ?? null;
+        opponentDeathsDelta  = oppDiff.deathsDelta  ?? null;
+        opponentAssistsDelta = oppDiff.assistsDelta ?? null;
+      } catch { /* ignore */ }
+    }
+  }
+
   res.json({
     matchId,
     resultType,
@@ -600,6 +700,16 @@ router.get("/quickmatch/result/:matchId", requireAuth, async (req, res) => {
     opponentName,
     opponentProfilePicture,
     settledAt:             row.createdAt,
+    // My stat deltas
+    killsDelta:   myStatDiff.killsDelta   ?? null,
+    damageDelta:  myStatDiff.damageDelta  ?? null,
+    deathsDelta:  myStatDiff.deathsDelta  ?? null,
+    assistsDelta: myStatDiff.assistsDelta ?? null,
+    // Opponent's stat deltas
+    opponentKillsDelta,
+    opponentDamageDelta,
+    opponentDeathsDelta,
+    opponentAssistsDelta,
   });
 });
 

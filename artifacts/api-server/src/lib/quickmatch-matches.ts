@@ -40,6 +40,8 @@ export interface QuickMatch {
   actionTaken: Record<string, string>;
   preSnapshots: Record<string, CsCareerSnapshot>;
   noShowHandled: boolean;
+  /** Settlement promise stored so concurrent check-end calls can await completion. */
+  settlementPromise?: Promise<void>;
 }
 
 const MAX_HISTORY = 50;
@@ -161,6 +163,11 @@ export function setPreSnapshot(matchId: string, userId: string, snapshot: CsCare
 export function markNoShowHandled(matchId: string): void {
   const match = activeMatches.find((m) => m.id === matchId);
   if (match) match.noShowHandled = true;
+}
+
+export function setSettlementPromise(matchId: string, promise: Promise<void>): void {
+  const match = activeMatches.find((m) => m.id === matchId);
+  if (match) match.settlementPromise = promise;
 }
 
 export function dismissMatch(matchId: string): void {

@@ -13,12 +13,85 @@ import { fetchCsCareerSnapshot } from "./quickmatch-hlgaming.js";
 import {
   setPreSnapshot,
   markNoShowHandled,
+  setSettlementPromise,
   dismissMatch,
   type QuickMatch,
 } from "./quickmatch-matches.js";
 import { getSystemSettings } from "./systemSettings.js";
 
-export const SNAPSHOT_DELAY_MS = 15 * 60 * 1000; // 15 minutes — enough for a CS 1v1 to complete
+export const SNAPSHOT_DELAY_MS = 15 * 60 * 1000; // 15 minutes — fallback if app-open detection misses
+
+// ─── App-open match-end detection ─────────────────────────────────────────────
+
+/**
+ * Called when a player brings the app to the foreground after the match.
+ * Fetches a fresh snapshot for each player and compares with the pre-snapshot.
+ * If ANY player's games-played count increased → the match has ended → settle.
+ * Returns true when settlement was triggered, false when the match is still live.
+ */
+export async function checkAndSettleIfEnded(match: QuickMatch): Promise<boolean> {
+  // If settlement is already complete or in-flight, await the promise so we
+  // only return ended:true once DB rows are guaranteed to be written.
+  if (match.noShowHandled) {
+    if (match.settlementPromise) await match.settlementPromise;
+    return true;
+  }
+
+  if (match.status !== "credentials_ready") return false;
+
+  // Need at least one pre-snapshot to compare against
+  const hasPreSnapshots = match.players.some((p) => !!match.preSnapshots[p.userId]);
+  if (!hasPreSnapshots) {
+    console.log(`[check-end] Match ${match.id}: no pre-snapshots yet — skipping`);
+    return false;
+  }
+
+  // Fetch fresh snapshots for all players with known UIDs
+  const freshSnaps: Record<string, Awaited<ReturnType<typeof fetchCsCareerSnapshot>>> = {};
+  await Promise.allSettled(
+    match.players
+      .filter((p) => !!p.uid)
+      .map(async (player) => {
+        const snap = await fetchCsCareerSnapshot(player.uid!);
+        freshSnaps[player.userId] = snap;
+        if (snap) {
+          console.log(
+            `[check-end] Fresh snap for player=${player.userId}: ` +
+            `games=${snap.gamesPlayed} kills=${snap.kills} damage=${snap.damage}`,
+          );
+        }
+      }),
+  );
+
+  // Match ended if ANY player has more games played than at pre-snapshot
+  const matchEnded = match.players.some((p) => {
+    const pre   = match.preSnapshots[p.userId];
+    const fresh = freshSnaps[p.userId];
+    return pre && fresh && fresh.gamesPlayed > pre.gamesPlayed;
+  });
+
+  if (!matchEnded) {
+    console.log(`[check-end] Match ${match.id}: stats unchanged — still in progress`);
+    return false;
+  }
+
+  // A concurrent check-end may have started settlement during the async snapshot
+  // fetching above. Re-check noShowHandled and await its promise if so.
+  if (match.noShowHandled) {
+    if (match.settlementPromise) await match.settlementPromise;
+    return true;
+  }
+
+  console.log(`[check-end] Match ${match.id}: stats changed — triggering immediate settlement`);
+
+  // Store the promise BEFORE awaiting so concurrent callers see it immediately.
+  // settleQuickMatch() sets noShowHandled synchronously at its start, making
+  // any subsequent concurrent call fall into the noShowHandled branch above.
+  const promise = settleQuickMatch(match);
+  setSettlementPromise(match.id, promise);
+  await promise;
+  return true;
+}
 // Read join window from system settings so admins can tune it live
 function getJoinWindowMs(): number {
   return (getSystemSettings().joinWindowSeconds ?? 30) * 1000;
@@ -150,14 +223,16 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   };
 
   // Outcome classification:
-  //   "winner"  — acted in time + stat-verified win
-  //   "loser"   — acted in time + played but did not win
+  //   "winner"  — acted in time + highest kills delta (damage as tiebreaker)
+  //   "loser"   — acted in time + played but fewer kills/damage than opponent
+  //   "tied"    — both played, kills AND damage deltas are equal → both refunded
   //   "no_show" — did NOT act in time, or no stat change detected
   //   "leaker"  — stats changed but player did NOT act in-app within window
   //               (credentials were shared externally)
-  type Outcome = "winner" | "loser" | "no_show" | "leaker";
+  type Outcome = "winner" | "loser" | "tied" | "no_show" | "leaker";
   const outcomes: Record<string, Outcome> = {};
 
+  // ── Pass 1: classify no_show / leaker / tentative "played" ───────────────
   for (const player of match.players) {
     const pre  = match.preSnapshots[player.userId];
     const post = postSnaps[player.userId];
@@ -165,18 +240,49 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     const inTime = actedInTime(player.userId);
 
     if (!statsChanged) {
-      // No stat movement — player did not play (no-show regardless of action)
       outcomes[player.userId] = "no_show";
     } else if (!inTime) {
-      // Stats changed but player never used in-app credentials within 20s
-      // → credentials were shared externally (leak)
+      // Stats changed but no in-app credential action → leak
       outcomes[player.userId] = "leaker";
     } else {
-      // Acted in time + played
-      const winsDelta = (post?.wins ?? 0) - (pre?.wins ?? 0);
-      outcomes[player.userId] = winsDelta >= 1 ? "winner" : "loser";
+      // Mark as "winner" tentatively; resolved in pass 2
+      outcomes[player.userId] = "winner";
     }
   }
+
+  // ── Pass 2: resolve winner/loser/tied for players who actually played ─────
+  const activePlayers = match.players.filter((p) => outcomes[p.userId] === "winner");
+  if (activePlayers.length === 2) {
+    const [p1, p2] = activePlayers;
+    const p1Pre  = match.preSnapshots[p1.userId];
+    const p1Post = postSnaps[p1.userId];
+    const p2Pre  = match.preSnapshots[p2.userId];
+    const p2Post = postSnaps[p2.userId];
+
+    const p1Kills  = (p1Post?.kills  ?? 0) - (p1Pre?.kills  ?? 0);
+    const p2Kills  = (p2Post?.kills  ?? 0) - (p2Pre?.kills  ?? 0);
+    const p1Damage = (p1Post?.damage ?? 0) - (p1Pre?.damage ?? 0);
+    const p2Damage = (p2Post?.damage ?? 0) - (p2Pre?.damage ?? 0);
+
+    console.log(
+      `[settlement] Kill delta: p1=${p1Kills} p2=${p2Kills}  ` +
+      `Damage delta: p1=${p1Damage} p2=${p2Damage}`,
+    );
+
+    if (p1Kills !== p2Kills) {
+      outcomes[p1.userId] = p1Kills > p2Kills ? "winner" : "loser";
+      outcomes[p2.userId] = p1Kills > p2Kills ? "loser"  : "winner";
+    } else if (p1Damage !== p2Damage) {
+      outcomes[p1.userId] = p1Damage > p2Damage ? "winner" : "loser";
+      outcomes[p2.userId] = p1Damage > p2Damage ? "loser"  : "winner";
+    } else {
+      // Perfect tie — both refunded
+      outcomes[p1.userId] = "tied";
+      outcomes[p2.userId] = "tied";
+      console.log(`[settlement] Perfect tie — both players refunded`);
+    }
+  }
+  // If activePlayers.length === 1, the single active player wins (opponent no_show/leaker handled below)
 
   console.log(`[settlement] Raw outcomes:`, outcomes);
 
@@ -225,10 +331,13 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     } else {
       // Both played normally
       if (outcome === "winner") {
-        resultTypes[player.userId]   = "win";
+        resultTypes[player.userId]    = "win";
         coinsEarnedMap[player.userId] = match.prizeAmount;
+      } else if (outcome === "tied") {
+        resultTypes[player.userId]    = "refund";
+        coinsEarnedMap[player.userId] = match.entryFee;
       } else {
-        resultTypes[player.userId]   = "loss";
+        resultTypes[player.userId]    = "loss";
         coinsEarnedMap[player.userId] = 0;
       }
     }
@@ -253,6 +362,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             killsDelta:       post.kills       - pre.kills,
             damageDelta:      post.damage      - pre.damage,
             deathsDelta:      post.deaths      - pre.deaths,
+            assistsDelta:     post.assists     - pre.assists,
           }
         : {}),
       // Result page context — authoritative, derived before any payment
@@ -443,6 +553,29 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             type:  "quickmatch_result",
             title: "You Won!",
             body:  `+${match.prizeAmount} coins! Great game.`,
+            url:   resultUrl,
+          });
+          pushToUser(userId, "quickmatch_result", {
+            matchId: match.id, resultType, coinsEarned,
+            entryFee: match.entryFee, prizeAmount: match.prizeAmount,
+          });
+        } else if (outcome === "tied") {
+          // Perfect stat tie — refund both
+          if (match.entryFee > 0) {
+            await creditPlayer(
+              userId,
+              match.entryFee,
+              "QuickMatch Tie Refund",
+              "quickmatch_tie_refund",
+              "withdraw_refund",
+            );
+          }
+          await notify(userId, {
+            type:  "quickmatch_result",
+            title: "Match Tied!",
+            body:  match.entryFee > 0
+              ? `Identical stats — it's a draw! Your ${match.entryFee} coin entry fee has been refunded.`
+              : "Identical stats — it's a draw! No coins were at stake.",
             url:   resultUrl,
           });
           pushToUser(userId, "quickmatch_result", {

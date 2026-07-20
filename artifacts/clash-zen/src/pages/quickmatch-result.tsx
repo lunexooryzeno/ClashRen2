@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Trophy, XCircle, RotateCcw, ShieldOff, Users } from "lucide-react";
+import { ArrowLeft, Trophy, XCircle, RotateCcw, ShieldOff, Users, Sparkles, Sword, Crosshair, Heart } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { apiFetch } from "@/lib/api";
 
@@ -14,6 +14,16 @@ interface MatchResult {
   opponentName: string | null;
   opponentProfilePicture: string | null;
   settledAt: string | null;
+  // My stat deltas
+  killsDelta:   number | null;
+  damageDelta:  number | null;
+  deathsDelta:  number | null;
+  assistsDelta: number | null;
+  // Opponent stat deltas
+  opponentKillsDelta:   number | null;
+  opponentDamageDelta:  number | null;
+  opponentDeathsDelta:  number | null;
+  opponentAssistsDelta: number | null;
 }
 
 type DisplayConfig = {
@@ -449,10 +459,91 @@ export default function QuickMatchResultPage() {
               </div>
             </div>
 
+            {/* ─── Stat Breakdown (win / loss only) ─── */}
+            {(result.resultType === "win" || result.resultType === "loss") &&
+              result.killsDelta !== null && result.opponentKillsDelta !== null && (
+              <div
+                className="w-full rounded-2xl overflow-hidden"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  animation: "slide-up 0.45s ease 0.30s both",
+                }}
+              >
+                {/* Header row */}
+                <div className="flex items-center px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 flex-1">Your Stats</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600">Opponent</span>
+                </div>
+
+                {/* Stat rows */}
+                {([
+                  { label: "Kills",   me: result.killsDelta,   opp: result.opponentKillsDelta,   Icon: Crosshair },
+                  { label: "Damage",  me: result.damageDelta,  opp: result.opponentDamageDelta,  Icon: Sword     },
+                  { label: "Deaths",  me: result.deathsDelta,  opp: result.opponentDeathsDelta,  Icon: XCircle   },
+                  { label: "Assists", me: result.assistsDelta, opp: result.opponentAssistsDelta, Icon: Heart     },
+                ] as { label: string; me: number | null; opp: number | null; Icon: React.ElementType }[]).map(({ label, me, opp, Icon }) => {
+                  if (me === null && opp === null) return null;
+                  const myVal  = me  ?? 0;
+                  const oppVal = opp ?? 0;
+                  const myBetter  = label === "Deaths" ? myVal < oppVal : myVal > oppVal;
+                  const oppBetter = label === "Deaths" ? oppVal < myVal : oppVal > myVal;
+                  return (
+                    <div key={label} className="flex items-center px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      {/* My value */}
+                      <span
+                        className="text-[18px] font-black tabular-nums w-10 text-left"
+                        style={{ color: myBetter ? cfg!.accent : oppBetter ? "#71717a" : "#a1a1aa" }}
+                      >
+                        {myVal}
+                      </span>
+
+                      {/* Centre label */}
+                      <div className="flex-1 flex flex-col items-center gap-0.5">
+                        <Icon className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.8} />
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">{label}</span>
+                      </div>
+
+                      {/* Opponent value */}
+                      <span
+                        className="text-[18px] font-black tabular-nums w-10 text-right"
+                        style={{ color: oppBetter ? "#ef4444" : myBetter ? "#71717a" : "#a1a1aa" }}
+                      >
+                        {oppVal}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ─── AI Verified Badge (win / loss only) ─── */}
+            {(result.resultType === "win" || result.resultType === "loss") && (
+              <div
+                className="w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl"
+                style={{
+                  background: "rgba(139,92,246,0.08)",
+                  border: "1px solid rgba(139,92,246,0.2)",
+                  animation: "slide-up 0.45s ease 0.38s both",
+                }}
+              >
+                <div
+                  className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(139,92,246,0.18)" }}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-violet-400" strokeWidth={2} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-violet-300 leading-tight">Result verified by AI stat analysis</p>
+                  <p className="text-[10px] text-zinc-600 leading-tight">Kills &amp; damage compared against pre-match snapshot</p>
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <div
               className="w-full flex flex-col gap-3 mt-2"
-              style={{ animation: "slide-up 0.45s ease 0.42s both" }}
+              style={{ animation: "slide-up 0.45s ease 0.46s both" }}
             >
               <button
                 onClick={() => navigate("/quickmatch")}
