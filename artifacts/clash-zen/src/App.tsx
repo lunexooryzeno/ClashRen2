@@ -306,6 +306,7 @@ function Router() {
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/manage-keys" component={ApiKeysAdminPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/utr-transactions" component={UtrTransactionsPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/phone-host" component={PhoneHostAdminPage} />
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/join-settings" component={lazy(() => import("@/pages/admin-join-settings"))} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

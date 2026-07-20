@@ -987,6 +987,7 @@ export default function SuperAdminPage() {
             <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-700">Configuration</p>
             <SidebarItem icon={KeyRound} label="Manage API Keys" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/manage-keys`)} />
             <SidebarItem icon={Smartphone} label="Phone Host" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/phone-host`)} />
+            <SidebarItem icon={Target} label="Join Requirements" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/join-settings`)} />
           </div>
 
           {/* Activity / Logs */}
