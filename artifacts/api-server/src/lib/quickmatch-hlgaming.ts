@@ -8,6 +8,7 @@ const SNAPSHOT_TIMEOUT_MS = 15_000;
 export interface HlGamingProfile {
   uid: string;
   nickname: string;
+  level: number;
 }
 
 export async function fetchHlGamingAccount(playerUid: string, region = "ind"): Promise<HlGamingProfile | null> {
@@ -31,11 +32,15 @@ export async function fetchHlGamingAccount(playerUid: string, region = "ind"): P
       return null;
     }
     const json = await resp.json() as Record<string, unknown>;
+    console.log(`[hlgaming] raw response for UID ${playerUid}:`, JSON.stringify(json).slice(0, 500));
     const result = (json.result ?? json.data ?? json) as Record<string, unknown>;
     const ai     = (result.AccountInfo ?? {}) as Record<string, unknown>;
     const name   = ai.AccountName ?? ai.nickname ?? ai.name;
     if (!name || typeof name !== "string") return null;
-    return { uid: playerUid, nickname: name };
+    const level  = Number(
+      ai.AccountLevel ?? ai.Level ?? ai.level ?? ai.account_level ?? 0
+    );
+    return { uid: playerUid, nickname: name, level };
   } catch (err: unknown) {
     console.error(`[hlgaming] Error fetching account for UID ${playerUid}:`, err instanceof Error ? err.message : String(err));
     return null;
