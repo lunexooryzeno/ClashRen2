@@ -175,22 +175,93 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
 
   console.log(`[settlement] Raw outcomes:`, outcomes);
 
+  // ── Determine settlement scenario (must be done before upsert) ───────────
+  // Deep-link to the per-match result page
+  const resultUrl = `/#/quickmatch/result/${match.id}`;
+
+  const leakers  = match.players.filter((p) => outcomes[p.userId] === "leaker");
+  const victims  = match.players.filter((p) => outcomes[p.userId] !== "leaker");
+  const hasLeaker = leakers.length > 0;
+  const allNoShow = !hasLeaker && match.players.every((p) => outcomes[p.userId] === "no_show");
+  const anyNoShow = !hasLeaker && match.players.some((p) => outcomes[p.userId] === "no_show");
+
+  // Canonical per-player result (what the result page shows)
+  // "win"       → beat opponent, prize credited
+  // "loss"      → lost, entry fee forfeited
+  // "refund"    → match invalid (opponent no-showed or credential leak victim), entry returned
+  // "no_show"   → this player didn't join, entry fee forfeited
+  // "suspended" → credential leak detected, player banned
+  type ResultType = "win" | "loss" | "refund" | "no_show" | "suspended";
+  const resultTypes: Record<string, ResultType> = {};
+  const coinsEarnedMap: Record<string, number>  = {};
+
+  for (const player of match.players) {
+    const outcome = outcomes[player.userId];
+    if (hasLeaker) {
+      if (outcome === "leaker") {
+        resultTypes[player.userId]   = "suspended";
+        coinsEarnedMap[player.userId] = 0;
+      } else {
+        resultTypes[player.userId]   = "refund";
+        coinsEarnedMap[player.userId] = match.entryFee;
+      }
+    } else if (allNoShow) {
+      resultTypes[player.userId]   = "no_show";
+      coinsEarnedMap[player.userId] = 0;
+    } else if (anyNoShow) {
+      if (outcome === "no_show") {
+        resultTypes[player.userId]   = "no_show";
+        coinsEarnedMap[player.userId] = 0;
+      } else {
+        // This player showed but opponent didn't → refund
+        resultTypes[player.userId]   = "refund";
+        coinsEarnedMap[player.userId] = match.entryFee;
+      }
+    } else {
+      // Both played normally
+      if (outcome === "winner") {
+        resultTypes[player.userId]   = "win";
+        coinsEarnedMap[player.userId] = match.prizeAmount;
+      } else {
+        resultTypes[player.userId]   = "loss";
+        coinsEarnedMap[player.userId] = 0;
+      }
+    }
+  }
+
+  console.log(`[settlement] Result types:`, resultTypes);
+
   // ── Upsert verification records (update pre rows created in pre-snapshot) ─
   for (const player of match.players) {
-    const pre     = match.preSnapshots[player.userId];
-    const post    = postSnaps[player.userId];
-    const outcome = outcomes[player.userId];
+    const pre        = match.preSnapshots[player.userId];
+    const post       = postSnaps[player.userId];
+    const outcome    = outcomes[player.userId];
+    const resultType = resultTypes[player.userId];
+    const coinsEarned = coinsEarnedMap[player.userId] ?? 0;
+    const opponent   = match.players.find((p) => p.userId !== player.userId);
 
-    const statDiff =
-      pre && post
-        ? JSON.stringify({
+    const statDiff = JSON.stringify({
+      ...(pre && post
+        ? {
             gamesPlayedDelta: post.gamesPlayed - pre.gamesPlayed,
             winsDelta:        post.wins        - pre.wins,
             killsDelta:       post.kills       - pre.kills,
             damageDelta:      post.damage      - pre.damage,
             deathsDelta:      post.deaths      - pre.deaths,
-          })
-        : null;
+          }
+        : {}),
+      // Result page context — authoritative, derived before any payment
+      resultType,
+      coinsEarned,
+      entryFee:       match.entryFee,
+      prizeAmount:    match.prizeAmount,
+      opponentUserId: opponent?.userId ?? null,
+      opponentName:   opponent?.inGameName ?? null,
+    });
+
+    // Store "suspended" for credential-leak players so the result page can
+    // show the correct state. All other outcome values pass through as-is.
+    const dbOutcome = outcome === "leaker" ? "suspended" : outcome;
 
     await db
       .insert(quickmatchVerificationsTable)
@@ -203,7 +274,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         postSnapshotAt:   post ? new Date(post.fetchedAt) : null,
         postSnapshotData: post ? JSON.stringify(post)      : null,
         statDiff,
-        outcome: outcome === "leaker" ? "no_show" : outcome,
+        outcome:       dbOutcome,
         rewardGranted: outcome === "winner",
       })
       .onConflictDoUpdate({
@@ -212,7 +283,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
           postSnapshotAt:   post ? new Date(post.fetchedAt) : null,
           postSnapshotData: post ? JSON.stringify(post)      : null,
           statDiff,
-          outcome: outcome === "leaker" ? "no_show" : outcome,
+          outcome:       dbOutcome,
           rewardGranted: outcome === "winner",
         },
       })
@@ -220,9 +291,6 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   }
 
   // ── Leak detection: suspend leaker, cancel, refund victim ─────────────────
-  const leakers  = match.players.filter((p) => outcomes[p.userId] === "leaker");
-  const victims  = match.players.filter((p) => outcomes[p.userId] !== "leaker");
-
   if (leakers.length > 0) {
     const banUntil = new Date(Date.now() + LEAK_BAN_HOURS * 60 * 60 * 1000);
 
@@ -253,7 +321,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         type:  "quickmatch_result",
         title: "Credential Leak — Suspended",
         body:  `You shared room credentials outside the app. Your QuickMatch access is suspended for ${LEAK_BAN_HOURS} hours.`,
-        url:   "/#/quickmatch",
+        url:   resultUrl,
       }).catch(() => {});
     }
 
@@ -273,7 +341,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
         type:  "quickmatch_result",
         title: "Match Cancelled — Opponent Suspended",
         body:  `Your opponent shared room credentials externally. They've been suspended and your ${match.entryFee > 0 ? `${match.entryFee} coin entry fee has been refunded` : "match has been cancelled"}.`,
-        url:   "/#/quickmatch",
+        url:   resultUrl,
       }).catch(() => {});
     }
 
@@ -290,9 +358,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   //                          • no-show player  : forfeits entry fee
   //                          • player who played: refunded entry fee (match invalid)
   //   neither no-shows   → both played: winner earns prize, loser keeps nothing
-
-  const allNoShow = match.players.every((p) => outcomes[p.userId] === "no_show");
-  const anyNoShow = match.players.some((p)  => outcomes[p.userId] === "no_show");
+  // (allNoShow / anyNoShow already computed above before upsert)
 
   for (const player of match.players) {
     const outcome = outcomes[player.userId] ?? "no_show";
@@ -305,7 +371,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
           type:  "quickmatch_result",
           title: "Match Cancelled",
           body:  "Neither player joined the room. Entry fee forfeited.",
-          url:   "/#/quickmatch",
+          url:   resultUrl,
         });
 
       } else if (anyNoShow) {
@@ -315,7 +381,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             type:  "quickmatch_result",
             title: "No-Show",
             body:  "You didn't join the room in time. Entry fee forfeited.",
-            url:   "/#/quickmatch",
+            url:   resultUrl,
           });
         } else {
           // This player showed but opponent didn't — refund entry fee
@@ -332,7 +398,7 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             type:  "quickmatch_result",
             title: "Match Cancelled — Opponent No-Show",
             body:  `Your opponent didn't join the room. Your ${match.entryFee} coin entry fee has been refunded.`,
-            url:   "/#/quickmatch",
+            url:   resultUrl,
           });
         }
 
@@ -350,14 +416,14 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
             type:  "quickmatch_result",
             title: "You Won!",
             body:  `+${match.prizeAmount} coins! Great game.`,
-            url:   "/#/quickmatch",
+            url:   resultUrl,
           });
         } else {
           await notify(userId, {
             type:  "quickmatch_result",
             title: "Match Complete",
             body:  "Good game! Better luck next time.",
-            url:   "/#/quickmatch",
+            url:   resultUrl,
           });
         }
       }

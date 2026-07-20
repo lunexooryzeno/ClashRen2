@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, or, sql } from "drizzle-orm";
-import { db, usersTable, walletTransactionsTable, balanceChangeLogsTable } from "@workspace/db";
+import { db, usersTable, walletTransactionsTable, balanceChangeLogsTable, quickmatchVerificationsTable } from "@workspace/db";
 import {
   getQueueStats,
   joinQueue,
@@ -441,6 +441,75 @@ router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
 
 router.get("/quickmatch/stats", (_req, res) => {
   res.json(getQueueStats());
+});
+
+// ─── Result page data ─────────────────────────────────────────────────────────
+router.get("/quickmatch/result/:matchId", requireAuth, async (req, res) => {
+  const userId  = req.user!.userId;
+  const { matchId } = req.params as { matchId: string };
+
+  const row = await db.query.quickmatchVerificationsTable.findFirst({
+    where: (t, { and, eq }) => and(eq(t.matchId, matchId), eq(t.userId, userId)),
+  });
+
+  if (!row) {
+    res.status(404).json({ error: "Result not found" });
+    return;
+  }
+
+  // Parse canonical result context embedded in statDiff by settlement
+  let resultType:    string = row.outcome ?? "no_show";
+  let coinsEarned:   number = 0;
+  let entryFee:      number = 0;
+  let prizeAmount:   number = 0;
+  let opponentUserId: string | null = null;
+  let opponentName:   string | null = null;
+
+  try {
+    if (row.statDiff) {
+      const parsed = JSON.parse(row.statDiff) as {
+        resultType?:    string;
+        coinsEarned?:   number;
+        entryFee?:      number;
+        prizeAmount?:   number;
+        opponentUserId?: string | null;
+        opponentName?:   string | null;
+      };
+      // Use canonical resultType from statDiff if present (new records);
+      // fall back to raw DB outcome for older rows
+      resultType     = parsed.resultType    ?? resultType;
+      coinsEarned    = parsed.coinsEarned   ?? 0;
+      entryFee       = parsed.entryFee      ?? 0;
+      prizeAmount    = parsed.prizeAmount   ?? 0;
+      opponentUserId = parsed.opponentUserId ?? null;
+      opponentName   = parsed.opponentName   ?? null;
+    }
+  } catch { /* ignore parse errors */ }
+
+  // Fetch fresh opponent profile (name / avatar) if we have the id
+  let opponentProfilePicture: string | null = null;
+  if (opponentUserId) {
+    const oppRow = await db.query.usersTable.findFirst({
+      where: (t, { eq }) => eq(t.id, Number(opponentUserId)),
+      columns: { inGameName: true, profilePicture: true },
+    }).catch(() => null);
+    if (oppRow) {
+      opponentName           = oppRow.inGameName    ?? opponentName;
+      opponentProfilePicture = oppRow.profilePicture ?? null;
+    }
+  }
+
+  res.json({
+    matchId,
+    resultType,
+    coinsEarned,
+    entryFee,
+    prizeAmount,
+    rewardGranted:         row.rewardGranted,
+    opponentName,
+    opponentProfilePicture,
+    settledAt:             row.createdAt,
+  });
 });
 
 export default router;

@@ -118,6 +118,7 @@ const JoinSuccessPage        = lazy(() => import("@/pages/join-success"));
 const AboutPage              = lazy(() => import("@/pages/about"));
 const QuickMatchHubPage       = lazy(() => import("@/pages/quickmatch-hub"));
 const QuickMatchQueuePage     = lazy(() => import("@/pages/quickmatch-queue"));
+const QuickMatchResultPage    = lazy(() => import("@/pages/quickmatch-result"));
 const DevLoginPage            = lazy(() => import("@/pages/dev-login"));
 
 // Suppress "signal is aborted without reason" — React Query cancels in-flight
@@ -220,6 +221,9 @@ function Router() {
         </Route>
         <Route path="/about">
           <ProtectedRoute component={AboutPage} />
+        </Route>
+        <Route path="/quickmatch/result/:matchId">
+          <ProtectedRoute component={QuickMatchResultPage} />
         </Route>
         <Route path="/quickmatch/:type/:mode">
           <ProtectedRoute component={QuickMatchQueuePage} />
