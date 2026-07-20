@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ArrowLeft, Users, Clock, Copy, Check, Shield, Crosshair,
-  Heart, Scissors, Target, Wind, Map as MapIcon, X, Swords,
+  Heart, Scissors, Target, Map as MapIcon, X, Swords,
   CheckCircle2, Zap, RotateCcw, Cpu, KeyRound, ExternalLink, Trophy,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
@@ -374,7 +374,7 @@ export default function QuickMatchQueue() {
   };
 
   const handleJoinRoom = async () => {
-    if (joining) return;
+    if (joining || phase === "joined") return;
     setJoining(true);
     stopJoinWindow();
     await leaveQueue();
@@ -387,16 +387,20 @@ export default function QuickMatchQueue() {
     if (!matchInfo) return;
     const url = matchInfo.openInFfUrl
       ?? `freefire://customroom?roomid=${encodeURIComponent(matchInfo.roomId)}&password=${encodeURIComponent(matchInfo.password)}`;
-    await trackAction("open_ff");
+    trackAction("open_ff").catch(() => {});
     window.open(url, "_blank");
+    // Auto-advance to joined immediately — opening FF means they're going in
+    handleJoinRoom();
   };
 
   function copyText(text: string, which: "room" | "pass") {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(which);
+      // Auto-advance to joined after 600 ms — enough to see the ✓ tick
+      setTimeout(() => handleJoinRoom(), 600);
       setTimeout(() => setCopied(null), 2500);
     });
-    trackAction(which === "room" ? "copy_room" : "copy_pass");
+    trackAction(which === "room" ? "copy_room" : "copy_pass").catch(() => {});
   }
 
   const Icon           = meta.Icon;
@@ -880,22 +884,13 @@ export default function QuickMatchQueue() {
             <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
           </button>
 
-          {/* I'm in — secondary CTA */}
-          <button
-            onClick={handleJoinRoom}
-            disabled={joining}
-            className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform disabled:opacity-60"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              animation: "slide-up 0.35s ease 0.25s both",
-            }}
+          {/* Hint — copy or open to auto-confirm */}
+          <p
+            className="text-[11px] text-zinc-600 text-center mt-0.5"
+            style={{ animation: "slide-up 0.35s ease 0.25s both" }}
           >
-            <Wind className="w-4.5 h-4.5 text-white/60" strokeWidth={2} />
-            <span className="text-[14px] font-bold text-white/70">
-              {joining ? "Confirming…" : "I'm In the Room"}
-            </span>
-          </button>
+            Copying credentials or opening Free Fire marks you as joined
+          </p>
         </div>
       )}
 
