@@ -946,16 +946,19 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          <h2 className="font-heading text-3xl font-black text-white tracking-tight mb-1" style={{ textShadow: `0 0 40px ${glow}` }}>
+          <h2 className="font-heading text-3xl font-black text-white tracking-tight mb-2" style={{ textShadow: `0 0 40px ${glow}` }}>
             You're In!
           </h2>
-          <p className="text-[13px] text-zinc-500 mb-5 text-center leading-relaxed">
-            Good luck! Results settle automatically after the match.
-          </p>
+
+          {/* Snapshot captured badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
+            <span className="text-[11px] font-bold text-emerald-400 tracking-wide">Stats snapshot captured</span>
+          </div>
 
           {/* Prize reminder */}
           {prizeAmount > 0 && (
-            <div className="flex items-center gap-2.5 mb-4 px-5 py-2.5 rounded-2xl" style={{
+            <div className="flex items-center gap-2.5 mb-3 px-5 py-2.5 rounded-2xl" style={{
               background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)",
             }}>
               <CoinIcon width={16} />
@@ -964,6 +967,38 @@ export default function QuickMatchQueue() {
               <span className="text-[11px] text-yellow-600">coins</span>
             </div>
           )}
+
+          {/* What happens next */}
+          <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-600">What happens next</span>
+            </div>
+            <div className="px-4 py-3 flex flex-col gap-2.5">
+              <div className="flex items-start gap-2.5">
+                <span className="text-base leading-none mt-0.5">📸</span>
+                <div>
+                  <p className="text-[11px] font-bold text-zinc-300 leading-tight">Snapshot captured</p>
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">Your pre-game stats were recorded the moment credentials arrived.</p>
+                </div>
+              </div>
+              <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+              <div className="flex items-start gap-2.5">
+                <span className="text-base leading-none mt-0.5">🎮</span>
+                <div>
+                  <p className="text-[11px] font-bold text-zinc-300 leading-tight">Play the match</p>
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">Wins are verified by comparing your stats before vs. after.</p>
+                </div>
+              </div>
+              <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
+              <div className="flex items-start gap-2.5">
+                <span className="text-base leading-none mt-0.5">🏆</span>
+                <div>
+                  <p className="text-[11px] font-bold text-zinc-300 leading-tight">Auto-settlement</p>
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">Results settle automatically. Prize credited if you win — refunded if opponent no-shows.</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Opponent card */}
           {opponent && (
