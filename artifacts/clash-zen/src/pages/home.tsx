@@ -15,6 +15,7 @@ import {
   User, Users, Crosshair, Medal, Flame, Target,
   TrendingUp, Crown, Wallet, Clock, CheckCircle,
   BookOpen, Award, Share2, Lightbulb, CalendarClock, ArrowRight, Zap,
+  Play,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -262,10 +263,30 @@ export default function Home() {
   const [tipIdx, setTipIdx] = useState(0);
   const tipTouchX = useRef<number | null>(null);
   const [apiBanners, setApiBanners] = useState<ApiBanner[] | null>(null);
+  const [activeMatch, setActiveMatch] = useState<{
+    status: string; gameType: string; modeId: string;
+    roomId?: string; prizeAmount?: number;
+  } | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setTipIdx(p => (p + 1) % PRO_TIPS.length), 4000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("clash_ren_token");
+    if (!token) return;
+    fetch("/api/quickmatch/match", {
+      credentials: "include",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data && data.status !== "none" && data.gameType && data.modeId) {
+          setActiveMatch(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -292,6 +313,40 @@ export default function Home() {
         style={{ background: "linear-gradient(180deg, #030303 0%, hsl(var(--background)) 100%)" }}>
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse at 50% 0%, hsl(var(--primary)/0.10) 0%, transparent 65%)" }} />
+
+        {/* ── Return to Active Match banner ── */}
+        {activeMatch && (
+          <Link href={`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`} className="block relative z-10 mb-4">
+            <div
+              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl active:scale-[0.97] transition-transform cursor-pointer"
+              style={{
+                background: "linear-gradient(135deg, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0.06) 100%)",
+                border: "1.5px solid rgba(239,68,68,0.40)",
+                boxShadow: "0 0 24px rgba(239,68,68,0.18)",
+              }}
+            >
+              {/* Pulse dot */}
+              <div className="relative shrink-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.35)" }}>
+                  <Play className="w-4 h-4 text-red-400" fill="currentColor" />
+                </div>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-black"
+                  style={{ animation: "live-pulse-home 1.2s ease-in-out infinite" }} />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-extrabold text-white leading-tight">Active QuickMatch</p>
+                <p className="text-[10px] text-red-400/80 font-semibold mt-0.5 truncate">
+                  {activeMatch.status === "ready"
+                    ? "Room credentials ready — tap to view"
+                    : "Waiting for room — tap to return"}
+                </p>
+              </div>
+
+              <ChevronRight className="w-4 h-4 text-red-400/60 shrink-0" />
+            </div>
+          </Link>
+        )}
 
         {/* ── Banner carousel ── */}
         {apiBanners === null ? (
