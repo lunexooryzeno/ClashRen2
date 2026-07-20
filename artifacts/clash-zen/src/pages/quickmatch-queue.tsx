@@ -379,6 +379,7 @@ export default function QuickMatchQueue() {
     stopJoinWindow();
     await leaveQueue();
     setPhase("joined");
+    trackAction("joined").catch(() => {});
     setJoining(false);
   };
 

@@ -23,6 +23,7 @@ import {
 } from "../lib/quickmatch-matches.js";
 import { creditPlayer } from "../lib/quickmatch-settlement.js";
 import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
+import { notify } from "../lib/push.js";
 import { requireAuth } from "../middlewares/auth.js";
 import type { QuickMatch } from "../lib/quickmatch-matches.js";
 
@@ -423,10 +424,11 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
 
 // ─── Track join-intent action ─────────────────────────────────────────────────
 router.post("/quickmatch/match/action", requireAuth, (req, res) => {
-  const userId = String(req.user!.userId);
+  const userId    = String(req.user!.userId);
+  const userIdNum = req.user!.userId;
   const { action, matchId: reqMatchId } = req.body as { action?: string; matchId?: string };
-  if (!action || !["copy_room", "copy_pass", "open_ff"].includes(action)) {
-    res.status(400).json({ error: "Invalid action. Use: copy_room, copy_pass, open_ff" });
+  if (!action || !["copy_room", "copy_pass", "open_ff", "joined"].includes(action)) {
+    res.status(400).json({ error: "Invalid action. Use: copy_room, copy_pass, open_ff, joined" });
     return;
   }
   // Prefer matchId from body; fall back to player's active match
@@ -436,6 +438,17 @@ router.post("/quickmatch/match/action", requireAuth, (req, res) => {
     return;
   }
   markActionTaken(match.id, userId);
+
+  // Send a push notification confirming the player has joined
+  if (action === "joined") {
+    notify(userIdNum, {
+      type:  "quickmatch_joined",
+      title: "You're In! 🎮",
+      body:  "Room credentials saved. Head to Free Fire and join the custom room — good luck!",
+      url:   `/#/quickmatch/${match.gameType}/${match.modeId}`,
+    }).catch(() => {});
+  }
+
   res.json({ ok: true });
 });
 
