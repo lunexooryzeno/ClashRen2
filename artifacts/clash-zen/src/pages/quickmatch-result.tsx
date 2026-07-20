@@ -180,6 +180,13 @@ export default function QuickMatchResultPage() {
       .then((data) => {
         setResult(data);
         setLoading(false);
+        // Mark as seen so the pending-result notification doesn't reappear
+        const token = localStorage.getItem("clash_ren_token");
+        fetch(`/api/quickmatch/result/${matchId}/seen`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        }).catch(() => {});
       })
       .catch((err: Error) => {
         setError(err.message ?? "Could not load result");
