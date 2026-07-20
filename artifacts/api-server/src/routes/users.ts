@@ -148,7 +148,7 @@ router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
 
   try {
     if (apiKey) {
-      const r = await fetch(`${INFO_BASE}?region=ind&uid=${user.uid}`, {
+      const r = await fetch(`${INFO_BASE}?region=ind&uid=${uidToUse}`, {
         headers: {
           "accept": "*/*",
           "content-type": "application/json",
@@ -166,7 +166,7 @@ router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
     }
 
     if (!nickname) {
-      const r = await fetch(`${STATS_BASE}?uid=${user.uid}&server=IND&gamemode=br&matchmode=CAREER`, {
+      const r = await fetch(`${STATS_BASE}?uid=${uidToUse}&server=IND&gamemode=br&matchmode=CAREER`, {
         signal: AbortSignal.timeout(10000),
       });
       if (r.ok) {
