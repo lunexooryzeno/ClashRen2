@@ -31,9 +31,9 @@ export async function fetchHlGamingAccount(playerUid: string, region = "ind"): P
       return null;
     }
     const json = await resp.json() as Record<string, unknown>;
-    const data  = (json.data  ?? json)       as Record<string, unknown>;
-    const ai    = (data.AccountInfo ?? data.BasicInfo ?? data.basicInfo ?? {}) as Record<string, unknown>;
-    const name  = ai.AccountName ?? ai.nickname ?? ai.name ?? ai.playerName;
+    const result = (json.result ?? json.data ?? json) as Record<string, unknown>;
+    const ai     = (result.AccountInfo ?? {}) as Record<string, unknown>;
+    const name   = ai.AccountName ?? ai.nickname ?? ai.name;
     if (!name || typeof name !== "string") return null;
     return { uid: playerUid, nickname: name };
   } catch (err: unknown) {
