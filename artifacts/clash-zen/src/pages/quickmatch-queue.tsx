@@ -398,9 +398,8 @@ export default function QuickMatchQueue() {
   useEffect(() => {
     if (phase !== "joined") return;
     let cancelled = false;
-    snapRetriesRef.current = 0;
+    const DEADLINE = Date.now() + 3 * 60 * 1000; // give up after 3 minutes
     setSnapFailed(false);
-    const MAX_RETRIES = 8; // ~40 s max (8 × 5 s)
     const fetchSnap = async () => {
       setSnapLoading(true);
       try {
@@ -417,14 +416,14 @@ export default function QuickMatchQueue() {
             setSnapLoading(false);
             return;
           }
-          if (!cancelled && data.reason === "pending" && snapRetriesRef.current < MAX_RETRIES) {
-            snapRetriesRef.current++;
-            setTimeout(fetchSnap, 5000);
+          // Keep retrying while backend is still fetching AND we haven't hit the deadline
+          if (!cancelled && data.reason === "pending" && Date.now() < DEADLINE) {
+            setTimeout(fetchSnap, 6000);
             return;
           }
         }
       } catch { /* best-effort */ }
-      // Exhausted retries or non-pending reason — give up
+      // Definitive unavailable/not_found, or deadline passed — stop
       if (!cancelled) { setSnapLoading(false); setSnapFailed(true); }
     };
     fetchSnap();
