@@ -539,7 +539,7 @@ router.get("/quickmatch/match/pre-snapshot", requireAuth, async (req, res) => {
   const userId    = String(req.user!.userId);
   const userIdNum = req.user!.userId;
 
-  // 1. Check in-memory match
+  // 1. Check in-memory match first
   const match = getMatchForPlayer(userId);
   if (match) {
     const snap = match.preSnapshots[userId];
@@ -547,14 +547,12 @@ router.get("/quickmatch/match/pre-snapshot", requireAuth, async (req, res) => {
       res.json({ snapshot: snap, capturedAt: snap.fetchedAt, source: "live" });
       return;
     }
-    // If fetch hasn't been attempted yet (credentials just arrived), tell client to wait.
-    // If it was already attempted but returned nothing (API error / no UID), say unavailable.
-    const reason = match.preSnapshotAttempted ? "unavailable" : "pending";
-    res.json({ snapshot: null, reason });
-    return;
+    // Snapshot not in memory — check DB before deciding pending vs unavailable.
+    // (DB write happens async; memory may not have it yet even if DB does.)
   }
 
-  // 2. Fall back to DB (match may have been dismissed after settlement)
+  // 2. Always check DB — covers in-progress matches whose snapshot was persisted
+  //    async, plus settled matches where the in-memory entry is gone.
   try {
     const row = await db.query.quickmatchVerificationsTable.findFirst({
       where: (t, { and, eq, isNotNull }) => and(
@@ -570,7 +568,13 @@ router.get("/quickmatch/match/pre-snapshot", requireAuth, async (req, res) => {
     }
   } catch { /* fall through */ }
 
-  res.json({ snapshot: null, reason: "not_found" });
+  // No snapshot anywhere — tell client whether to keep waiting or give up
+  if (match) {
+    const reason = match.preSnapshotAttempted ? "unavailable" : "pending";
+    res.json({ snapshot: null, reason });
+  } else {
+    res.json({ snapshot: null, reason: "not_found" });
+  }
 });
 
 router.get("/quickmatch/stats", (_req, res) => {
