@@ -24,22 +24,26 @@ function setCache(uid: string, snap: CsCareerSnapshot): void {
 
 // ─── Retry helper ─────────────────────────────────────────────────────────────
 // Retries a fetch up to maxRetries times when the response is 429 (rate-limit).
-// Uses exponential back-off starting at baseDelayMs.
+// Each attempt gets its own per-attempt timeout so earlier retries don't eat
+// into the timeout budget of later attempts.
+// baseDelayMs is chosen to give the API's rate-limit window time to reset:
+// 15s, 30s, 60s — total possible wait ~105s before giving up.
 async function fetchWithRetry(
   url: string,
-  signal: AbortSignal,
+  perAttemptTimeoutMs: number,
   maxRetries = 3,
-  baseDelayMs = 2_000,
+  baseDelayMs = 15_000,
 ): Promise<Response> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      const delay = baseDelayMs * Math.pow(2, attempt - 1); // 2s, 4s, 8s
-      console.log(`[hlgaming] Rate-limited (429). Retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+      const delay = baseDelayMs * Math.pow(2, attempt - 1); // 15s, 30s, 60s
+      console.log(`[hlgaming] Rate-limited (429). Retrying in ${Math.round(delay / 1000)}s (attempt ${attempt}/${maxRetries})`);
       await new Promise((r) => setTimeout(r, delay));
     }
     try {
-      const resp = await fetch(url, { signal });
+      // Fresh AbortSignal per attempt so earlier delays don't consume the budget
+      const resp = await fetch(url, { signal: AbortSignal.timeout(perAttemptTimeoutMs) });
       if (resp.status !== 429) return resp; // success or other error — return as-is
       lastErr = new Error(`HTTP 429`);
     } catch (err) {
@@ -70,7 +74,8 @@ export async function fetchHlGamingAccount(playerUid: string, region = "ind"): P
     `&api=${encodeURIComponent(settings.hlGamingApiKey)}`;
 
   try {
-    const resp = await fetchWithRetry(url, AbortSignal.timeout(10_000));
+    // 3 retries, 5s per-attempt timeout, 5s base delay (account lookup is quick)
+    const resp = await fetchWithRetry(url, 10_000, 3, 5_000);
     if (!resp.ok) {
       console.warn(`[hlgaming] HTTP ${resp.status} fetching account for UID ${playerUid}`);
       return null;
@@ -132,8 +137,9 @@ export async function fetchCsCareerSnapshot(
     `&region=IND`;
 
   try {
-    // Retries up to 3× on 429 with exponential back-off (2s → 4s → 8s)
-    const resp = await fetchWithRetry(url, AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS));
+    // Retries up to 3× on 429 with exponential back-off (15s → 30s → 60s).
+    // Each attempt gets its own fresh SNAPSHOT_TIMEOUT_MS window.
+    const resp = await fetchWithRetry(url, SNAPSHOT_TIMEOUT_MS);
     if (!resp.ok) {
       console.warn(`[hlgaming] HTTP ${resp.status} fetching snapshot for UID ${playerUid}`);
       return null;

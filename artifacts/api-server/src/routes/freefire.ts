@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { requireAuth, requireSuperAdmin } from "../middlewares/auth.js";
-import { fetchHlGamingAccount } from "../lib/quickmatch-hlgaming.js";
+import { fetchHlGamingAccount, fetchCsCareerSnapshot } from "../lib/quickmatch-hlgaming.js";
 import { db } from "@workspace/db";
 import { freefireApiKeysTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
@@ -19,6 +19,17 @@ router.get("/freefire/player", requireAuth, async (req, res) => {
   if (profile) return res.json(profile);
 
   return res.json({ manual: true, uid });
+});
+
+// ── Super-admin: fetch CS Career snapshot for any UID ──────────────────────
+router.get("/super-admin/freefire/snapshot", requireSuperAdmin, async (req, res) => {
+  const { uid } = req.query as { uid?: string };
+  if (!uid || !/^\d{6,14}$/.test(uid)) {
+    return res.status(400).json({ error: "uid query param required (6-14 digits)" });
+  }
+  const snap = await fetchCsCareerSnapshot(uid, { bypassCache: true });
+  if (!snap) return res.status(502).json({ error: "HL Gaming API returned no data — check credentials or UID" });
+  return res.json({ uid, snapshot: snap });
 });
 
 // ── GET /freefire/sources ───────────────────────────────────────────────────
