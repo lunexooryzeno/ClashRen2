@@ -1108,30 +1108,23 @@ export default function QuickMatchQueue() {
             </div>
           )}
 
-          {/* Pre-snapshot stats card */}
-          <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
-              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-600">📸 Pre-game snapshot</span>
-              {preSnap && (
+          {/* Pre-snapshot stats card — only shown once snapshot is captured */}
+          {preSnap && (
+            <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
+                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-600">📸 Pre-game snapshot</span>
                 <span className="text-[9px] text-zinc-700">
                   {new Date(preSnap.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
-              )}
-            </div>
-            {snapLoading && !preSnap ? (
-              <div className="px-4 py-3 flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ border: "2px solid rgba(255,255,255,0.08)", borderTopColor: accent, animation: "icon-spin 0.8s linear infinite" }} />
-                <span className="text-[11px] text-zinc-600">Capturing your stats…</span>
               </div>
-            ) : preSnap ? (
               <div className="px-4 py-3 grid grid-cols-3 gap-2">
                 {[
-                  { label: "Games", value: preSnap.gamesPlayed },
-                  { label: "Kills",  value: preSnap.kills },
-                  { label: "Damage", value: preSnap.damage },
-                  { label: "Wins",   value: preSnap.wins },
-                  { label: "Deaths", value: preSnap.deaths },
-                  { label: "Assists",value: preSnap.assists },
+                  { label: "Games",   value: preSnap.gamesPlayed },
+                  { label: "Kills",   value: preSnap.kills },
+                  { label: "Damage",  value: preSnap.damage },
+                  { label: "Wins",    value: preSnap.wins },
+                  { label: "Deaths",  value: preSnap.deaths },
+                  { label: "Assists", value: preSnap.assists },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col items-center py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                     <span className="text-[16px] font-black text-white tabular-nums leading-none">{value.toLocaleString()}</span>
@@ -1139,14 +1132,8 @@ export default function QuickMatchQueue() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="px-4 py-3">
-                <p className="text-[11px] text-zinc-600 text-center">
-                  {snapFailed ? "Stats unavailable — match will still be detected automatically" : "Waiting for stats…"}
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* What happens next */}
           <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
