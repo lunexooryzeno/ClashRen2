@@ -133,8 +133,10 @@ export default function QuickMatchQueue() {
     gamesPlayed: number; wins: number; kills: number;
     damage: number; deaths: number; assists: number; fetchedAt: string;
   }
-  const [preSnap, setPreSnap]   = useState<PreSnap | null>(null);
+  const [preSnap, setPreSnap]       = useState<PreSnap | null>(null);
   const [snapLoading, setSnapLoading] = useState(false);
+  const [snapFailed, setSnapFailed]   = useState(false);
+  const snapRetriesRef = useRef(0);
 
   const leftRef       = useRef(false);
   const pollIdRef     = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -396,6 +398,9 @@ export default function QuickMatchQueue() {
   useEffect(() => {
     if (phase !== "joined") return;
     let cancelled = false;
+    snapRetriesRef.current = 0;
+    setSnapFailed(false);
+    const MAX_RETRIES = 8; // ~40 s max (8 × 5 s)
     const fetchSnap = async () => {
       setSnapLoading(true);
       try {
@@ -404,18 +409,23 @@ export default function QuickMatchQueue() {
           credentials: "include",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        if (!resp.ok || cancelled) return;
-        const data = await resp.json() as { snapshot: PreSnap | null; reason?: string };
-        if (!cancelled && data.snapshot) {
-          setPreSnap(data.snapshot);
-        } else if (!cancelled && data.reason === "pending") {
-          // Fetch still in progress (HL Gaming API call running) — retry in 5 s
-          setTimeout(fetchSnap, 5000);
-          return;
+        if (cancelled) return;
+        if (resp.ok) {
+          const data = await resp.json() as { snapshot: PreSnap | null; reason?: string };
+          if (!cancelled && data.snapshot) {
+            setPreSnap(data.snapshot);
+            setSnapLoading(false);
+            return;
+          }
+          if (!cancelled && data.reason === "pending" && snapRetriesRef.current < MAX_RETRIES) {
+            snapRetriesRef.current++;
+            setTimeout(fetchSnap, 5000);
+            return;
+          }
         }
-        // "unavailable" or "not_found" → stop retrying, fall through to setSnapLoading(false)
       } catch { /* best-effort */ }
-      if (!cancelled) setSnapLoading(false);
+      // Exhausted retries or non-pending reason — give up
+      if (!cancelled) { setSnapLoading(false); setSnapFailed(true); }
     };
     fetchSnap();
     return () => { cancelled = true; };
@@ -1132,7 +1142,9 @@ export default function QuickMatchQueue() {
               </div>
             ) : (
               <div className="px-4 py-3">
-                <p className="text-[11px] text-zinc-600 text-center">Snapshot will appear once stats are fetched</p>
+                <p className="text-[11px] text-zinc-600 text-center">
+                  {snapFailed ? "Stats unavailable — match will still be detected automatically" : "Waiting for stats…"}
+                </p>
               </div>
             )}
           </div>
