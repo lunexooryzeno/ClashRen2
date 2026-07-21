@@ -12,6 +12,7 @@ import { pushToUser } from "./sse-manager.js";
 import { fetchCsCareerSnapshot } from "./quickmatch-hlgaming.js";
 import {
   setPreSnapshot,
+  markPreSnapshotAttempted,
   markNoShowHandled,
   setSettlementPromise,
   dismissMatch,
@@ -191,6 +192,8 @@ export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void
           .catch((err: unknown) => console.error("[settlement] Failed to persist pre-snapshot:", err));
       }),
   );
+  // Always mark as attempted so the UI knows the fetch is done (even if it got no data)
+  markPreSnapshotAttempted(match.id);
 }
 
 // ─── Post-snapshot + settlement ───────────────────────────────────────────────

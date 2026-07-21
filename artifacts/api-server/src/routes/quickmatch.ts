@@ -547,8 +547,10 @@ router.get("/quickmatch/match/pre-snapshot", requireAuth, async (req, res) => {
       res.json({ snapshot: snap, capturedAt: snap.fetchedAt, source: "live" });
       return;
     }
-    // Match exists but snapshot not yet ready
-    res.json({ snapshot: null, reason: "pending" });
+    // If fetch hasn't been attempted yet (credentials just arrived), tell client to wait.
+    // If it was already attempted but returned nothing (API error / no UID), say unavailable.
+    const reason = match.preSnapshotAttempted ? "unavailable" : "pending";
+    res.json({ snapshot: null, reason });
     return;
   }
 

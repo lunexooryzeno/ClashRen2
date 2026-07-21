@@ -406,12 +406,14 @@ export default function QuickMatchQueue() {
         });
         if (!resp.ok || cancelled) return;
         const data = await resp.json() as { snapshot: PreSnap | null; reason?: string };
-        if (!cancelled && data.snapshot) setPreSnap(data.snapshot);
-        // If still pending, retry after 5 s (HL Gaming API may not be done yet)
-        else if (!cancelled && data.reason === "pending") {
+        if (!cancelled && data.snapshot) {
+          setPreSnap(data.snapshot);
+        } else if (!cancelled && data.reason === "pending") {
+          // Fetch still in progress (HL Gaming API call running) — retry in 5 s
           setTimeout(fetchSnap, 5000);
           return;
         }
+        // "unavailable" or "not_found" → stop retrying, fall through to setSnapLoading(false)
       } catch { /* best-effort */ }
       if (!cancelled) setSnapLoading(false);
     };
@@ -1108,9 +1110,9 @@ export default function QuickMatchQueue() {
               )}
             </div>
             {snapLoading && !preSnap ? (
-              <div className="px-4 py-4 flex items-center gap-2">
-                <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ border: "2px solid rgba(255,255,255,0.08)", borderTopColor: accent, animation: "icon-spin 0.8s linear infinite" }} />
-                <span className="text-[11px] text-zinc-600">Fetching your stats…</span>
+              <div className="px-4 py-3 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ border: "2px solid rgba(255,255,255,0.08)", borderTopColor: accent, animation: "icon-spin 0.8s linear infinite" }} />
+                <span className="text-[11px] text-zinc-600">Capturing your stats…</span>
               </div>
             ) : preSnap ? (
               <div className="px-4 py-3 grid grid-cols-3 gap-2">

@@ -39,6 +39,8 @@ export interface QuickMatch {
   credentialsReadyAt?: string;
   actionTaken: Record<string, string>;
   preSnapshots: Record<string, CsCareerSnapshot>;
+  /** True once fetchAndStorePreSnapshots() has finished (even if it got no data). */
+  preSnapshotAttempted: boolean;
   noShowHandled: boolean;
   /** Settlement promise stored so concurrent check-end calls can await completion. */
   settlementPromise?: Promise<void>;
@@ -102,6 +104,7 @@ export function createMatch(
     webhookFired: false,
     actionTaken: {},
     preSnapshots: {},
+    preSnapshotAttempted: false,
     noShowHandled: false,
   };
   activeMatches.push(match);
@@ -158,6 +161,11 @@ export function markActionTaken(matchId: string, userId: string): void {
 export function setPreSnapshot(matchId: string, userId: string, snapshot: CsCareerSnapshot): void {
   const match = activeMatches.find((m) => m.id === matchId);
   if (match) match.preSnapshots[userId] = snapshot;
+}
+
+export function markPreSnapshotAttempted(matchId: string): void {
+  const match = activeMatches.find((m) => m.id === matchId);
+  if (match) match.preSnapshotAttempted = true;
 }
 
 export function markNoShowHandled(matchId: string): void {
