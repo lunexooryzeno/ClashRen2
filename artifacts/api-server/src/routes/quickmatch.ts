@@ -532,6 +532,45 @@ router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Pre-snapshot for display in the "joined" phase ───────────────────────────
+// Returns the player's pre-game snapshot fetched when credentials arrived.
+// Tries in-memory first (fastest), falls back to DB for resilience.
+router.get("/quickmatch/match/pre-snapshot", requireAuth, async (req, res) => {
+  const userId    = String(req.user!.userId);
+  const userIdNum = req.user!.userId;
+
+  // 1. Check in-memory match
+  const match = getMatchForPlayer(userId);
+  if (match) {
+    const snap = match.preSnapshots[userId];
+    if (snap) {
+      res.json({ snapshot: snap, capturedAt: snap.fetchedAt, source: "live" });
+      return;
+    }
+    // Match exists but snapshot not yet ready
+    res.json({ snapshot: null, reason: "pending" });
+    return;
+  }
+
+  // 2. Fall back to DB (match may have been dismissed after settlement)
+  try {
+    const row = await db.query.quickmatchVerificationsTable.findFirst({
+      where: (t, { and, eq, isNotNull }) => and(
+        eq(t.userId, userIdNum),
+        isNotNull(t.preSnapshotData),
+      ),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
+    });
+    if (row?.preSnapshotData) {
+      const snap = JSON.parse(row.preSnapshotData as string);
+      res.json({ snapshot: snap, capturedAt: row.preSnapshotAt, source: "db" });
+      return;
+    }
+  } catch { /* fall through */ }
+
+  res.json({ snapshot: null, reason: "not_found" });
+});
+
 router.get("/quickmatch/stats", (_req, res) => {
   res.json(getQueueStats());
 });

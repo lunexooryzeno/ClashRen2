@@ -129,6 +129,13 @@ export default function QuickMatchQueue() {
   const [checkingEnd, setCheckingEnd]           = useState(false);
   const [stillInMatch, setStillInMatch]         = useState(false);
 
+  interface PreSnap {
+    gamesPlayed: number; wins: number; kills: number;
+    damage: number; deaths: number; assists: number; fetchedAt: string;
+  }
+  const [preSnap, setPreSnap]   = useState<PreSnap | null>(null);
+  const [snapLoading, setSnapLoading] = useState(false);
+
   const leftRef       = useRef(false);
   const pollIdRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const windowIdRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -384,6 +391,34 @@ export default function QuickMatchQueue() {
     trackAction("joined").catch(() => {});
     setJoining(false);
   };
+
+  // ── Fetch pre-snapshot from server when joined ────────────────────────────
+  useEffect(() => {
+    if (phase !== "joined") return;
+    let cancelled = false;
+    const fetchSnap = async () => {
+      setSnapLoading(true);
+      try {
+        const token = localStorage.getItem("clash_ren_token");
+        const resp = await fetch("/api/quickmatch/match/pre-snapshot", {
+          credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok || cancelled) return;
+        const data = await resp.json() as { snapshot: PreSnap | null; reason?: string };
+        if (!cancelled && data.snapshot) setPreSnap(data.snapshot);
+        // If still pending, retry after 5 s (HL Gaming API may not be done yet)
+        else if (!cancelled && data.reason === "pending") {
+          setTimeout(fetchSnap, 5000);
+          return;
+        }
+      } catch { /* best-effort */ }
+      if (!cancelled) setSnapLoading(false);
+    };
+    fetchSnap();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   // ── App-focus check-end (phase === "joined") ───────────────────────────────
   // Polls every POLL_INTERVAL_MS while joined. Also fires immediately on
@@ -1061,6 +1096,44 @@ export default function QuickMatchQueue() {
               <span className="text-[11px] text-yellow-600">coins</span>
             </div>
           )}
+
+          {/* Pre-snapshot stats card */}
+          <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-600">📸 Pre-game snapshot</span>
+              {preSnap && (
+                <span className="text-[9px] text-zinc-700">
+                  {new Date(preSnap.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
+            {snapLoading && !preSnap ? (
+              <div className="px-4 py-4 flex items-center gap-2">
+                <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ border: "2px solid rgba(255,255,255,0.08)", borderTopColor: accent, animation: "icon-spin 0.8s linear infinite" }} />
+                <span className="text-[11px] text-zinc-600">Fetching your stats…</span>
+              </div>
+            ) : preSnap ? (
+              <div className="px-4 py-3 grid grid-cols-3 gap-2">
+                {[
+                  { label: "Games", value: preSnap.gamesPlayed },
+                  { label: "Kills",  value: preSnap.kills },
+                  { label: "Damage", value: preSnap.damage },
+                  { label: "Wins",   value: preSnap.wins },
+                  { label: "Deaths", value: preSnap.deaths },
+                  { label: "Assists",value: preSnap.assists },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex flex-col items-center py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <span className="text-[16px] font-black text-white tabular-nums leading-none">{value.toLocaleString()}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 mt-1">{label}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-3">
+                <p className="text-[11px] text-zinc-600 text-center">Snapshot will appear once stats are fetched</p>
+              </div>
+            )}
+          </div>
 
           {/* What happens next */}
           <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
