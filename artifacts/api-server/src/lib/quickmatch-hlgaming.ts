@@ -98,6 +98,20 @@ export async function fetchHlGamingAccount(playerUid: string, region = "ind"): P
 
 interface HlApiResponse {
   status?: string;
+  // New API shape wraps everything under `result`
+  result?: {
+    data?: {
+      CS_CAREER?: {
+        games_played?: number;
+        wins?: number;
+        kills?: number;
+        damage?: number;
+        deaths?: number;
+        assists?: number;
+      };
+    };
+  };
+  // Legacy shape (kept for backwards-compat)
   data?: {
     CS_CAREER?: {
       games_played?: number;
@@ -145,9 +159,10 @@ export async function fetchCsCareerSnapshot(
       return null;
     }
     const json = (await resp.json()) as HlApiResponse;
-    const cs = json?.data?.CS_CAREER;
+    // Support both response shapes: new API wraps under `result.data`, old under `data`
+    const cs = json?.result?.data?.CS_CAREER ?? json?.data?.CS_CAREER;
     if (!cs) {
-      console.warn(`[hlgaming] No CS_CAREER data for UID ${playerUid}`);
+      console.warn(`[hlgaming] No CS_CAREER data for UID ${playerUid} — raw:`, JSON.stringify(json).slice(0, 300));
       return null;
     }
     const snap: CsCareerSnapshot = {
