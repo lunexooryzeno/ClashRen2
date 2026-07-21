@@ -1078,7 +1078,7 @@ export default function QuickMatchQueue() {
             You're In!
           </h2>
 
-          {/* Snapshot captured badge / checking status */}
+          {/* Status badge */}
           {checkingEnd ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}>
               <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ border: "2px solid rgba(99,102,241,0.3)", borderTopColor: "#818cf8", animation: "icon-spin 0.8s linear infinite" }} />
@@ -1090,10 +1090,7 @@ export default function QuickMatchQueue() {
               <span className="text-[11px] font-bold text-amber-400 tracking-wide">Still in match — check back when done</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full mb-4" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)" }}>
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
-              <span className="text-[11px] font-bold text-emerald-400 tracking-wide">Stats snapshot captured</span>
-            </div>
+            <div className="mb-4" />
           )}
 
           {/* Prize reminder */}
@@ -1108,12 +1105,15 @@ export default function QuickMatchQueue() {
             </div>
           )}
 
-          {/* Pre-snapshot stats card — only shown once snapshot is captured */}
+          {/* Pre-snapshot stats — shown once captured */}
           {preSnap && (
-            <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}>
-                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-600">📸 Pre-game snapshot</span>
-                <span className="text-[9px] text-zinc-700">
+            <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(34,197,94,0.18)" }}>
+              <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(34,197,94,0.06)" }}>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2.5} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-500">Your stats at match start</span>
+                </div>
+                <span className="text-[9px] text-zinc-600">
                   {new Date(preSnap.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
@@ -1128,7 +1128,7 @@ export default function QuickMatchQueue() {
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col items-center py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                     <span className="text-[16px] font-black text-white tabular-nums leading-none">{value.toLocaleString()}</span>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-600 mt-1">{label}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 mt-1">{label}</span>
                   </div>
                 ))}
               </div>
