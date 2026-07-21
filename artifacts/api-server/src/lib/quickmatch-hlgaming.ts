@@ -5,6 +5,50 @@ const HL_BASE    = "https://proapis.hlgamingofficial.com/main/games/freefire/sta
 const HL_ACCOUNT = "https://proapis.hlgamingofficial.com/main/games/freefire/account/api";
 const SNAPSHOT_TIMEOUT_MS = 15_000;
 
+// ─── In-memory snapshot cache ─────────────────────────────────────────────────
+// Avoids hammering the HL Gaming API when check-end polls every 30 s.
+// Cache entries expire after CACHE_TTL_MS so we still detect stat changes.
+const CACHE_TTL_MS = 90_000; // 90 s — shorter than polling interval × 3
+interface CacheEntry { snap: CsCareerSnapshot; expiresAt: number; }
+const snapshotCache = new Map<string, CacheEntry>();
+
+function getCached(uid: string): CsCareerSnapshot | null {
+  const entry = snapshotCache.get(uid);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { snapshotCache.delete(uid); return null; }
+  return entry.snap;
+}
+function setCache(uid: string, snap: CsCareerSnapshot): void {
+  snapshotCache.set(uid, { snap, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+// ─── Retry helper ─────────────────────────────────────────────────────────────
+// Retries a fetch up to maxRetries times when the response is 429 (rate-limit).
+// Uses exponential back-off starting at baseDelayMs.
+async function fetchWithRetry(
+  url: string,
+  signal: AbortSignal,
+  maxRetries = 3,
+  baseDelayMs = 2_000,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      const delay = baseDelayMs * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+      console.log(`[hlgaming] Rate-limited (429). Retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+    try {
+      const resp = await fetch(url, { signal });
+      if (resp.status !== 429) return resp; // success or other error — return as-is
+      lastErr = new Error(`HTTP 429`);
+    } catch (err) {
+      throw err; // timeout or network error — don't retry
+    }
+  }
+  throw lastErr ?? new Error("HTTP 429 — exhausted retries");
+}
+
 export interface HlGamingProfile {
   uid: string;
   nickname: string;
@@ -26,7 +70,7 @@ export async function fetchHlGamingAccount(playerUid: string, region = "ind"): P
     `&api=${encodeURIComponent(settings.hlGamingApiKey)}`;
 
   try {
-    const resp = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    const resp = await fetchWithRetry(url, AbortSignal.timeout(10_000));
     if (!resp.ok) {
       console.warn(`[hlgaming] HTTP ${resp.status} fetching account for UID ${playerUid}`);
       return null;
@@ -61,7 +105,19 @@ interface HlApiResponse {
   };
 }
 
-export async function fetchCsCareerSnapshot(playerUid: string): Promise<CsCareerSnapshot | null> {
+export async function fetchCsCareerSnapshot(
+  playerUid: string,
+  { bypassCache = false }: { bypassCache?: boolean } = {},
+): Promise<CsCareerSnapshot | null> {
+  // Serve from cache when available (suppresses repeated API calls during polling)
+  if (!bypassCache) {
+    const cached = getCached(playerUid);
+    if (cached) {
+      console.log(`[hlgaming] Cache hit for UID ${playerUid} (games=${cached.gamesPlayed})`);
+      return cached;
+    }
+  }
+
   const settings = getSystemSettings();
   if (!settings.hlGamingUseruid || !settings.hlGamingApiKey) {
     console.warn("[hlgaming] Missing hlGamingUseruid or hlGamingApiKey — skipping snapshot");
@@ -76,7 +132,8 @@ export async function fetchCsCareerSnapshot(playerUid: string): Promise<CsCareer
     `&region=IND`;
 
   try {
-    const resp = await fetch(url, { signal: AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS) });
+    // Retries up to 3× on 429 with exponential back-off (2s → 4s → 8s)
+    const resp = await fetchWithRetry(url, AbortSignal.timeout(SNAPSHOT_TIMEOUT_MS));
     if (!resp.ok) {
       console.warn(`[hlgaming] HTTP ${resp.status} fetching snapshot for UID ${playerUid}`);
       return null;
@@ -87,7 +144,7 @@ export async function fetchCsCareerSnapshot(playerUid: string): Promise<CsCareer
       console.warn(`[hlgaming] No CS_CAREER data for UID ${playerUid}`);
       return null;
     }
-    return {
+    const snap: CsCareerSnapshot = {
       gamesPlayed: Number(cs.games_played ?? 0),
       wins:        Number(cs.wins        ?? 0),
       kills:       Number(cs.kills       ?? 0),
@@ -96,6 +153,8 @@ export async function fetchCsCareerSnapshot(playerUid: string): Promise<CsCareer
       assists:     Number(cs.assists     ?? 0),
       fetchedAt:   new Date().toISOString(),
     };
+    setCache(playerUid, snap);
+    return snap;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[hlgaming] Error fetching snapshot for UID ${playerUid}:`, msg);

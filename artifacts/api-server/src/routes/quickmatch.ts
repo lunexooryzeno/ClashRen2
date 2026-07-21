@@ -21,7 +21,7 @@ import {
   markActionTaken,
   type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
-import { creditPlayer, checkAndSettleIfEnded } from "../lib/quickmatch-settlement.js";
+import { creditPlayer, checkAndSettleIfEnded, type CheckEndResult } from "../lib/quickmatch-settlement.js";
 import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
 import { notify } from "../lib/push.js";
 import { requireAuth } from "../middlewares/auth.js";
@@ -501,8 +501,8 @@ router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
   // DB rows exist by the time the client navigates to the result page.
   // (Do NOT short-circuit on noShowHandled here; that bypasses the await.)
   try {
-    const ended = await checkAndSettleIfEnded(match);
-    res.json({ ended, matchId: match.id });
+    const result: CheckEndResult = await checkAndSettleIfEnded(match);
+    res.json({ ended: result.ended, reason: result.reason, matchId: match.id });
   } catch (err) {
     console.error("[check-end] Error:", err);
     res.status(500).json({ error: "Failed to check match end" });

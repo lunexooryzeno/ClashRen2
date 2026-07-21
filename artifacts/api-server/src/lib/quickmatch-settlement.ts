@@ -29,21 +29,32 @@ export const SNAPSHOT_DELAY_MS = 15 * 60 * 1000; // 15 minutes — fallback if a
  * If ANY player's games-played count increased → the match has ended → settle.
  * Returns true when settlement was triggered, false when the match is still live.
  */
-export async function checkAndSettleIfEnded(match: QuickMatch): Promise<boolean> {
+export interface CheckEndResult {
+  ended: boolean;
+  /** Why ended=false. Client uses this to decide whether to retry quickly. */
+  reason?: "credentials_not_ready" | "no_pre_snapshots" | "stats_unchanged";
+}
+
+export async function checkAndSettleIfEnded(match: QuickMatch): Promise<CheckEndResult> {
   // If settlement is already complete or in-flight, await the promise so we
   // only return ended:true once DB rows are guaranteed to be written.
   if (match.noShowHandled) {
     if (match.settlementPromise) await match.settlementPromise;
-    return true;
+    return { ended: true };
   }
 
-  if (match.status !== "credentials_ready") return false;
+  if (match.status !== "credentials_ready") {
+    return { ended: false, reason: "credentials_not_ready" };
+  }
 
-  // Need at least one pre-snapshot to compare against
+  // Need at least one pre-snapshot to compare against.
+  // Pre-snapshots are fetched async when credentials arrive (HL Gaming API call
+  // can take several seconds). Return a specific reason so the client knows to
+  // retry quickly rather than showing "still in match".
   const hasPreSnapshots = match.players.some((p) => !!match.preSnapshots[p.userId]);
   if (!hasPreSnapshots) {
-    console.log(`[check-end] Match ${match.id}: no pre-snapshots yet — skipping`);
-    return false;
+    console.log(`[check-end] Match ${match.id}: no pre-snapshots yet — will retry`);
+    return { ended: false, reason: "no_pre_snapshots" };
   }
 
   // Fetch fresh snapshots for all players with known UIDs
@@ -72,14 +83,14 @@ export async function checkAndSettleIfEnded(match: QuickMatch): Promise<boolean>
 
   if (!matchEnded) {
     console.log(`[check-end] Match ${match.id}: stats unchanged — still in progress`);
-    return false;
+    return { ended: false, reason: "stats_unchanged" };
   }
 
   // A concurrent check-end may have started settlement during the async snapshot
   // fetching above. Re-check noShowHandled and await its promise if so.
   if (match.noShowHandled) {
     if (match.settlementPromise) await match.settlementPromise;
-    return true;
+    return { ended: true };
   }
 
   console.log(`[check-end] Match ${match.id}: stats changed — triggering immediate settlement`);
@@ -90,7 +101,7 @@ export async function checkAndSettleIfEnded(match: QuickMatch): Promise<boolean>
   const promise = settleQuickMatch(match);
   setSettlementPromise(match.id, promise);
   await promise;
-  return true;
+  return { ended: true };
 }
 // Read join window from system settings so admins can tune it live
 function getJoinWindowMs(): number {
@@ -150,7 +161,8 @@ export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void
     match.players
       .filter((p) => !!p.uid)
       .map(async (player) => {
-        const snap = await fetchCsCareerSnapshot(player.uid!);
+        // Bypass cache — pre-snapshot must be the actual baseline, not a stale hit
+        const snap = await fetchCsCareerSnapshot(player.uid!, { bypassCache: true });
         if (!snap) return;
 
         setPreSnapshot(match.id, player.userId, snap);
@@ -197,7 +209,8 @@ export async function settleQuickMatch(match: QuickMatch): Promise<void> {
     match.players
       .filter((p) => !!p.uid)
       .map(async (player) => {
-        const snap = await fetchCsCareerSnapshot(player.uid!);
+        // Bypass cache — post-snapshot must reflect actual post-game state
+        const snap = await fetchCsCareerSnapshot(player.uid!, { bypassCache: true });
         postSnaps[player.userId] = snap;
         if (snap) {
           console.log(

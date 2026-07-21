@@ -386,14 +386,29 @@ export default function QuickMatchQueue() {
   };
 
   // ── App-focus check-end (phase === "joined") ───────────────────────────────
-  // When the player returns to the app after the match, fire check-end.
-  // If stats changed → navigate to result page. If not → show "still in match".
-  const checkingEndRef = useRef(false);
+  // Polls every POLL_INTERVAL_MS while joined. Also fires immediately on
+  // visibilitychange so returning from the game triggers detection right away.
+  //
+  // When the server says reason="no_pre_snapshots" we retry after a short
+  // delay (pre-snapshots are fetched async and may not be ready yet).
+  const POLL_INTERVAL_MS    = 30_000; // normal poll cadence
+  const PRE_SNAP_RETRY_MS   = 8_000;  // retry interval while snapshots not yet ready
+  const checkingEndRef      = useRef(false);
+  const pollTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (phase !== "joined" || !matchId) return;
 
-    const onVisibility = async () => {
-      if (document.visibilityState !== "visible") return;
+    const clearPollTimer = () => {
+      if (pollTimerRef.current) { clearTimeout(pollTimerRef.current); pollTimerRef.current = null; }
+    };
+
+    const scheduleNext = (delayMs: number) => {
+      clearPollTimer();
+      pollTimerRef.current = setTimeout(runCheck, delayMs);
+    };
+
+    const runCheck = async () => {
       if (checkingEndRef.current) return; // debounce concurrent calls
       checkingEndRef.current = true;
       setCheckingEnd(true);
@@ -407,29 +422,50 @@ export default function QuickMatchQueue() {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          // Send matchId so the server can scope any DB fallback to this exact match
           body: JSON.stringify({ matchId }),
         });
         if (resp.ok) {
-          const data = await resp.json() as { ended: boolean; matchId?: string };
+          const data = await resp.json() as { ended: boolean; reason?: string; matchId?: string };
           if (data.ended) {
+            clearPollTimer();
             safeNavigate(`/quickmatch/result/${data.matchId ?? matchId}`);
             return;
-          } else {
-            setStillInMatch(true);
-            // Auto-hide the "still in match" toast after 4 s
-            setTimeout(() => setStillInMatch(false), 4000);
           }
+          if (data.reason === "no_pre_snapshots") {
+            // Pre-snapshots still being fetched — retry quickly, no toast
+            scheduleNext(PRE_SNAP_RETRY_MS);
+          } else {
+            // Stats unchanged or no active match — show toast, poll normally
+            setStillInMatch(true);
+            setTimeout(() => setStillInMatch(false), 4000);
+            scheduleNext(POLL_INTERVAL_MS);
+          }
+        } else {
+          scheduleNext(POLL_INTERVAL_MS);
         }
-      } catch { /* best-effort */ }
+      } catch {
+        scheduleNext(POLL_INTERVAL_MS);
+      }
       setCheckingEnd(false);
       checkingEndRef.current = false;
     };
 
+    // Immediate check on visibility restore (returning from game)
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      clearPollTimer(); // cancel pending timer; runCheck will reschedule
+      runCheck();
+    };
+
     document.addEventListener("visibilitychange", onVisibility);
-    // Also fire once immediately (user may have opened the app after the match)
-    onVisibility();
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    // Fire immediately — catches the case where the user is already in the app
+    // when the match ends, and starts the polling loop.
+    runCheck();
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearPollTimer();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, matchId]);
 
