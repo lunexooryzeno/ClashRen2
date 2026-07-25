@@ -66,6 +66,30 @@ export default function Profile() {
     if (user) setIsLoading(false);
   }, [user]);
 
+  // ── Tawk.to live chat (profile page only) ──────────────────────────────────
+  useEffect(() => {
+    const TAWK_ID = "tawk-to-script";
+    if (!document.getElementById(TAWK_ID)) {
+      (window as any).Tawk_API = (window as any).Tawk_API || {};
+      (window as any).Tawk_LoadStart = new Date();
+      const s1 = document.createElement("script");
+      const s0 = document.getElementsByTagName("script")[0];
+      s1.id = TAWK_ID;
+      s1.async = true;
+      s1.src = "https://embed.tawk.to/6a64f20497935d1d49019a09/1jud52pkt";
+      s1.charset = "UTF-8";
+      s1.setAttribute("crossorigin", "*");
+      s0.parentNode!.insertBefore(s1, s0);
+    } else {
+      // Widget already loaded on a previous visit — just show it again
+      (window as any).Tawk_API?.showWidget?.();
+    }
+    return () => {
+      // Hide the widget when navigating away from the profile page
+      (window as any).Tawk_API?.hideWidget?.();
+    };
+  }, []);
+
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
