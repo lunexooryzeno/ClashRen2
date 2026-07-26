@@ -3,7 +3,7 @@ import { subscribeToSecondTick } from "@/lib/clock";
 import { Link, useLocation } from "wouter";
 import { CachedImg } from "@/components/CachedImg";
 import { format } from "date-fns";
-import { Users, Clock, Swords, Check, ShieldAlert, ChevronRight, X, Zap, Trophy } from "lucide-react";
+import { Users, Clock, Swords, Check, ShieldAlert, ChevronRight, X, Zap, Trophy, CalendarClock } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import type { Tournament } from "@workspace/api-client-react";
 
@@ -177,26 +177,30 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
 
         {/* ── Info row ── */}
         <div className={cn("px-4 py-3 grid gap-2 border-b border-white/5", perKill > 0 ? "grid-cols-4" : "grid-cols-3")}>
-          {/* Start Time / Countdown — left */}
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">
-              {fixedMatchTime ? "Time" : "Slot"}
-            </span>
-            {fixedMatchTime ? (
-              <div className="flex flex-col items-center leading-tight">
-                <span className="text-[11px] font-bold text-violet-300 tabular-nums">
-                  {format(new Date(tournament.startTime), "h:mm a")}
-                </span>
-                <span className="text-[9px] text-zinc-500 tabular-nums">
-                  {format(new Date(tournament.startTime), "MMM d")}
-                </span>
+          {/* Start Time — left */}
+          {fixedMatchTime ? (
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)" }}>
+                <CalendarClock className="w-2.5 h-2.5 text-violet-400" />
+                <span className="text-[8px] font-bold text-violet-400 uppercase tracking-wide">Fixed</span>
               </div>
-            ) : (
+              <span className="text-[12px] font-black text-violet-200 tabular-nums leading-none"
+                style={{ textShadow: "0 0 12px rgba(139,92,246,0.6)" }}>
+                {format(new Date(tournament.startTime), "h:mm a")}
+              </span>
+              <span className="text-[9px] text-zinc-500 tabular-nums leading-none">
+                {format(new Date(tournament.startTime), "MMM d")}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Slot</span>
               <span className="text-[10px] font-medium text-zinc-300 tabular-nums">
                 {format(new Date(tournament.startTime), "MMM d, yyyy")}
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Prize Pool */}
           <div className="flex flex-col items-center gap-0.5 border-l border-white/5">
