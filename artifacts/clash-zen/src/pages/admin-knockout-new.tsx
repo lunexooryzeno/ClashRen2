@@ -798,6 +798,41 @@ export default function AdminKnockoutNewPage() {
                 <TextInput type="number" value={td.registrationCloseMinutes} onChange={v => setTd("registrationCloseMinutes", parseInt(v) || 0)} placeholder="15" />
               </Field>
             </div>
+
+            {/* Template: Fixed Match Start Time */}
+            <Field label="Default Fixed Start Time" hint="Pre-select a time so matches from this template start at a consistent hour. Can be changed at creation.">
+              <div className="flex gap-2 flex-wrap mb-1.5">
+                {(["18:00","19:00","20:00","21:00","22:00","23:00"] as const).map(t => {
+                  const [h, m] = t.split(":").map(Number);
+                  const active = td.fixedMatchTime === t;
+                  return (
+                    <button key={t} type="button"
+                      onClick={() => setTd("fixedMatchTime", active ? null : t)}
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-95"
+                      style={{
+                        background: active ? "rgba(168,85,247,0.18)" : "rgba(255,255,255,0.04)",
+                        border: `1.5px solid ${active ? "rgba(168,85,247,0.55)" : "rgba(255,255,255,0.08)"}`,
+                        color: active ? "#c084fc" : "#52525b",
+                      }}>
+                      {fmt12(h, m)}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="relative">
+                <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+                <input type="time" value={td.fixedMatchTime ?? ""}
+                  onChange={e => setTd("fixedMatchTime", e.target.value || null)}
+                  className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+                  style={{
+                    background: td.fixedMatchTime ? "rgba(168,85,247,0.10)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${td.fixedMatchTime ? "rgba(168,85,247,0.35)" : "rgba(255,255,255,0.08)"}`,
+                    color: td.fixedMatchTime ? "#c084fc" : "#52525b",
+                    colorScheme: "dark",
+                  }} />
+              </div>
+            </Field>
+
             <div className="grid grid-cols-2 gap-3">
               <Field label="Short Title">
                 <TextInput value={td.shortTitle} onChange={v => setTd("shortTitle", v)} placeholder="CS · 1v1" />
@@ -1122,40 +1157,48 @@ export default function AdminKnockoutNewPage() {
 
           {/* Fixed Match Start Time */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Fixed Match Start Time</p>
-                <p className="text-[9px] text-zinc-700 mt-0.5">Exact time the match kicks off — separate from join windows</p>
-              </div>
-              <button type="button"
-                onClick={() => set("fixedMatchTime", form.fixedMatchTime ? null : "20:00")}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all active:scale-95"
-                style={{
-                  background: form.fixedMatchTime ? "rgba(168,85,247,0.18)" : "rgba(255,255,255,0.04)",
-                  border: `1px solid ${form.fixedMatchTime ? "rgba(168,85,247,0.50)" : "rgba(255,255,255,0.08)"}`,
-                  color: form.fixedMatchTime ? "#c084fc" : "#52525b",
-                }}>
-                {form.fixedMatchTime ? "✓ Enabled" : "Off"}
-              </button>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
+              Fixed Match Start Time <span className="normal-case font-normal text-zinc-700 tracking-normal">— when the match actually begins</span>
+            </p>
+            {/* Quick-pick preset times */}
+            <div className="flex gap-2 flex-wrap mb-2">
+              {(["18:00","19:00","20:00","21:00","22:00","23:00"] as const).map(t => {
+                const [h, m] = t.split(":").map(Number);
+                const active = form.fixedMatchTime === t;
+                return (
+                  <button key={t} type="button"
+                    onClick={() => set("fixedMatchTime", active ? null : t)}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-95"
+                    style={{
+                      background: active ? "rgba(168,85,247,0.18)" : "rgba(255,255,255,0.04)",
+                      border: `1.5px solid ${active ? "rgba(168,85,247,0.55)" : "rgba(255,255,255,0.08)"}`,
+                      color: active ? "#c084fc" : "#52525b",
+                    }}>
+                    {fmt12(h, m)}
+                  </button>
+                );
+              })}
             </div>
-            {form.fixedMatchTime && (
-              <div className="rounded-xl px-3.5 py-3 space-y-2"
-                style={{ background: "rgba(168,85,247,0.06)", border: "1.5px solid rgba(168,85,247,0.28)" }}>
-                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Match Starts At</p>
-                <div className="relative">
-                  <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-violet-400 pointer-events-none" />
-                  <input type="time" value={form.fixedMatchTime}
-                    onChange={e => set("fixedMatchTime", e.target.value)}
-                    className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold text-violet-200 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
-                    style={{ background: "rgba(168,85,247,0.10)", border: "1px solid rgba(168,85,247,0.30)", colorScheme: "dark" }} />
-                </div>
-                {form.fixedMatchTime && (
-                  <p className="text-[10px] text-violet-300/60">
-                    Match locked to start at <span className="font-bold text-violet-300">{fmt12(...(form.fixedMatchTime.split(":").map(Number) as [number, number]))}</span>
-                    {form.startDate ? ` on ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}.
-                  </p>
-                )}
-              </div>
+            {/* Manual time picker */}
+            <div className="relative">
+              <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+              <input type="time" value={form.fixedMatchTime ?? ""}
+                onChange={e => set("fixedMatchTime", e.target.value || null)}
+                className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+                style={{
+                  background: form.fixedMatchTime ? "rgba(168,85,247,0.10)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${form.fixedMatchTime ? "rgba(168,85,247,0.35)" : "rgba(255,255,255,0.08)"}`,
+                  color: form.fixedMatchTime ? "#c084fc" : "#52525b",
+                  colorScheme: "dark",
+                }} />
+            </div>
+            {form.fixedMatchTime ? (
+              <p className="text-[10px] text-violet-300/70 mt-1.5 px-1">
+                Match kicks off at <span className="font-bold text-violet-300">{fmt12(...(form.fixedMatchTime.split(":").map(Number) as [number, number]))}</span>
+                {form.startDate ? ` · ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}. Tap a button again to clear.
+              </p>
+            ) : (
+              <p className="text-[10px] text-zinc-700 mt-1.5 px-1">Not set — match starts at the first slot's time. Pick a time above or type one.</p>
             )}
           </div>
 
