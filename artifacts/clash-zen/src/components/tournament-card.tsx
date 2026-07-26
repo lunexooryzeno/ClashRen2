@@ -179,12 +179,8 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
         <div className={cn("px-4 py-3 grid gap-2 border-b border-white/5", perKill > 0 ? "grid-cols-4" : "grid-cols-3")}>
           {/* Start Time — left */}
           {fixedMatchTime ? (
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)" }}>
-                <CalendarClock className="w-2.5 h-2.5 text-violet-400" />
-                <span className="text-[8px] font-bold text-violet-400 uppercase tracking-wide">Fixed</span>
-              </div>
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[9px] text-violet-400/70 uppercase tracking-wider">Time</span>
               <span className="text-[12px] font-black text-violet-200 tabular-nums leading-none"
                 style={{ textShadow: "0 0 12px rgba(139,92,246,0.6)" }}>
                 {format(new Date(tournament.startTime), "h:mm a")}
