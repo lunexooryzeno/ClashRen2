@@ -387,11 +387,12 @@ export default function EventDetails() {
   const msEp            = String(ms.ep            ?? "0");
   const msMovementSpeed = String(ms.movementSpeed ?? "100%");
   const msJumpHeight    = String(ms.jumpHeight    ?? "100%");
-  const msAmmoLimit     = ms.ammoLimit     ? "Yes" : "No";
-  const msGunAttr       = ms.gunAttributes ? "Allowed" : "Not Allowed";
-  const msWeaponSkins   = ms.weaponSkins   ? "Allowed" : "Not Allowed";
-  const msOnlyHeadshot  = ms.onlyHeadshot  ? "Yes" : "No";
-  const msEmulators     = ms.emulators     ? "Allowed" : "Not Allowed";
+  const msAmmoLimit       = ms.ammoLimit     ? "Yes" : "No";
+  const msGunAttr         = ms.gunAttributes ? "Allowed" : "Not Allowed";
+  const msWeaponSkins     = ms.weaponSkins   ? "Allowed" : "Not Allowed";
+  const msOnlyHeadshot    = ms.onlyHeadshot  ? "Yes" : "No";
+  const msEmulators       = ms.emulators     ? "Allowed" : "Not Allowed";
+  const msFixedMatchTime: string | null = (ms.fixedMatchTime as string | undefined) ?? null;
 
   const roomUnlocked = !roomOpenCountdown;
   const showRoomDetails = tm.isJoined && tm.roomId && t.credentialsReleased;
@@ -495,114 +496,173 @@ export default function EventDetails() {
 
       <div className="px-5 pt-6 pb-6 space-y-8">
         
-        {/* ── 5. Slot Picker ── */}
-        {(() => {
-          const timeSlots = Array.isArray((ms as any).timeSlots)
-            ? (ms as any).timeSlots as Array<{ startTime: string; endTime: string; label: string }>
-            : null;
-
-          const effectiveIndex = selectedSlotIndex !== null
-            ? selectedSlotIndex
-            : (tm.isJoined && bookedSlotIndices.length > 0 ? bookedSlotIndices[0] : null);
-          const selSlot = (timeSlots && effectiveIndex !== null) ? timeSlots[effectiveIndex] : null;
-          const triggerLabel = selSlot
-            ? (tm.isJoined ? `Booked · ${selSlot.label}` : selSlot.label)
-            : timeSlots && timeSlots.length > 0
-              ? "Select Session Time"
-              : ((ms as any).slotWindowLabel || format(new Date(tm.startTime), "MMM d, yyyy"));
-          const hasSelection = selSlot !== null;
-
-          return (
-            <div className="space-y-3" style={{ animation: "sectionIn 0.6s cubic-bezier(0.22,1,0.36,1) both", animationDelay: "80ms" }}>
-               <div className="flex items-center gap-2 mb-1">
-                 <Clock className="w-4 h-4 text-zinc-400" />
-                 <h3 className="font-heading text-lg font-bold text-white tracking-tight">Session Time</h3>
-               </div>
-              <button
-                onClick={() => { setSlotDropOpen(true); dismissSlotHint(); }}
-                className="w-full flex items-center justify-between p-4 rounded-2xl bg-card border shadow-sm active:scale-[0.98] transition-all"
-                style={showSlotHint && !tm.isJoined ? {
-                  borderColor: "rgba(139,92,246,0.6)",
-                  boxShadow: "0 0 0 0 rgba(139,92,246,0.5)",
-                  animation: "hintPulseRing 1.8s ease-out infinite",
-                } : { borderColor: "hsl(var(--border))" }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${hasSelection ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white/5 border-white/10 text-zinc-400'}`}>
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5">
-                       {tm.isJoined ? "Your Schedule" : "Available Slot"}
-                    </p>
-                    <p className={`text-sm font-bold ${hasSelection ? 'text-white' : 'text-zinc-300'}`}>
-                       {triggerLabel}
-                    </p>
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                  <ChevronDown className="w-4 h-4 text-zinc-400" />
-                </div>
-              </button>
-
-              {/* ── First-visit slot hint ── */}
-              {showSlotHint && !tm.isJoined && (
-                <div
-                  className="relative mt-3"
-                  style={{ animation: "fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both" }}
-                >
-                  {/* Bouncing arrow pointing up */}
-                  <div
-                    className="absolute left-7"
-                    style={{ top: "-14px", animation: "hintBounceArrow 1.2s ease-in-out infinite" }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M7 1L7 13M7 1L2 6M7 1L12 6" stroke="rgba(139,92,246,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-
-                  {/* Card with animated shimmer border */}
-                  <div
-                    className="rounded-2xl px-4 py-3.5 flex items-start gap-3 relative overflow-hidden"
-                    style={{
-                      background: "rgba(18,12,36,0.98)",
-                      border: "1px solid rgba(139,92,246,0.35)",
-                      boxShadow: "0 6px 32px rgba(139,92,246,0.18), inset 0 1px 0 rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    {/* Shimmer sweep */}
-                    <div
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background: "linear-gradient(105deg, transparent 40%, rgba(139,92,246,0.12) 50%, transparent 60%)",
-                        backgroundSize: "200% 100%",
-                        animation: "hintShimmer 2.4s linear infinite",
-                      }}
-                    />
-
-                    {/* Pulsing icon */}
-                    <div
-                      className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 mt-0.5 relative"
-                      style={{ animation: "hintIconPulse 2s ease-in-out infinite" }}
-                    >
-                      <div className="absolute inset-0 rounded-xl" style={{ background: "rgba(139,92,246,0.2)", animation: "hintIconRipple 2s ease-out infinite" }} />
-                      <Clock className="w-4 h-4 text-primary relative z-10" />
-                    </div>
-
-                    <div className="flex-1 relative z-10">
-                      <p className="text-[12px] font-bold text-white mb-0.5">Pick your session time</p>
-                      <p className="text-[11px] text-zinc-400 leading-relaxed">Tap the slot above to choose when you want to play. Each session is a separate match window — select one before joining.</p>
-                    </div>
-                    <button
-                      onClick={dismissSlotHint}
-                      className="text-zinc-600 active:text-zinc-300 transition-colors shrink-0 mt-0.5 text-[18px] leading-none relative z-10"
-                    >×</button>
-                  </div>
-                </div>
-              )}
+        {/* ── 5. Session Time (Fixed) or Slot Picker ── */}
+        {msFixedMatchTime ? (
+          /* ── Fixed Start Time card ── */
+          <div className="space-y-3" style={{ animation: "sectionIn 0.6s cubic-bezier(0.22,1,0.36,1) both", animationDelay: "80ms" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 text-violet-400" />
+              <h3 className="font-heading text-lg font-bold text-white tracking-tight">Match Time</h3>
             </div>
-          );
-        })()}
+
+            <div
+              className="relative rounded-2xl overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(139,92,246,0.13) 0%, rgba(99,102,241,0.07) 100%)",
+                border: "1px solid rgba(139,92,246,0.35)",
+                boxShadow: "0 0 32px rgba(139,92,246,0.12)",
+              }}
+            >
+              {/* Glow orb */}
+              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(139,92,246,0.25) 0%, transparent 70%)" }} />
+
+              <div className="relative z-10 px-5 py-5 flex items-center gap-4">
+                {/* Icon */}
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)" }}>
+                  <Clock className="w-7 h-7 text-violet-400" />
+                </div>
+
+                {/* Time & date */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-400/70 mb-0.5">
+                    {tm.isJoined ? "Your Match Starts At" : "Fixed Start Time"}
+                  </p>
+                  <p className="text-3xl font-black text-white tabular-nums leading-none tracking-tight"
+                    style={{ textShadow: "0 0 24px rgba(139,92,246,0.6)" }}>
+                    {format(new Date(tm.startTime), "h:mm a")}
+                  </p>
+                  <p className="text-[12px] text-zinc-400 mt-1 font-medium">
+                    {format(new Date(tm.startTime), "EEEE, MMM d, yyyy")}
+                  </p>
+                </div>
+
+                {/* Joined badge */}
+                {tm.isJoined && (
+                  <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                    style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)" }}>
+                    <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[11px] font-bold text-violet-300">Registered</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom info strip */}
+              <div className="border-t px-5 py-3 flex items-center gap-2"
+                style={{ borderColor: "rgba(139,92,246,0.18)" }}>
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400" style={{ animation: "hintIconPulse 2s ease-in-out infinite" }} />
+                <p className="text-[11px] text-zinc-500 leading-snug">
+                  {tm.isJoined
+                    ? "Get ready — make sure you're in the room before the match begins."
+                    : "This match has a fixed start time. All players join at the same time."}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ── Slot Picker (multiple registration windows) ── */
+          (() => {
+            const timeSlots = Array.isArray((ms as any).timeSlots)
+              ? (ms as any).timeSlots as Array<{ startTime: string; endTime: string; label: string }>
+              : null;
+
+            const effectiveIndex = selectedSlotIndex !== null
+              ? selectedSlotIndex
+              : (tm.isJoined && bookedSlotIndices.length > 0 ? bookedSlotIndices[0] : null);
+            const selSlot = (timeSlots && effectiveIndex !== null) ? timeSlots[effectiveIndex] : null;
+            const triggerLabel = selSlot
+              ? (tm.isJoined ? `Booked · ${selSlot.label}` : selSlot.label)
+              : timeSlots && timeSlots.length > 0
+                ? "Select Session Time"
+                : ((ms as any).slotWindowLabel || format(new Date(tm.startTime), "MMM d, yyyy"));
+            const hasSelection = selSlot !== null;
+
+            return (
+              <div className="space-y-3" style={{ animation: "sectionIn 0.6s cubic-bezier(0.22,1,0.36,1) both", animationDelay: "80ms" }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-zinc-400" />
+                  <h3 className="font-heading text-lg font-bold text-white tracking-tight">Session Time</h3>
+                </div>
+                <button
+                  onClick={() => { setSlotDropOpen(true); dismissSlotHint(); }}
+                  className="w-full flex items-center justify-between p-4 rounded-2xl bg-card border shadow-sm active:scale-[0.98] transition-all"
+                  style={showSlotHint && !tm.isJoined ? {
+                    borderColor: "rgba(139,92,246,0.6)",
+                    boxShadow: "0 0 0 0 rgba(139,92,246,0.5)",
+                    animation: "hintPulseRing 1.8s ease-out infinite",
+                  } : { borderColor: "hsl(var(--border))" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${hasSelection ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white/5 border-white/10 text-zinc-400'}`}>
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5">
+                        {tm.isJoined ? "Your Schedule" : "Available Slot"}
+                      </p>
+                      <p className={`text-sm font-bold ${hasSelection ? 'text-white' : 'text-zinc-300'}`}>
+                        {triggerLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                    <ChevronDown className="w-4 h-4 text-zinc-400" />
+                  </div>
+                </button>
+
+                {/* ── First-visit slot hint ── */}
+                {showSlotHint && !tm.isJoined && (
+                  <div
+                    className="relative mt-3"
+                    style={{ animation: "fadeSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) both" }}
+                  >
+                    <div
+                      className="absolute left-7"
+                      style={{ top: "-14px", animation: "hintBounceArrow 1.2s ease-in-out infinite" }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 1L7 13M7 1L2 6M7 1L12 6" stroke="rgba(139,92,246,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div
+                      className="rounded-2xl px-4 py-3.5 flex items-start gap-3 relative overflow-hidden"
+                      style={{
+                        background: "rgba(18,12,36,0.98)",
+                        border: "1px solid rgba(139,92,246,0.35)",
+                        boxShadow: "0 6px 32px rgba(139,92,246,0.18), inset 0 1px 0 rgba(255,255,255,0.05)",
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background: "linear-gradient(105deg, transparent 40%, rgba(139,92,246,0.12) 50%, transparent 60%)",
+                          backgroundSize: "200% 100%",
+                          animation: "hintShimmer 2.4s linear infinite",
+                        }}
+                      />
+                      <div
+                        className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 mt-0.5 relative"
+                        style={{ animation: "hintIconPulse 2s ease-in-out infinite" }}
+                      >
+                        <div className="absolute inset-0 rounded-xl" style={{ background: "rgba(139,92,246,0.2)", animation: "hintIconRipple 2s ease-out infinite" }} />
+                        <Clock className="w-4 h-4 text-primary relative z-10" />
+                      </div>
+                      <div className="flex-1 relative z-10">
+                        <p className="text-[12px] font-bold text-white mb-0.5">Pick your session time</p>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed">Tap the slot above to choose when you want to play. Each session is a separate match window — select one before joining.</p>
+                      </div>
+                      <button
+                        onClick={dismissSlotHint}
+                        className="text-zinc-600 active:text-zinc-300 transition-colors shrink-0 mt-0.5 text-[18px] leading-none relative z-10"
+                      >×</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        )}
 
         {/* ── 6. Rewards & Entry ── */}
         <div className="space-y-3" style={{ animation: "sectionIn 0.6s cubic-bezier(0.22,1,0.36,1) both", animationDelay: "140ms" }}>
