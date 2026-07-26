@@ -538,14 +538,36 @@ export default function EventDetails() {
                   </p>
                 </div>
 
-                {/* Joined badge */}
-                {tm.isJoined && (
-                  <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                    style={{ background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.35)" }}>
-                    <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
-                    <span className="text-[11px] font-bold text-violet-300">Registered</span>
+                {/* Countdown */}
+                {countdown ? (
+                  <div className="shrink-0 flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-2xl"
+                    style={{ background: "rgba(139,92,246,0.13)", border: "1px solid rgba(139,92,246,0.3)", minWidth: 64 }}>
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-violet-400/70">Starts in</span>
+                    {countdown.h > 0 ? (
+                      <>
+                        <span className="font-mono font-black text-[18px] text-white tabular-nums leading-none"
+                          style={{ textShadow: "0 0 14px rgba(139,92,246,0.7)" }}>
+                          {String(countdown.h).padStart(2,"0")}:{String(countdown.m).padStart(2,"0")}
+                        </span>
+                        <span className="text-[8px] text-zinc-500 font-medium">hr : min</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-mono font-black text-[18px] text-white tabular-nums leading-none"
+                          style={{ textShadow: "0 0 14px rgba(139,92,246,0.7)" }}>
+                          {String(countdown.m).padStart(2,"0")}:{String(countdown.s).padStart(2,"0")}
+                        </span>
+                        <span className="text-[8px] text-zinc-500 font-medium">min : sec</span>
+                      </>
+                    )}
                   </div>
-                )}
+                ) : isUpcoming ? (
+                  <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                    style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)" }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ animation: "hintIconPulse 1.2s ease-in-out infinite" }} />
+                    <span className="text-[11px] font-bold text-emerald-300">Live</span>
+                  </div>
+                ) : null}
               </div>
 
               {/* Bottom info strip */}
