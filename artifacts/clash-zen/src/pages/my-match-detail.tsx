@@ -271,8 +271,9 @@ export default function MyMatchDetailPage() {
   const msEp            = String(ms.ep            ?? "0");
   const msMovementSpeed = String(ms.movementSpeed ?? "100%");
   const msJumpHeight    = String(ms.jumpHeight    ?? "100%");
-  const msAmmoLimit     = ms.ammoLimit     ? "Yes" : "No";
-  const msGunAttr       = ms.gunAttributes ? "Allowed" : "Not Allowed";
+  const msAmmoLimit       = ms.ammoLimit     ? "Yes" : "No";
+  const msGunAttr         = ms.gunAttributes ? "Allowed" : "Not Allowed";
+  const msFixedMatchTime: string | null = (ms.fixedMatchTime as string | undefined) ?? null;
   const msOnlyHeadshot  = ms.onlyHeadshot  ? "Yes" : "No";
   const msEmulators     = ms.emulators     ? "Allowed" : "Not Allowed";
   const matchRules: string[] = t.rules
@@ -493,24 +494,24 @@ export default function MyMatchDetailPage() {
             <div className="px-4 pt-3 pb-2 flex items-center gap-2 border-b border-white/5">
               <Clock className="w-3.5 h-3.5 text-violet-400" />
               <span className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-400/80">
-                {slotLabel} · {format(new Date(slotStartTime), "EEEE, MMM d, yyyy")}
+                {msFixedMatchTime ? "Fixed Start Time" : slotLabel} · {format(new Date(slotStartTime), "EEEE, MMM d, yyyy")}
               </span>
             </div>
             {/* Rows */}
             <div className="divide-y divide-white/5">
-              {/* Slot window */}
+              {/* Slot window / fixed time */}
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-[11px] text-zinc-500">Slot Window</span>
+                <span className="text-[11px] text-zinc-500">{msFixedMatchTime ? "Match Time" : "Slot Window"}</span>
                 <span className="text-[13px] font-bold text-white">
                   {format(new Date(slotStartTime), "h:mm a")}
-                  {slotEndTime
+                  {!msFixedMatchTime && slotEndTime
                     ? <span className="text-zinc-400"> – {format(new Date(slotEndTime), "h:mm a")}</span>
                     : null}
                 </span>
               </div>
               {/* Admin-confirmed match start */}
               <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-[11px] text-zinc-500">Match Start Time</span>
+                <span className="text-[11px] text-zinc-500">Confirmed Start</span>
                 {confirmedStartTime ? (
                   <span className="text-[13px] font-bold text-green-400">
                     {format(new Date(confirmedStartTime), "h:mm a")}
@@ -563,16 +564,38 @@ export default function MyMatchDetailPage() {
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl px-4 py-4 mb-4 flex items-start gap-3"
-            style={{ background: "linear-gradient(135deg,rgba(245,158,11,0.08),rgba(0,0,0,0.3))", border: "1px solid rgba(245,158,11,0.2)" }}
+            style={msFixedMatchTime
+              ? { background: "linear-gradient(135deg,rgba(139,92,246,0.08),rgba(0,0,0,0.3))", border: "1px solid rgba(139,92,246,0.2)" }
+              : { background: "linear-gradient(135deg,rgba(245,158,11,0.08),rgba(0,0,0,0.3))", border: "1px solid rgba(245,158,11,0.2)" }}
           >
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
-              <Hourglass className="w-4 h-4 text-amber-400" />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+              style={msFixedMatchTime
+                ? { background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)" }
+                : { background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
+              {msFixedMatchTime
+                ? <Clock className="w-4 h-4 text-violet-400" />
+                : <Hourglass className="w-4 h-4 text-amber-400" />}
             </div>
             <div className="flex-1">
-              <p className="text-[12px] font-bold text-amber-300 mb-0.5">Match Timing Pending</p>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                You'll get your match start timing once the Clash Ren team confirms your match. We'll notify you as soon as it's set!
-              </p>
+              {msFixedMatchTime ? (
+                <>
+                  <p className="text-[12px] font-bold text-violet-300 mb-0.5">Match Scheduled</p>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    This match starts at{" "}
+                    <span className="text-violet-300 font-bold">
+                      {format(new Date(t.startTime), "h:mm a · MMM d")}
+                    </span>
+                    . Room details will be shared once confirmed.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[12px] font-bold text-amber-300 mb-0.5">Match Timing Pending</p>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    You'll get your match start timing once the Clash Ren team confirms your match. We'll notify you as soon as it's set!
+                  </p>
+                </>
+              )}
             </div>
           </motion.div>
         ) : null}
@@ -580,7 +603,7 @@ export default function MyMatchDetailPage() {
         {/* Info strip */}
         <div className="rounded-2xl overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           {[
-            { icon: <Calendar className="w-3.5 h-3.5 text-zinc-500" />, label: slotLabel ? `Date · ${slotLabel}` : "Date", value: slotStartTime ? format(new Date(slotStartTime), "MMM d, yyyy") : (confirmedStartTime ? format(new Date(confirmedStartTime), "MMM d, yyyy") : "—") },
+            { icon: <Calendar className="w-3.5 h-3.5 text-zinc-500" />, label: slotLabel ? (msFixedMatchTime ? "Date · Fixed Time" : `Date · ${slotLabel}`) : "Date", value: slotStartTime ? format(new Date(slotStartTime), msFixedMatchTime ? "MMM d, yyyy · h:mm a" : "MMM d, yyyy") : (confirmedStartTime ? format(new Date(confirmedStartTime), "MMM d, yyyy") : "—") },
             { icon: <CoinIcon className="w-3.5 h-3.5 text-blue-400" />, label: "Entry Fee", value: t.entryFeeDiamonds > 0 ? `${t.entryFeeDiamonds}` : "Free", isDiamond: t.entryFeeDiamonds > 0 },
             { icon: <Trophy className="w-3.5 h-3.5 text-yellow-400" />, label: "Prize Pool", value: t.prizePoolDiamonds ? `${t.prizePoolDiamonds}` : "—", isDiamond: !!t.prizePoolDiamonds },
           ].map((row, i, arr) => (

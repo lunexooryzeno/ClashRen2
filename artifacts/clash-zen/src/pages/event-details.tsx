@@ -305,7 +305,9 @@ export default function EventDetails() {
         toast({ title: "Failed to join", description: (err as { error?: string })?.error || "An error occurred", variant: "destructive" });
       } else {
         queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(tid) });
-        sessionStorage.setItem("cz_join_success", JSON.stringify({ name: resolvedTournament?.title ?? "", matchId: rawId, ts: Date.now() }));
+        const _rt = resolvedTournament as any;
+        const _ms = (() => { try { return typeof _rt?.matchSettings === "string" ? JSON.parse(_rt.matchSettings) : (_rt?.matchSettings ?? {}); } catch { return {}; } })();
+        sessionStorage.setItem("cz_join_success", JSON.stringify({ name: resolvedTournament?.title ?? "", matchId: rawId, ts: Date.now(), startTime: resolvedTournament?.startTime ?? null, fixedMatchTime: _ms.fixedMatchTime ?? null }));
         navigate("/join-success");
       }
     }).catch(() => {

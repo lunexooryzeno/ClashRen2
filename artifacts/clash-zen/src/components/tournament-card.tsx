@@ -59,6 +59,12 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
   const matchSlug: string | null = t.matchSlug ?? null;
   const gameModeInfo = parseGameMode(tournament.gameMode ?? "");
 
+  const matchSettings = (() => {
+    try { return typeof t.matchSettings === "string" ? JSON.parse(t.matchSettings) : (t.matchSettings ?? {}); }
+    catch { return {}; }
+  })();
+  const fixedMatchTime: string | null = matchSettings.fixedMatchTime ?? null;
+
   const isUpcoming = tournament.status === "upcoming";
   const isOngoing = tournament.status === "ongoing";
   const isFull = tournament.filledSlots >= tournament.maxSlots;
@@ -173,8 +179,23 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
         <div className={cn("px-4 py-3 grid gap-2 border-b border-white/5", perKill > 0 ? "grid-cols-4" : "grid-cols-3")}>
           {/* Start Time / Countdown — left */}
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Slot</span>
-            <span className="text-[10px] font-medium text-zinc-300 tabular-nums">{format(new Date(tournament.startTime), "MMM d, yyyy")}</span>
+            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">
+              {fixedMatchTime ? "Time" : "Slot"}
+            </span>
+            {fixedMatchTime ? (
+              <div className="flex flex-col items-center leading-tight">
+                <span className="text-[11px] font-bold text-violet-300 tabular-nums">
+                  {format(new Date(tournament.startTime), "h:mm a")}
+                </span>
+                <span className="text-[9px] text-zinc-500 tabular-nums">
+                  {format(new Date(tournament.startTime), "MMM d")}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[10px] font-medium text-zinc-300 tabular-nums">
+                {format(new Date(tournament.startTime), "MMM d, yyyy")}
+              </span>
+            )}
           </div>
 
           {/* Prize Pool */}

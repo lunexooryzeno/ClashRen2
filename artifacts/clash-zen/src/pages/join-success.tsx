@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle, Trophy, ExternalLink } from "lucide-react";
+import { CheckCircle, Trophy, ExternalLink, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 
 const REDIRECT_SECONDS = 3;
 const SESSION_KEY = "cz_join_success";
@@ -107,6 +108,8 @@ export default function JoinSuccessPage() {
   const [, navigate] = useLocation();
   const [tournamentName, setTournamentName] = useState<string | null>(null);
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [matchStartTime, setMatchStartTime] = useState<string | null>(null);
+  const [fixedMatchTime, setFixedMatchTime] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
   const [valid, setValid] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
@@ -128,6 +131,8 @@ export default function JoinSuccessPage() {
       sessionStorage.removeItem(SESSION_KEY);
       setTournamentName(data.name ?? null);
       setMatchId(data.matchId ?? null);
+      setMatchStartTime(data.startTime ?? null);
+      setFixedMatchTime(data.fixedMatchTime ?? null);
       setValid(true);
       setConfettiActive(true);
       setTimeout(() => setConfettiActive(false), 2000);
@@ -179,6 +184,18 @@ export default function JoinSuccessPage() {
           <div className="flex items-center gap-2 mb-2">
             <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
             <p className="text-[15px] font-semibold text-amber-300 line-clamp-2">{tournamentName}</p>
+          </div>
+        )}
+
+        {fixedMatchTime && matchStartTime && (
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl mb-4"
+            style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.3)" }}
+          >
+            <Clock className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <span className="text-[13px] font-bold text-violet-300">
+              {format(new Date(matchStartTime), "h:mm a · MMM d, yyyy")}
+            </span>
           </div>
         )}
 
