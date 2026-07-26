@@ -110,6 +110,7 @@ interface TournamentForm {
   shortTitle: string; statusLabel: string; statusColor: string;
   description: string; map: string; region: string;
   estimatedDuration: string; matchSettings: MatchSettingsForm;
+  fixedMatchTime: string | null; // e.g. "20:00" — fixed match start time (optional)
 }
 
 const EMPTY_FORM: TournamentForm = {
@@ -121,6 +122,7 @@ const EMPTY_FORM: TournamentForm = {
   imageUrl: "", rules: "", shortTitle: "", statusLabel: "", statusColor: "green",
   description: "", map: "Bermuda", region: "India", estimatedDuration: "20 min",
   matchSettings: { ...DEFAULT_MATCH_SETTINGS },
+  fixedMatchTime: null,
 };
 
 const CS1V1_TEMPLATE: TournamentForm = {
@@ -447,16 +449,23 @@ export default function AdminKnockoutNewPage() {
         ? firstSlot.label
         : `${fmt12(slots[0].hour, slots[0].minute)} – ${fmt12(slots[slots.length - 1].endHour ?? slots[slots.length - 1].hour, slots[slots.length - 1].endMinute ?? slots[slots.length - 1].minute + 45)}`;
 
+      // Fixed match start time (overrides first-slot startTime if set)
+      const fixedStartIso = form.fixedMatchTime
+        ? new Date(`${form.startDate}T${form.fixedMatchTime}:00`).toISOString()
+        : null;
+
       const ms = JSON.stringify({
         ...form.matchSettings,
         timeSlots,
         slotWindowLabel,
         slotEndTime: firstSlot.endTime,
         registrationCloseMinutes: form.registrationCloseMinutes,
+        fixedMatchTime: form.fixedMatchTime ?? null,
       });
 
       const body = {
-        title: form.title, gameMode: `${knockoutTeamFormat.toLowerCase().replace(/\s+/g, "_")}_knockout`, startTime: firstSlot.startTime,
+        title: form.title, gameMode: `${knockoutTeamFormat.toLowerCase().replace(/\s+/g, "_")}_knockout`,
+        startTime: fixedStartIso ?? firstSlot.startTime,
         status: form.status,
         entryFeeDiamonds: form.entryFeeDiamonds,
         prizePoolDiamonds: form.prizePoolDiamonds,
@@ -1108,6 +1117,45 @@ export default function AdminKnockoutNewPage() {
                 {(form.slotEntries ?? []).length} session time{(form.slotEntries ?? []).length !== 1 ? "s" : ""} stored inside <span className="text-zinc-500">1 match</span>
                 {form.startDate ? ` on ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}.
               </p>
+            )}
+          </div>
+
+          {/* Fixed Match Start Time */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Fixed Match Start Time</p>
+                <p className="text-[9px] text-zinc-700 mt-0.5">Exact time the match kicks off — separate from join windows</p>
+              </div>
+              <button type="button"
+                onClick={() => set("fixedMatchTime", form.fixedMatchTime ? null : "20:00")}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all active:scale-95"
+                style={{
+                  background: form.fixedMatchTime ? "rgba(168,85,247,0.18)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${form.fixedMatchTime ? "rgba(168,85,247,0.50)" : "rgba(255,255,255,0.08)"}`,
+                  color: form.fixedMatchTime ? "#c084fc" : "#52525b",
+                }}>
+                {form.fixedMatchTime ? "✓ Enabled" : "Off"}
+              </button>
+            </div>
+            {form.fixedMatchTime && (
+              <div className="rounded-xl px-3.5 py-3 space-y-2"
+                style={{ background: "rgba(168,85,247,0.06)", border: "1.5px solid rgba(168,85,247,0.28)" }}>
+                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Match Starts At</p>
+                <div className="relative">
+                  <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-violet-400 pointer-events-none" />
+                  <input type="time" value={form.fixedMatchTime}
+                    onChange={e => set("fixedMatchTime", e.target.value)}
+                    className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold text-violet-200 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+                    style={{ background: "rgba(168,85,247,0.10)", border: "1px solid rgba(168,85,247,0.30)", colorScheme: "dark" }} />
+                </div>
+                {form.fixedMatchTime && (
+                  <p className="text-[10px] text-violet-300/60">
+                    Match locked to start at <span className="font-bold text-violet-300">{fmt12(...(form.fixedMatchTime.split(":").map(Number) as [number, number]))}</span>
+                    {form.startDate ? ` on ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
