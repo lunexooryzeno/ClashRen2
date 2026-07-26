@@ -321,28 +321,39 @@ export default function AdminKnockoutEditPage() {
   async function handleSave() {
     if (!form.title.trim()) { toast({ title: "Match title is required", variant: "destructive" }); return; }
     if (!form.startDate) { toast({ title: "Start date is required", variant: "destructive" }); return; }
-    const slots = (form.slotEntries ?? []).filter(e => e.hour >= 0 && e.hour <= 23);
-    if (slots.length === 0) { toast({ title: "Add at least one time slot", variant: "destructive" }); return; }
+    const isFixed = !!form.fixedMatchTime;
+    const slots = isFixed ? [] : (form.slotEntries ?? []).filter(e => e.hour >= 0 && e.hour <= 23);
+    if (!isFixed && slots.length === 0) { toast({ title: "Add at least one time slot", variant: "destructive" }); return; }
     setSaving(true);
     const pad = (n: number) => String(n).padStart(2, "0");
     try {
-      const timeSlots = slots.map(entry => {
-        const { hour: startHour, minute: startMin, endHour, endMinute } = entry;
-        const startTime = new Date(`${form.startDate}T${pad(startHour)}:${pad(startMin)}:00`).toISOString();
-        const slotEndTime = new Date(`${form.startDate}T${pad(endHour ?? startHour)}:${pad(endMinute ?? startMin + 45)}:00`).toISOString();
-        const label = `${fmt12(startHour, startMin)} – ${fmt12(endHour ?? startHour, endMinute ?? startMin + 45)}`;
-        return { startTime, endTime: slotEndTime, label };
-      });
+      type TS = { startTime: string; endTime: string; label: string };
+      let timeSlots: TS[];
+      let firstSlot: TS;
+      let slotWindowLabel: string;
 
-      const firstSlot = timeSlots[0];
-      const slotWindowLabel = timeSlots.length === 1
-        ? firstSlot.label
-        : `${fmt12(slots[0].hour, slots[0].minute)} – ${fmt12(slots[slots.length - 1].endHour ?? slots[slots.length - 1].hour, slots[slots.length - 1].endMinute ?? slots[slots.length - 1].minute + 45)}`;
-
-      // Fixed match start time (overrides first-slot startTime if set)
-      const fixedStartIso = form.fixedMatchTime
-        ? new Date(`${form.startDate}T${form.fixedMatchTime}:00`).toISOString()
-        : null;
+      if (isFixed) {
+        const [fh, fm] = form.fixedMatchTime!.split(":").map(Number);
+        const fixedIso = new Date(`${form.startDate}T${pad(fh)}:${pad(fm)}:00`).toISOString();
+        const endD = new Date(`${form.startDate}T${pad(fh)}:${pad(fm)}:00`);
+        endD.setMinutes(endD.getMinutes() + 45);
+        const label = fmt12(fh, fm);
+        timeSlots = [{ startTime: fixedIso, endTime: endD.toISOString(), label }];
+        firstSlot = timeSlots[0];
+        slotWindowLabel = label;
+      } else {
+        timeSlots = slots.map(entry => {
+          const { hour: startHour, minute: startMin, endHour, endMinute } = entry;
+          const startTime = new Date(`${form.startDate}T${pad(startHour)}:${pad(startMin)}:00`).toISOString();
+          const slotEndTime = new Date(`${form.startDate}T${pad(endHour ?? startHour)}:${pad(endMinute ?? startMin + 45)}:00`).toISOString();
+          const label = `${fmt12(startHour, startMin)} – ${fmt12(endHour ?? startHour, endMinute ?? startMin + 45)}`;
+          return { startTime, endTime: slotEndTime, label };
+        });
+        firstSlot = timeSlots[0];
+        slotWindowLabel = timeSlots.length === 1
+          ? firstSlot.label
+          : `${fmt12(slots[0].hour, slots[0].minute)} – ${fmt12(slots[slots.length - 1].endHour ?? slots[slots.length - 1].hour, slots[slots.length - 1].endMinute ?? slots[slots.length - 1].minute + 45)}`;
+      }
 
       const ms = JSON.stringify({
         ...form.matchSettings,
@@ -355,7 +366,7 @@ export default function AdminKnockoutEditPage() {
 
       const body = {
         title: form.title, gameMode: `${knockoutTeamFormat.toLowerCase()}_knockout`,
-        startTime: fixedStartIso ?? firstSlot.startTime,
+        startTime: firstSlot.startTime,
         status: form.status,
         entryFeeDiamonds: form.entryFeeDiamonds,
         prizePoolDiamonds: form.prizePoolDiamonds,
@@ -497,141 +508,146 @@ export default function AdminKnockoutEditPage() {
             </div>
           </Field>
 
-          {/* Session time entries */}
+          {/* Timing Mode radio */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Session Times <span className="normal-case font-normal text-zinc-700">(all saved in 1 match)</span></p>
-              <button type="button"
-                onClick={() => set("slotEntries", DEFAULT_SLOT_ENTRIES.map(e => ({ ...e })))}
-                className="text-[10px] font-bold text-zinc-500 px-2 py-0.5 rounded-lg transition-colors"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                Load 5 presets
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Timing Mode</p>
+            <div className="grid grid-cols-2 overflow-hidden rounded-2xl" style={{ border: "1.5px solid rgba(255,255,255,0.10)" }}>
+              <button type="button" onClick={() => set("fixedMatchTime", null)}
+                className="flex items-center justify-center gap-2 py-3 text-[12px] font-bold transition-all active:scale-95"
+                style={{
+                  background: !form.fixedMatchTime ? "rgba(56,189,248,0.15)" : "rgba(255,255,255,0.03)",
+                  borderRight: "1px solid rgba(255,255,255,0.08)",
+                  color: !form.fixedMatchTime ? "#7dd3fc" : "#52525b",
+                }}>
+                <div className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0"
+                  style={{ borderColor: !form.fixedMatchTime ? "#38bdf8" : "#3f3f46" }}>
+                  {!form.fixedMatchTime && <div className="w-1.5 h-1.5 rounded-full bg-sky-400" />}
+                </div>
+                Slot Timing
+              </button>
+              <button type="button" onClick={() => set("fixedMatchTime", form.fixedMatchTime || "20:00")}
+                className="flex items-center justify-center gap-2 py-3 text-[12px] font-bold transition-all active:scale-95"
+                style={{
+                  background: !!form.fixedMatchTime ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.03)",
+                  color: !!form.fixedMatchTime ? "#c084fc" : "#52525b",
+                }}>
+                <div className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0"
+                  style={{ borderColor: !!form.fixedMatchTime ? "#a855f7" : "#3f3f46" }}>
+                  {!!form.fixedMatchTime && <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />}
+                </div>
+                Fixed Start Time
               </button>
             </div>
-            <div className="space-y-2">
-              {(form.slotEntries ?? []).map((entry, idx) => {
-                const pad2 = (n: number) => String(n).padStart(2, "0");
-                const startVal = `${pad2(entry.hour)}:${pad2(entry.minute)}`;
-                const endVal = `${pad2(entry.endHour ?? entry.hour)}:${pad2(entry.endMinute ?? entry.minute + 45)}`;
-                const updateTime = (field: "start" | "end", raw: string) => {
-                  const [h, m] = raw.split(":").map(Number);
-                  const next = (form.slotEntries ?? []).map((en, i) => {
-                    if (i !== idx) return en;
-                    return field === "start"
-                      ? { ...en, hour: isNaN(h) ? 0 : h, minute: isNaN(m) ? 0 : m }
-                      : { ...en, endHour: isNaN(h) ? 0 : h, endMinute: isNaN(m) ? 0 : m };
-                  });
-                  set("slotEntries", next);
-                };
-                return (
-                  <div key={idx} className="rounded-xl px-3.5 py-3"
-                    style={{ background: "rgba(56,189,248,0.06)", border: "1.5px solid rgba(56,189,248,0.22)" }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-sky-400"
-                          style={{ background: "rgba(56,189,248,0.18)" }}>{idx + 1}</span>
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Slot {idx + 1}</span>
-                      </span>
-                      <button type="button"
-                        onClick={() => set("slotEntries", (form.slotEntries ?? []).filter((_, i) => i !== idx))}
-                        className="w-6 h-6 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                        style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
-                        <X className="w-3 h-3 text-red-400" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Start Time</p>
-                        <div className="relative">
-                          <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-sky-400 pointer-events-none" />
-                          <input type="time" value={startVal}
-                            onChange={e => updateTime("start", e.target.value)}
-                            className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-500/50"
-                            style={{ background: "rgba(56,189,248,0.10)", border: "1px solid rgba(56,189,248,0.30)", colorScheme: "dark" }} />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1">End Time</p>
-                        <div className="relative">
-                          <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-400 pointer-events-none" />
-                          <input type="time" value={endVal}
-                            onChange={e => updateTime("end", e.target.value)}
-                            className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold text-amber-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
-                            style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.28)", colorScheme: "dark" }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button type="button"
-              onClick={() => {
-                const existing = form.slotEntries ?? [];
-                const lastHour = existing.length > 0 ? existing[existing.length - 1].hour : 17;
-                const newHour = Math.min(23, lastHour + 1);
-                set("slotEntries", [...existing, { hour: newHour, minute: 0, endHour: newHour, endMinute: 45 }]);
-              }}
-              className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-bold transition-all active:scale-[0.98]"
-              style={{ background: "rgba(56,189,248,0.08)", border: "1.5px dashed rgba(56,189,248,0.30)", color: "#38bdf8" }}>
-              <Plus className="w-3.5 h-3.5" /> Add Slot
-            </button>
-
-            {(form.slotEntries ?? []).length > 0 && (
-              <p className="text-[10px] text-zinc-600 mt-2 px-1">
-                {(form.slotEntries ?? []).length} session time{(form.slotEntries ?? []).length !== 1 ? "s" : ""} stored inside <span className="text-zinc-500">1 match</span>
-                {form.startDate ? ` on ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}.
-              </p>
-            )}
           </div>
 
-          {/* Fixed Match Start Time */}
-          <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">
-              Fixed Match Start Time <span className="normal-case font-normal text-zinc-700 tracking-normal">— when the match actually begins</span>
-            </p>
-            {/* Quick-pick preset times */}
-            <div className="flex gap-2 flex-wrap mb-2">
-              {(["18:00","19:00","20:00","21:00","22:00","23:00"] as const).map(t => {
-                const [h, m] = t.split(":").map(Number);
-                const active = form.fixedMatchTime === t;
-                return (
-                  <button key={t} type="button"
-                    onClick={() => set("fixedMatchTime", active ? null : t)}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-95"
-                    style={{
-                      background: active ? "rgba(168,85,247,0.18)" : "rgba(255,255,255,0.04)",
-                      border: `1.5px solid ${active ? "rgba(168,85,247,0.55)" : "rgba(255,255,255,0.08)"}`,
-                      color: active ? "#c084fc" : "#52525b",
-                    }}>
-                    {fmt12(h, m)}
-                  </button>
-                );
-              })}
+          {/* ── Slot Timing panel ── */}
+          {!form.fixedMatchTime && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Session Times <span className="normal-case font-normal text-zinc-700">(all saved in 1 match)</span></p>
+                <button type="button"
+                  onClick={() => set("slotEntries", DEFAULT_SLOT_ENTRIES.map(e => ({ ...e })))}
+                  className="text-[10px] font-bold text-zinc-500 px-2 py-0.5 rounded-lg transition-colors"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  Load 5 presets
+                </button>
+              </div>
+              <div className="space-y-2">
+                {(form.slotEntries ?? []).map((entry, idx) => {
+                  const pad2 = (n: number) => String(n).padStart(2, "0");
+                  const startVal = `${pad2(entry.hour)}:${pad2(entry.minute)}`;
+                  const endVal = `${pad2(entry.endHour ?? entry.hour)}:${pad2(entry.endMinute ?? entry.minute + 45)}`;
+                  const updateTime = (field: "start" | "end", raw: string) => {
+                    const [h, m] = raw.split(":").map(Number);
+                    const next = (form.slotEntries ?? []).map((en, i) => {
+                      if (i !== idx) return en;
+                      return field === "start"
+                        ? { ...en, hour: isNaN(h) ? 0 : h, minute: isNaN(m) ? 0 : m }
+                        : { ...en, endHour: isNaN(h) ? 0 : h, endMinute: isNaN(m) ? 0 : m };
+                    });
+                    set("slotEntries", next);
+                  };
+                  return (
+                    <div key={idx} className="rounded-xl px-3.5 py-3"
+                      style={{ background: "rgba(56,189,248,0.06)", border: "1.5px solid rgba(56,189,248,0.22)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-sky-400"
+                            style={{ background: "rgba(56,189,248,0.18)" }}>{idx + 1}</span>
+                          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Slot {idx + 1}</span>
+                        </span>
+                        <button type="button"
+                          onClick={() => set("slotEntries", (form.slotEntries ?? []).filter((_, i) => i !== idx))}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                          style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                          <X className="w-3 h-3 text-red-400" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Start Time</p>
+                          <div className="relative">
+                            <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-sky-400 pointer-events-none" />
+                            <input type="time" value={startVal}
+                              onChange={e => updateTime("start", e.target.value)}
+                              className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-500/50"
+                              style={{ background: "rgba(56,189,248,0.10)", border: "1px solid rgba(56,189,248,0.30)", colorScheme: "dark" }} />
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-1">End Time</p>
+                          <div className="relative">
+                            <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-amber-400 pointer-events-none" />
+                            <input type="time" value={endVal}
+                              onChange={e => updateTime("end", e.target.value)}
+                              className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold text-amber-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+                              style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.28)", colorScheme: "dark" }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button type="button"
+                onClick={() => {
+                  const existing = form.slotEntries ?? [];
+                  const lastHour = existing.length > 0 ? existing[existing.length - 1].hour : 17;
+                  const newHour = Math.min(23, lastHour + 1);
+                  set("slotEntries", [...existing, { hour: newHour, minute: 0, endHour: newHour, endMinute: 45 }]);
+                }}
+                className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-bold transition-all active:scale-[0.98]"
+                style={{ background: "rgba(56,189,248,0.08)", border: "1.5px dashed rgba(56,189,248,0.30)", color: "#38bdf8" }}>
+                <Plus className="w-3.5 h-3.5" /> Add Slot
+              </button>
+              {(form.slotEntries ?? []).length > 0 && (
+                <p className="text-[10px] text-zinc-600 mt-2 px-1">
+                  {(form.slotEntries ?? []).length} session time{(form.slotEntries ?? []).length !== 1 ? "s" : ""} stored inside <span className="text-zinc-500">1 match</span>
+                  {form.startDate ? ` on ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}.
+                </p>
+              )}
             </div>
-            {/* Manual time picker */}
-            <div className="relative">
-              <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
-              <input type="time" value={form.fixedMatchTime ?? ""}
-                onChange={e => set("fixedMatchTime", e.target.value || null)}
-                className="w-full pl-7 pr-2 py-2 rounded-xl text-[13px] font-extrabold focus:outline-none focus:ring-1 focus:ring-violet-500/50"
-                style={{
-                  background: form.fixedMatchTime ? "rgba(168,85,247,0.10)" : "rgba(255,255,255,0.04)",
-                  border: `1px solid ${form.fixedMatchTime ? "rgba(168,85,247,0.35)" : "rgba(255,255,255,0.08)"}`,
-                  color: form.fixedMatchTime ? "#c084fc" : "#52525b",
-                  colorScheme: "dark",
-                }} />
+          )}
+
+          {/* ── Fixed Start Time panel ── */}
+          {!!form.fixedMatchTime && (
+            <div>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Match Start Time</p>
+              <input
+                type="time"
+                value={form.fixedMatchTime}
+                onChange={e => set("fixedMatchTime", e.target.value || "00:00")}
+                className="w-full rounded-xl px-4 py-3 text-[16px] font-bold text-white outline-none focus:ring-1 focus:ring-violet-500/40"
+                style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.13)", colorScheme: "dark" }}
+              />
+              {form.startDate && (
+                <p className="text-[10px] text-violet-300/70 mt-2 px-1">
+                  Match starts at <span className="font-bold text-violet-300">{fmt12(...(form.fixedMatchTime.split(":").map(Number) as [number, number]))}</span>
+                  {` · ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`}
+                </p>
+              )}
             </div>
-            {form.fixedMatchTime ? (
-              <p className="text-[10px] text-violet-300/70 mt-1.5 px-1">
-                Match kicks off at <span className="font-bold text-violet-300">{fmt12(...(form.fixedMatchTime.split(":").map(Number) as [number, number]))}</span>
-                {form.startDate ? ` · ${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}` : ""}. Tap a button again to clear.
-              </p>
-            ) : (
-              <p className="text-[10px] text-zinc-700 mt-1.5 px-1">Not set — match starts at the first slot's time. Pick a time above or type one.</p>
-            )}
-          </div>
+          )}
 
           {/* Registration close */}
           <div>
