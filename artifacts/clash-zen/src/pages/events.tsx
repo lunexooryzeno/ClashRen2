@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { User, Users, Shield, ArrowRight } from "lucide-react";
-import { CoinIcon } from "@/components/CoinIcon";
 import bgImage from "@assets/1782801646557_1782801792030.png";
 import ibImage from "@assets/1783435012009_1-removebg-preview_1783435742788.png";
 
@@ -10,7 +9,6 @@ const MODES = [
     id: "solo",
     label: "Solo",
     tagline: "Last One Standing",
-    entry: "From 10 🪙 entry",
     icon: User,
     accent: "#ef4444",
     glow: "rgba(239,68,68,0.5)",
@@ -22,7 +20,6 @@ const MODES = [
     id: "duo",
     label: "Duo",
     tagline: "Pair Up & Dominate",
-    entry: "From 20 🪙 entry",
     icon: Users,
     accent: "#a855f7",
     glow: "rgba(168,85,247,0.5)",
@@ -34,7 +31,6 @@ const MODES = [
     id: "squad",
     label: "Squad",
     tagline: "Unite Your Squad",
-    entry: "From 40 🪙 entry",
     icon: Shield,
     accent: "#f59e0b",
     glow: "rgba(245,158,11,0.5)",
@@ -100,10 +96,6 @@ function ModeCard({ mode, visible }: { mode: typeof MODES[number]; visible: bool
             {mode.label}
           </h2>
           <p className="text-[11px] font-semibold mt-1 leading-tight" style={{ color: `${mode.accent}bb` }}>{mode.tagline}</p>
-          <div className="flex items-center gap-1 mt-2">
-            <CoinIcon className="w-2.5 h-2.5 shrink-0" style={{ color: `${mode.accent}99` }} />
-            <span className="text-[10px] font-semibold" style={{ color: `${mode.accent}77` }}>{mode.entry}</span>
-          </div>
         </div>
       </div>
     </div>
@@ -155,11 +147,7 @@ export default function Events() {
         <div className="flex flex-col gap-2.5 mt-2">
           <SectionLabel delay={40} visible={visible}>Instant Battle</SectionLabel>
           <div
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate("/quickmatch")}
-            onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
-            className="relative overflow-hidden cursor-pointer active:scale-[0.99] select-none"
+            className="relative overflow-hidden select-none"
             style={{ borderRadius: "14px" }}
           >
             <img
@@ -173,8 +161,23 @@ export default function Events() {
                 display: "block",
                 objectFit: "cover",
                 objectPosition: "center 20%",
+                filter: "brightness(0.45)",
               }}
             />
+            {/* Coming Soon overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+              <span
+                className="text-[10px] font-black uppercase tracking-[0.22em] px-3 py-1 rounded-full"
+                style={{
+                  background: "rgba(139,92,246,0.25)",
+                  border: "1px solid rgba(139,92,246,0.5)",
+                  color: "#c4b5fd",
+                }}
+              >
+                Coming Soon
+              </span>
+              <p className="text-[12px] font-semibold text-white/60">Instant Battle is on the way</p>
+            </div>
           </div>
         </div>
 
