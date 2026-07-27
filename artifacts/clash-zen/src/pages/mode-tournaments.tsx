@@ -4,6 +4,7 @@ import { TournamentCard } from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Trophy, User, Users, Shield, Zap, Plus, Bell, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { isBookingClosed } from "@/lib/utils";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListTournamentsQueryKey } from "@workspace/api-client-react";
@@ -134,13 +135,15 @@ export default function ModeTournaments() {
     { query: { refetchInterval: 10_000, refetchIntervalInBackground: false } }
   );
 
-  const tournaments = (allTournaments ?? []).filter(t => {
-    const m = (t.gameMode ?? "").toLowerCase();
-    if (mode === "solo")  return m.includes("solo");
-    if (mode === "duo")   return m.includes("duo");
-    if (mode === "squad") return m.includes("squad");
-    return false;
-  });
+  const tournaments = (allTournaments ?? [])
+    .filter(t => !isBookingClosed(t))
+    .filter(t => {
+      const m = (t.gameMode ?? "").toLowerCase();
+      if (mode === "solo")  return m.includes("solo");
+      if (mode === "duo")   return m.includes("duo");
+      if (mode === "squad") return m.includes("squad");
+      return false;
+    });
 
   // ── New match banner ───────────────────────────────────────────────────────
   const seenIdsRef       = useRef<Set<number> | null>(null);

@@ -12,6 +12,21 @@ const KNOCKOUT_FORMAT_MAP: Record<string, string> = {
   clash_squad: "Clash Squad",
 };
 
+export function isBookingClosed(tournament: { status?: string; startTime?: string; matchSettings?: string | Record<string, unknown> | null; isJoined?: boolean | null | undefined }): boolean {
+  if (tournament.isJoined) return false; // joined players always see their match
+  if (tournament.status !== "upcoming") return false;
+  const startTime = tournament.startTime;
+  if (!startTime) return false;
+  let closeMin = 15;
+  try {
+    const ms = typeof tournament.matchSettings === "string"
+      ? JSON.parse(tournament.matchSettings)
+      : (tournament.matchSettings ?? {});
+    if (typeof ms.registrationCloseMinutes === "number") closeMin = ms.registrationCloseMinutes;
+  } catch { /* keep default */ }
+  return Date.now() >= new Date(startTime).getTime() - closeMin * 60 * 1000;
+}
+
 export function parseGameMode(gameMode: string): {
   isKnockout: boolean;
   teamFormat: string | null;
