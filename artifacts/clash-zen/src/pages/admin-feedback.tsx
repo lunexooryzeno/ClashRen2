@@ -11,6 +11,25 @@ interface FeedbackItem {
   user: { id: number; inGameName: string | null; phone: string } | null;
 }
 
+const SUPER_ADMIN_SESSION_KEY = "czsa_v1_session";
+
+function getSuperAdminToken(): string | null {
+  try {
+    const raw = localStorage.getItem(SUPER_ADMIN_SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw) as { token?: string; expiresAt?: number };
+    if (!session.token || (session.expiresAt && Date.now() > session.expiresAt)) {
+      if (session.expiresAt && Date.now() > session.expiresAt) {
+        localStorage.removeItem(SUPER_ADMIN_SESSION_KEY);
+      }
+      return null;
+    }
+    return session.token;
+  } catch {
+    return null;
+  }
+}
+
 const TYPE_LABELS: Record<string, string> = {
   bug: "Bug report",
   suggestion: "Suggestion",
@@ -28,7 +47,11 @@ export default function AdminFeedbackPage() {
   async function loadFeedback() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/feedback", { credentials: "include" });
+      const token = getSuperAdminToken();
+      const res = await fetch("/api/admin/feedback", {
+        credentials: "include",
+        headers: token ? { "X-Super-Admin-Token": token } : undefined,
+      });
       if (!res.ok) throw new Error(res.status === 403 ? "Admin access required." : "Could not load feedback.");
       setItems(await res.json() as FeedbackItem[]);
     } catch (error) {
