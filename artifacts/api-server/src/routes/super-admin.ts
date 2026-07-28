@@ -1379,7 +1379,7 @@ router.patch("/super-admin/banners/:id", requireSuperAdmin, async (req, res) => 
     req.body as Record<string, string | number | boolean | undefined>;
   try {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
-    if (title !== undefined) updateData.title = String(title).trim();
+    if (title !== undefined) updateData.title = String(title).trim() || "Image banner";
     if (tag !== undefined) updateData.tag = String(tag).trim() || null;
     if (subtitle !== undefined) updateData.subtitle = String(subtitle).trim() || null;
     if (buttonText !== undefined) updateData.buttonText = String(buttonText).trim() || null;

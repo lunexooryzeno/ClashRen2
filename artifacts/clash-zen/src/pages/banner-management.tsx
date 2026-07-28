@@ -228,14 +228,20 @@ export default function BannerManagementPage() {
   const handleBannerSave = async () => {
     setBannerSaving(true);
     try {
+      // Titles are optional. Keep the database's internal non-null field
+      // populated while preserving image-only banner behavior in the UI.
+      const saveData = {
+        ...bannerForm,
+        title: bannerForm.title.trim() || "Image banner",
+      };
       if (bannerModal?.mode === "create") {
         const data = await saFetch<BannerData>("/super-admin/banners", token, {
-          method: "POST", body: JSON.stringify(bannerForm),
+          method: "POST", body: JSON.stringify(saveData),
         });
         setBanners(b => [...b, data]);
       } else if (bannerModal?.mode === "edit" && bannerModal.banner) {
         const data = await saFetch<BannerData>(`/super-admin/banners/${bannerModal.banner.id}`, token, {
-          method: "PATCH", body: JSON.stringify(bannerForm),
+          method: "PATCH", body: JSON.stringify(saveData),
         });
         setBanners(b => b.map(x => x.id === data.id ? data : x));
       }
