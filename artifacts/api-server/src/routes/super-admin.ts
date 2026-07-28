@@ -1347,15 +1347,13 @@ router.get("/super-admin/banners", requireSuperAdmin, async (_req, res) => {
 router.post("/super-admin/banners", requireSuperAdmin, async (req, res) => {
   const { title, tag, subtitle, buttonText, buttonUrl, imageUrl, accentColor, placement, displayOrder, isActive } =
     req.body as Record<string, string | number | boolean | undefined>;
-  if (!title || typeof title !== "string" || !title.trim()) {
-    res.status(400).json({ error: "Title is required" });
-    return;
-  }
   try {
     const [banner] = await db
       .insert(bannersTable)
       .values({
-        title: (title as string).trim(),
+        // The database keeps a non-null internal title for image-only banners.
+        // The public carousel only renders this value when the admin supplied copy.
+        title: typeof title === "string" && title.trim() ? title.trim() : "Image banner",
         tag: tag ? String(tag).trim() || null : null,
         subtitle: subtitle ? String(subtitle).trim() || null : null,
         buttonText: buttonText ? String(buttonText).trim() || null : null,

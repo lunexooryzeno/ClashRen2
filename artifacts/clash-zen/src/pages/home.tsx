@@ -102,13 +102,13 @@ function apiBannerToCarousel(b: ApiBanner): CarouselBanner {
   return {
     id: b.id,
     tag: b.tag ?? "",
-    title: b.title,
+    title: b.title === "Image banner" ? "" : b.title,
     subtitle: b.subtitle ?? "",
-    cta: b.buttonText || "View More",
+    cta: b.buttonText ?? "",
     href: b.buttonUrl || "/matches",
     accent: color,
     glow: `${color}4d`,
-    badge: badge.replace(/[^\w]/g, "").toUpperCase() || "NEW",
+    badge: b.tag ? (badge.replace(/[^\w]/g, "").toUpperCase() || "NEW") : "",
     image: b.imageUrl ? bannerImgSrc(b.imageUrl) : "",
   };
 }
@@ -210,27 +210,33 @@ function BannerCarousel({ items }: { items: CarouselBanner[] }) {
                 ) : (
                   <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${banner.accent}28 0%, #0a0612 100%)` }} />
                 )}
-                <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 60%, rgba(0,0,0,0.18) 100%)" }} />
-                <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 85% 50%, ${banner.glow} 0%, transparent 60%)` }} />
-                <div className="relative z-10 h-full flex flex-col justify-between p-5">
-                  <div className="flex items-start justify-between">
-                    <span className="text-[11px] font-bold text-white/80 tracking-wide">{banner.tag}</span>
-                    <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full tracking-widest"
-                      style={{ background: `${banner.accent}33`, color: banner.accent, border: `1px solid ${banner.accent}66` }}>
-                      {banner.badge}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="font-heading text-2xl font-extrabold text-white leading-tight tracking-tight mb-1 drop-shadow-md">{banner.title}</h2>
-                    {banner.subtitle && <p className="text-[11px] text-white/65 leading-snug mb-3">{banner.subtitle}</p>}
-                    {banner.cta && (
+                {banner.title || banner.tag || banner.subtitle || banner.cta ? (
+                  <>
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 60%, rgba(0,0,0,0.18) 100%)" }} />
+                    <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 85% 50%, ${banner.glow} 0%, transparent 60%)` }} />
+                    <div className="relative z-10 h-full flex flex-col justify-between p-5">
+                      <div className="flex items-start justify-between">
+                        {banner.tag && <span className="text-[11px] font-bold text-white/80 tracking-wide">{banner.tag}</span>}
+                        {banner.badge && (
+                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full tracking-widest"
+                            style={{ background: `${banner.accent}33`, color: banner.accent, border: `1px solid ${banner.accent}66` }}>
+                            {banner.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        {banner.title && <h2 className="font-heading text-2xl font-extrabold text-white leading-tight tracking-tight mb-1 drop-shadow-md">{banner.title}</h2>}
+                        {banner.subtitle && <p className="text-[11px] text-white/65 leading-snug mb-3">{banner.subtitle}</p>}
+                        {banner.cta && (
                       <span className="inline-flex h-8 px-4 rounded-xl text-xs font-bold items-center gap-1.5"
                         style={{ background: `${banner.accent}33`, border: `1px solid ${banner.accent}66`, color: banner.accent }}>
                         {banner.cta} <ChevronRight className="w-3 h-3" />
                       </span>
-                    )}
-                  </div>
-                </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </Tag>
             );

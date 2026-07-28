@@ -226,7 +226,6 @@ export default function BannerManagementPage() {
   };
 
   const handleBannerSave = async () => {
-    if (!bannerForm.title.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
     setBannerSaving(true);
     try {
       if (bannerModal?.mode === "create") {
@@ -378,6 +377,18 @@ export default function BannerManagementPage() {
           ))}
         </div>
 
+        <div className="rounded-2xl px-4 py-3 flex items-start gap-3"
+          style={{ background: "rgba(56,189,248,0.07)", border: "1px solid rgba(56,189,248,0.2)" }}>
+          <Image className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-bold text-sky-300">Banner format: 2:1 ratio</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Recommended size <span className="font-bold text-zinc-300">1200 × 600 px</span>.
+              JPG, PNG, WebP, or GIF up to 5 MB. You can upload an image without any text.
+            </p>
+          </div>
+        </div>
+
         {/* Add banner button */}
         <button
           onClick={openCreateBanner}
@@ -500,6 +511,7 @@ export default function BannerManagementPage() {
             <div className="overflow-y-auto flex-1 px-5 pb-2 flex flex-col gap-4">
               <div>
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Banner Image</label>
+                <p className="text-[10px] text-sky-400/80 mb-2">Recommended: 1200 × 600 px (2:1 ratio). Image-only banners are supported.</p>
                 {bannerForm.imageUrl ? (
                   <div className="relative rounded-2xl overflow-hidden h-36 bg-zinc-900">
                     <img src={bannerImgSrc(bannerForm.imageUrl)} alt="preview" className="w-full h-full object-cover" />
@@ -523,9 +535,9 @@ export default function BannerManagementPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5 block">Title <span className="text-red-400">*</span></label>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5 block">Title <span className="text-zinc-600">(optional)</span></label>
                 <input value={bannerForm.title} onChange={e => setBannerForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="e.g. Friday Blitz"
+                  placeholder="Leave blank for image-only banner"
                   className="w-full rounded-xl bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 placeholder:text-zinc-600 focus:outline-none focus:border-violet-400/50" />
               </div>
 
@@ -608,7 +620,7 @@ export default function BannerManagementPage() {
               <button onClick={() => setBannerModal(null)} className="flex-1 py-3 rounded-2xl text-sm font-bold text-zinc-400 bg-white/5 hover:bg-white/10 transition-colors">
                 Cancel
               </button>
-              <button onClick={handleBannerSave} disabled={bannerSaving || !bannerForm.title.trim()}
+              <button onClick={handleBannerSave} disabled={bannerSaving}
                 className="flex-1 py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #a855f7)" }}>
                 {bannerSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
