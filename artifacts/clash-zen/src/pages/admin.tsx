@@ -38,7 +38,7 @@ import {
   Wrench, ChevronDown, ChevronUp, DollarSign, Crown, Ban as BanIcon,
   RefreshCw, CalendarClock, Undo2, Bell, XCircle, Timer, Minus, Megaphone, Radio,
   Flag, CheckCircle, Lightbulb, ShieldBan, CircleDot, MessageSquare,
-  ScrollText, Wallet, Globe2, HeadphonesIcon, Phone, AtSign, Clock,
+  ScrollText, Wallet, Globe2, HeadphonesIcon, Phone, AtSign,
   KeyRound, Eye, EyeOff, CheckCircle2,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
