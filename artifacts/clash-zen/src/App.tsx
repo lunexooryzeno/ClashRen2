@@ -102,6 +102,7 @@ const AdminUsersPage      = lazy(() => import("@/pages/admin-users"));
 const AdminUserDetailPage = lazy(() => import("@/pages/admin-user-detail"));
 const AdminFFStatsPage    = lazy(() => import("@/pages/admin-ff-stats"));
 const AdminFraudPage      = lazy(() => import("@/pages/admin-fraud"));
+const AdminFeedbackPage   = lazy(() => import("@/pages/admin-feedback"));
 const AccountSuspendedPage = lazy(() => import("@/pages/account-suspended"));
 const OnboardingPage       = lazy(() => import("@/pages/onboarding"));
 const BannerManagementPage = lazy(() => import("@/pages/banner-management"));
@@ -287,6 +288,9 @@ function Router() {
         </Route>
         <Route path="/admin/fraud">
           <ProtectedRoute component={AdminFraudPage} />
+        </Route>
+        <Route path="/admin/feedback">
+          <ProtectedRoute component={AdminFeedbackPage} />
         </Route>
         <Route path="/account-suspended" component={AccountSuspendedPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c" component={SuperAdminPage} />

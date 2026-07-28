@@ -2154,6 +2154,14 @@ function AdminReports() {
 
         {showFeedback && (
           <div className="border-t border-white/5 divide-y divide-white/5">
+            <div className="px-4 py-3 border-b border-white/5">
+              <Link
+                href="/admin/feedback"
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/15"
+              >
+                <ExternalLink className="w-3 h-3" /> Open dedicated feedback page
+              </Link>
+            </div>
             {feedbackLoading && <div className="p-4 text-center text-xs text-zinc-600">Loading...</div>}
             {!feedbackLoading && feedback.length === 0 && (
               <div className="p-4 text-center text-xs text-zinc-600">No feedback yet</div>
