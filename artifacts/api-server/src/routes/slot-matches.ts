@@ -1934,24 +1934,52 @@ router.patch("/admin/slot-matches/:mid/override-winner", requireAdmin, async (re
   if (!body.winnerId) { res.status(400).json({ error: "winnerId required" }); return; }
   const match = await db.query.slotMatchesTable.findFirst({ where: eq(slotMatchesTable.id, mid) });
   if (!match) { res.status(404).json({ error: "Match not found" }); return; }
-  if (match.verificationStatus === "reward_distributed") { res.status(400).json({ error: "Reward already distributed" }); return; }
+  if (match.winnerId != null || match.status === "completed" || match.verificationStatus === "reward_distributed") {
+    res.status(400).json({ error: "This match already has a finalized winner" });
+    return;
+  }
   const validPlayerIds = [match.player1Id, match.player2Id].filter(Boolean) as number[];
   if (!validPlayerIds.includes(body.winnerId)) { res.status(400).json({ error: "Winner must be a match participant" }); return; }
 
   const prize = body.prizeAmountDiamonds !== undefined
     ? body.prizeAmountDiamonds
     : await resolveMatchPrize(match);
+  if (!Number.isInteger(prize) || prize < 0) {
+    res.status(400).json({ error: "Prize must be a non-negative whole number" });
+    return;
+  }
   const now = new Date();
   if (prize > 0) {
     await creditMatchPrize(mid, body.winnerId, prize, match.slotId);
-    await db.update(slotMatchVerificationsTable).set({ isWinner: false }).where(eq(slotMatchVerificationsTable.slotMatchId, mid));
-    await db.update(slotMatchVerificationsTable).set({ isWinner: true, rewardGranted: true })
-      .where(and(eq(slotMatchVerificationsTable.slotMatchId, mid), eq(slotMatchVerificationsTable.userId, body.winnerId)));
+  }
+
+  // Keep verification records and tournament history aligned with the
+  // administrator's decision, even when no prize is configured.
+  await db.update(slotMatchVerificationsTable)
+    .set({ isWinner: false, rewardGranted: false })
+    .where(eq(slotMatchVerificationsTable.slotMatchId, mid));
+  await db.update(slotMatchVerificationsTable)
+    .set({ isWinner: true, rewardGranted: prize > 0 })
+    .where(and(eq(slotMatchVerificationsTable.slotMatchId, mid), eq(slotMatchVerificationsTable.userId, body.winnerId)));
+  for (const userId of validPlayerIds) {
+    await db.update(tournamentParticipantsTable)
+      .set({
+        placement: userId === body.winnerId ? 1 : 2,
+        ...(userId === body.winnerId && prize > 0 ? { diamondsWon: prize } : {}),
+      })
+      .where(and(
+        eq(tournamentParticipantsTable.tournamentId, match.slotId),
+        eq(tournamentParticipantsTable.userId, userId),
+        eq(tournamentParticipantsTable.slotIndex, match.slotIndex),
+      ));
   }
 
   await db.update(slotMatchesTable).set({
-    winnerId: body.winnerId, status: "completed", verificationStatus: "reward_distributed",
-    rewardDistributedAt: now, prizeAmountDiamonds: prize,
+    winnerId: body.winnerId,
+    status: "completed",
+    verificationStatus: prize > 0 ? "reward_distributed" : "winner_decided",
+    ...(prize > 0 ? { rewardDistributedAt: now } : { rewardDistributedAt: null }),
+    prizeAmountDiamonds: prize,
   }).where(eq(slotMatchesTable.id, mid));
 
   await logMatchEvent(mid, "admin", "winner_overridden", { winnerId: body.winnerId, prize });

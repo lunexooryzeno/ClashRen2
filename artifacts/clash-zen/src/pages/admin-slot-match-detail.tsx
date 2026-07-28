@@ -1513,8 +1513,9 @@ export default function AdminSlotMatchDetailPage() {
                         );
                       })()}
 
-                      {/* Disputed banner + manual winner pick */}
-                      {match.verificationStatus === "disputed" && (
+                      {/* Manual winner decision — available for disputed and
+                          unresolved matches when stats cannot decide safely. */}
+                      {match.winnerId == null && match.status !== "completed" && (
                         <div className="rounded-2xl overflow-hidden space-y-0"
                           style={{ border: "1px solid rgba(249,115,22,0.35)", background: "rgba(249,115,22,0.05)" }}>
 
@@ -1523,8 +1524,8 @@ export default function AdminSlotMatchDetailPage() {
                             style={{ borderColor: "rgba(249,115,22,0.18)" }}>
                             <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />
                             <div>
-                              <p className="text-[11px] text-orange-300 font-black">Match Disputed</p>
-                              <p className="text-[10px] text-orange-500">Tap a player below to manually decide the winner, then confirm.</p>
+                              <p className="text-[11px] text-orange-300 font-black">Admin Winner Decision</p>
+                              <p className="text-[10px] text-orange-500">Tap a player below to decide the official winner, then confirm.</p>
                             </div>
                           </div>
 
@@ -1589,7 +1590,7 @@ export default function AdminSlotMatchDetailPage() {
                                 style={{ background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.45)", color: "#4ade80" }}>
                                 {overriding
                                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Confirming…</>
-                                  : <><Trophy className="w-3.5 h-3.5" /> Confirm Winner & Credit Prize</>}
+                                  : <><Trophy className="w-3.5 h-3.5" /> Confirm Official Winner</>}
                               </button>
                             </div>
                           )}
