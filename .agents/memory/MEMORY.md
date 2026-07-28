@@ -1,1 +1,2 @@
 - [Single-bundle deploy](single-bundle-deploy.md) — how clash-zen ships as one Node process (API + SPA on one port) for Hostinger; DATA_DIR + build.mjs externals contract.
+- [Banner upload serving](banner-upload-serving.md) — resolve uploaded assets independently of the bundled server's working directory.

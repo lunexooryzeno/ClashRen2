@@ -5,7 +5,7 @@ import pinoHttp from "pino-http";
 import helmet from "helmet";
 import compression from "compression";
 import { rateLimit } from "express-rate-limit";
-import { join } from "path";
+import { join, basename } from "path";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
@@ -137,14 +137,26 @@ app.use("/api", (req, res, next) => {
   requireIndiaIP(req, res, next);
 });
 
-// Serve uploaded banner images
-app.use(
-  "/api/admin/banners/uploads",
-  express.static(join(UPLOADS_DIR, "banners"), {
+// Serve uploaded banner images. Use an explicit handler because the
+// deploy bundle and the dev server can have different working directories,
+// while uploads live in the shared artifacts/data directory.
+app.get("/api/admin/banners/uploads/:filename", (req, res, next) => {
+  const filename = basename(req.params.filename);
+  const candidates = [
+    join(UPLOADS_DIR, "banners", filename),
+    join(process.cwd(), "..", "data", "uploads", "banners", filename),
+    join(process.cwd(), "..", "..", "artifacts", "data", "uploads", "banners", filename),
+  ];
+  const filePath = candidates.find((candidate) => existsSync(candidate));
+  if (!filePath) {
+    next();
+    return;
+  }
+  res.sendFile(filePath, {
     maxAge: "7d",
     immutable: false,
-  }),
-);
+  });
+});
 
 // Serve uploaded avatar/profile-picture images
 app.use(

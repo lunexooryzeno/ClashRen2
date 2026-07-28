@@ -113,6 +113,31 @@ function apiBannerToCarousel(b: ApiBanner): CarouselBanner {
   };
 }
 
+function BannerImage({ src, alt, accent }: { src: string; alt: string; accent: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div
+        className="absolute inset-0"
+        style={{ background: `linear-gradient(135deg, ${accent}38 0%, #0a0612 100%)` }}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="absolute inset-0 w-full h-full object-cover"
+      draggable={false}
+      loading="eager"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 /* ── Banner carousel ──────────────────────────────────────────────────────── */
 
 function BannerCarousel({ items }: { items: CarouselBanner[] }) {
@@ -181,7 +206,7 @@ function BannerCarousel({ items }: { items: CarouselBanner[] }) {
             <Tag key={banner.id} href={banner.href} style={{ width: `${100 / items.length}%`, flexShrink: 0 }}>
               <div className="relative h-[178px] cursor-pointer w-full">
                 {banner.image ? (
-                  <CachedImg src={banner.image} alt={banner.title} className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+                  <BannerImage src={banner.image} alt={banner.title} accent={banner.accent} />
                 ) : (
                   <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${banner.accent}28 0%, #0a0612 100%)` }} />
                 )}
