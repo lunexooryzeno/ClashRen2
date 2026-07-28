@@ -60,8 +60,23 @@ export default function AccountSuspendedPage() {
       {/* Back button */}
       <div className="relative z-10 px-4 pt-5">
         <button
-          onClick={() => setLocation("/get-started")}
+          onClick={() => {
+            // The suspended screen can be reached from a still-authenticated
+            // browser session. Clear every client-side auth marker before
+            // returning to login so the next sign-in starts cleanly.
+            sessionStorage.setItem("czDeletedAccountRelogin", "1");
+            sessionStorage.removeItem("czAccountSuspended");
+            sessionStorage.removeItem("clash-ren:post-welcome-redirect");
+            sessionStorage.removeItem("redirectAfterLogin");
+            try {
+              localStorage.removeItem("clash_ren_token");
+              localStorage.removeItem("cz:qcache");
+            } catch { /* storage may be unavailable */ }
+            fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
+            window.location.href = "/?fresh=1#/get-started";
+          }}
           className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
+          data-testid="button-back-to-login"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to login

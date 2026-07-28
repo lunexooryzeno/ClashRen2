@@ -211,6 +211,7 @@ export default function GetStartedPage() {
     }
 
     const fp = await collectFingerprint().catch(() => null);
+    const startFresh = sessionStorage.getItem("czDeletedAccountRelogin") === "1";
     const res = await fetch("/api/auth/complete-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -219,10 +220,12 @@ export default function GetStartedPage() {
         browserToken: browserTokenRef.current,
         deviceId: fp?.deviceId ?? undefined,
         fingerprint: fp?.fingerprint ?? undefined,
+        startFresh,
         _hp: honeypotRef.current || undefined,
       }),
       credentials: "include",
     });
+    if (startFresh) sessionStorage.removeItem("czDeletedAccountRelogin");
 
     isVerifyingRef.current = false;
     setIsVerifying(false);

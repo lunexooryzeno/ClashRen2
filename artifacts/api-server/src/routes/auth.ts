@@ -277,8 +277,8 @@ router.post("/auth/resend-otp", async (req, res) => {
 // the OTP flow was rate-checked before antcloud was called from the browser.
 // If the user has 2FA enabled, returns { requires2fa: true } first.
 router.post("/auth/complete-login", async (req, res) => {
-  const { phone, browserToken, passcode, deviceId: fpDeviceId, fingerprint: fpFingerprint, _hp } = req.body as {
-    phone?: string; browserToken?: string; passcode?: string; deviceId?: string; fingerprint?: string; _hp?: string;
+  const { phone, browserToken, passcode, deviceId: fpDeviceId, fingerprint: fpFingerprint, startFresh, _hp } = req.body as {
+    phone?: string; browserToken?: string; passcode?: string; deviceId?: string; fingerprint?: string; startFresh?: boolean; _hp?: string;
   };
 
   if (_hp) {
@@ -327,12 +327,81 @@ router.post("/auth/complete-login", async (req, res) => {
   }
 
   if (user.status === "deleted") {
-    res.status(403).json({
-      suspended: true,
-      status: "deleted",
-      reason: (user as unknown as Record<string, unknown>).deleteReason as string | null ?? null,
-    });
-    return;
+    if (!startFresh) {
+      res.status(403).json({
+        suspended: true,
+        status: "deleted",
+        reason: (user as unknown as Record<string, unknown>).deleteReason as string | null ?? null,
+      });
+      return;
+    }
+
+    // A user who explicitly chose “Back to login” on the deleted-account
+    // screen may reuse the phone number as a fresh account. Keep the row so
+    // existing foreign keys remain valid, but clear account-owned identity,
+    // balance, security, and moderation state before continuing login.
+    await db.update(usersTable).set({
+      status: "active",
+      deletedAt: null,
+      deleteReason: null,
+      displayName: null,
+      googleId: null,
+      email: null,
+      avatarUrl: null,
+      profilePicture: null,
+      inGameName: null,
+      uid: null,
+      isProfileComplete: false,
+      diamondBalance: 0,
+      isAdmin: false,
+      blockedAt: null,
+      blockedReason: null,
+      blockedUntil: null,
+      tournamentBanned: false,
+      tournamentBannedAt: null,
+      tournamentBannedUntil: null,
+      quickmatchBannedUntil: null,
+      withdrawalBanned: false,
+      withdrawalBannedAt: null,
+      topupBanned: false,
+      topupBannedAt: null,
+      chatMuted: false,
+      chatMutedAt: null,
+      chatMutedUntil: null,
+      walletFrozen: false,
+      walletFrozenAt: null,
+      twoFaEnabled: false,
+      twoFaEmail: null,
+      twoFaPassword: null,
+      twoFaPending: false,
+      twoFaPendingPassword: null,
+      twoFaPendingAt: null,
+      twoFaResetAt: null,
+      twoFaWithdrawalBypass: false,
+      sessionVersion: (user.sessionVersion ?? 1) + 1,
+    }).where(eq(usersTable.id, user.id));
+    user = {
+      ...user,
+      status: "active",
+      deletedAt: null,
+      deleteReason: null,
+      displayName: null,
+      googleId: null,
+      email: null,
+      avatarUrl: null,
+      profilePicture: null,
+      inGameName: null,
+      uid: null,
+      isProfileComplete: false,
+      diamondBalance: 0,
+      isAdmin: false,
+      twoFaEnabled: false,
+      twoFaPassword: null,
+      twoFaPending: false,
+      twoFaPendingPassword: null,
+      sessionVersion: (user.sessionVersion ?? 1) + 1,
+    };
+    isNewUser = true;
   }
   if (user.status === "blocked") {
     const until = user.blockedUntil;
