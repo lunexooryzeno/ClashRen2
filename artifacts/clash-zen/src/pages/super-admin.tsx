@@ -6,7 +6,7 @@ import {
   Search, RefreshCw, Download, X, Check, AlertTriangle, Crown,
   Activity, Send, Filter, Clock, ArrowUpRight, ArrowDownLeft, Loader2,
   Copy, UserCheck, UserX, ChevronLeft, Settings, Hash, Zap, Database, Menu, Images,
-  KeyRound, CheckCircle2, Target, Smartphone,
+  KeyRound, CheckCircle2, Target, Smartphone, Lightbulb,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { motion, AnimatePresence } from "framer-motion";
@@ -961,6 +961,7 @@ export default function SuperAdminPage() {
             <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-700">Users</p>
             <SidebarItem icon={Users} label="Manage Users" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/user_management`)} />
             <SidebarItem icon={Images} label="Banner Management" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/banner_management`)} />
+            <SidebarItem icon={Lightbulb} label="User Feedback" external onClick={() => navigate("/admin/feedback")} />
           </div>
 
           {/* Tournaments */}
@@ -1216,6 +1217,20 @@ export default function SuperAdminPage() {
                                 <p className="text-[11px] text-zinc-600 mt-0.5">UPI, BharatPe, top-up requests</p>
                               </div>
                               <ArrowUpRight className="w-4 h-4 text-violet-400/50 shrink-0" />
+                            </button>
+                            <button
+                              onClick={() => navigate("/admin/feedback")}
+                              className="flex items-center gap-3.5 p-4 rounded-2xl text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+                              style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.16)" }}
+                            >
+                              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                                <Lightbulb className="w-5 h-5 text-amber-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-white">User Feedback</p>
+                                <p className="text-[11px] text-zinc-600 mt-0.5">Read feedback and view profiles</p>
+                              </div>
+                              <ArrowUpRight className="w-4 h-4 text-amber-400/50 shrink-0" />
                             </button>
                           </div>
                         </motion.div>
