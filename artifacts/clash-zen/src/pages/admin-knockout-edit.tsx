@@ -793,7 +793,7 @@ export default function AdminKnockoutEditPage() {
         <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHead icon={Image} label="Banner Image" color="#38bdf8" />
           {form.imageUrl ? (
-            <div className="relative rounded-xl overflow-hidden" style={{ height: 130 }}>
+            <div className="relative rounded-xl overflow-hidden aspect-video">
               <img src={resolveImageUrl(form.imageUrl)} alt="preview" className="w-full h-full object-cover"
                 onError={e => (e.currentTarget.style.display = "none")} />
               <button type="button" onClick={() => set("imageUrl", "")}
@@ -803,7 +803,7 @@ export default function AdminKnockoutEditPage() {
               </button>
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center gap-1.5 rounded-xl h-28 cursor-pointer transition-colors"
+            <label className="flex flex-col items-center justify-center gap-1.5 rounded-xl aspect-video cursor-pointer transition-colors"
               style={{ background: "rgba(255,255,255,0.03)", border: "1.5px dashed rgba(56,189,248,0.35)" }}>
               {uploading ? (
                 <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#38bdf8", borderTopColor: "transparent" }} />

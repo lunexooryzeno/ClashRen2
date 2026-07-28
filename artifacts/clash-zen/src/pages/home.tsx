@@ -191,7 +191,7 @@ function BannerCarousel({ items }: { items: CarouselBanner[] }) {
 
   return (
     <div className="w-full select-none" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <div className="overflow-hidden rounded-3xl h-[178px]"
+      <div className="overflow-hidden rounded-3xl aspect-video"
         style={{ boxShadow: `0 8px 48px ${b.glow}`, transition: "box-shadow 0.4s ease" }}>
         <div className="flex h-full"
           style={{
@@ -204,7 +204,7 @@ function BannerCarousel({ items }: { items: CarouselBanner[] }) {
             const Tag = isExternal ? "a" : Link;
             return (
             <Tag key={banner.id} href={banner.href} style={{ width: `${100 / items.length}%`, flexShrink: 0 }}>
-              <div className="relative h-[178px] cursor-pointer w-full">
+              <div className="relative aspect-video cursor-pointer w-full">
                 {banner.image ? (
                   <BannerImage src={banner.image} alt={banner.title} accent={banner.accent} />
                 ) : (

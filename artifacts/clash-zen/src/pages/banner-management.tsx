@@ -381,9 +381,9 @@ export default function BannerManagementPage() {
           style={{ background: "rgba(56,189,248,0.07)", border: "1px solid rgba(56,189,248,0.2)" }}>
           <Image className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-bold text-sky-300">Banner format: 2:1 ratio</p>
+            <p className="text-xs font-bold text-sky-300">Banner format: 16:9 wide ratio</p>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Recommended size <span className="font-bold text-zinc-300">1200 × 600 px</span>.
+              Recommended size <span className="font-bold text-zinc-300">1200 × 675 px</span>.
               JPG, PNG, WebP, or GIF up to 5 MB. You can upload an image without any text.
             </p>
           </div>
@@ -511,9 +511,9 @@ export default function BannerManagementPage() {
             <div className="overflow-y-auto flex-1 px-5 pb-2 flex flex-col gap-4">
               <div>
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Banner Image</label>
-                <p className="text-[10px] text-sky-400/80 mb-2">Recommended: 1200 × 600 px (2:1 ratio). Image-only banners are supported.</p>
+                <p className="text-[10px] text-sky-400/80 mb-2">Recommended: 1200 × 675 px (16:9 wide ratio). Image-only banners are supported.</p>
                 {bannerForm.imageUrl ? (
-                  <div className="relative rounded-2xl overflow-hidden h-36 bg-zinc-900">
+                  <div className="relative rounded-2xl overflow-hidden aspect-video bg-zinc-900">
                     <img src={bannerImgSrc(bannerForm.imageUrl)} alt="preview" className="w-full h-full object-cover" />
                     <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%)" }} />
                     <button onClick={() => setBannerForm(f => ({ ...f, imageUrl: "" }))}
