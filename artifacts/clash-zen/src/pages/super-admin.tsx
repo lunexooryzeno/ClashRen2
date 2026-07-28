@@ -961,7 +961,7 @@ export default function SuperAdminPage() {
             <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-700">Users</p>
             <SidebarItem icon={Users} label="Manage Users" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/user_management`)} />
             <SidebarItem icon={Images} label="Banner Management" external onClick={() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/banner_management`)} />
-            <SidebarItem icon={Lightbulb} label="User Feedback" external onClick={() => navigate("/admin/feedback")} />
+            <SidebarItem icon={Lightbulb} label="User Feedback" external onClick={() => navigate("/286c81443d1fb388d1b9a8e3b280824c/feedback")} />
           </div>
 
           {/* Tournaments */}
@@ -1219,7 +1219,7 @@ export default function SuperAdminPage() {
                               <ArrowUpRight className="w-4 h-4 text-violet-400/50 shrink-0" />
                             </button>
                             <button
-                              onClick={() => navigate("/admin/feedback")}
+                              onClick={() => navigate("/286c81443d1fb388d1b9a8e3b280824c/feedback")}
                               className="flex items-center gap-3.5 p-4 rounded-2xl text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
                               style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.16)" }}
                             >

@@ -294,6 +294,7 @@ function Router() {
         </Route>
         <Route path="/account-suspended" component={AccountSuspendedPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c" component={SuperAdminPage} />
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/feedback" component={AdminFeedbackPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/payments" component={PaymentAdminPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid/ff-stats" component={AdminFFStatsPage} />
         <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid/topup-history" component={lazy(() => import("@/pages/admin-user-topup-history"))} />
