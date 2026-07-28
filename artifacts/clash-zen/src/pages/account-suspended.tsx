@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { ShieldX, Ban, Trash2, MessageCircle, ChevronRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 const WHATSAPP_NUMBER = "919999999999";
 
@@ -28,6 +29,7 @@ function WhatsAppIcon() {
 
 export default function AccountSuspendedPage() {
   const [, setLocation] = useLocation();
+  const { logout } = useAuth();
   const [data, setData] = useState<SuspendedData | null>(null);
 
   useEffect(() => {
@@ -72,8 +74,13 @@ export default function AccountSuspendedPage() {
               localStorage.removeItem("clash_ren_token");
               localStorage.removeItem("cz:qcache");
             } catch { /* storage may be unavailable */ }
+            // Clear the in-memory auth/query state too. Without this, the
+            // login page can immediately redirect back to the old account.
+            logout();
             fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
-            window.location.href = "/?fresh=1#/get-started";
+            // This app uses hash routing; use wouter navigation rather than
+            // assigning a URL that can be swallowed by the current hash.
+            setLocation("/get-started");
           }}
           className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
           data-testid="button-back-to-login"
