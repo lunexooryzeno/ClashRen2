@@ -105,18 +105,19 @@
     <script type="module" src="/src/main.tsx"></script>
 
     <script>
-      // Unregister any stale service worker on each page load so old cached
-      // chunks can never trap users on a broken old build.
+      // Only unregister service workers whose script is NOT the current /sw.js
+      // (e.g. old Workbox/Vite plugin SWs). The active /sw.js is kept alive so
+      // push notifications and offline caching continue to work. Its own
+      // activate handler prunes any stale caches automatically.
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
-          for (var i = 0; i < regs.length; i++) { try { regs[i].unregister(); } catch (e) {} }
+          for (var i = 0; i < regs.length; i++) {
+            var sw = regs[i].active || regs[i].installing || regs[i].waiting;
+            if (sw && sw.scriptURL && sw.scriptURL.indexOf('/sw.js') === -1) {
+              try { regs[i].unregister(); } catch (e) {}
+            }
+          }
         }).catch(function () {});
-        // Also nuke any caches the old SW left behind
-        if (window.caches && caches.keys) {
-          caches.keys().then(function (keys) {
-            for (var i = 0; i < keys.length; i++) { try { caches.delete(keys[i]); } catch (e) {} }
-          }).catch(function () {});
-        }
       }
     </script>
   </body>

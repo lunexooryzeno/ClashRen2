@@ -5,9 +5,14 @@ import "./index.css";
 import { preloadAllPages } from "@/lib/preload-pages";
 import { THEME_CATALOG } from "@/lib/themes";
 
-// Service worker is intentionally NOT registered here. The inline HTML script
-// actively unregisters any old SW + clears caches on every page load so users
-// can never get trapped on a stale cached build.
+// Register the service worker for push notifications + offline caching.
+// The SW's own activate handler prunes stale caches, so we don't need
+// to unregister it on every load.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
 
 const ALL_THEME_IDS = THEME_CATALOG.map(t => t.id);
 
