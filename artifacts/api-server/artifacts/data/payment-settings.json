@@ -1,0 +1,23 @@
+{
+  "upiId": "BHARATPE2V0D0M2C0A10930@unitype",
+  "upiName": "BharatPe Merchant",
+  "ratePerDiamond": 1,
+  "minTopup": 10,
+  "minWithdrawal": 20,
+  "maxWithdrawal": 0,
+  "isEnabled": true,
+  "withdrawalEnabled": true,
+  "withdrawalPaused": false,
+  "withdrawalPauseMessage": "Withdrawals are temporarily paused for maintenance. Please try again later.",
+  "withdrawalWindowEnabled": false,
+  "withdrawalWindowStart": "10:00",
+  "withdrawalWindowEnd": "22:00",
+  "withdrawalProcessingNote": "Most withdrawals are processed within 30 minutes · max 12 hours.",
+  "xsrfToken": "",
+  "bharatpeSession": "",
+  "bharatpeToken": "07057037713148108e08b60f427f2d1a",
+  "bharatpeMerchantId": "69893818",
+  "gatewayAlert": null,
+  "webhookUrl": "https://trigger.macrodroid.com/9fa326ec-2426-42fa-9ad1-5aeaa12c27cd",
+  "webhookSecret": "baaf0e555918cc699369e77a7d7421a5f04f813e95fea962c36e15d1b41748ee"
+}

@@ -27,8 +27,10 @@ async function authFetchAdmin(path: string, opts?: RequestInit): Promise<Respons
   const session = getSession();
   return fetch(`/api${path}`, {
     ...opts,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
       ...(session ? { "x-super-admin-token": session.token } : {}),
       ...(opts?.headers ?? {}),
     },
@@ -234,8 +236,14 @@ export default function AdminKnockoutEditPage() {
     if (!session) { navigate(`/286c81443d1fb388d1b9a8e3b280824c`); return; }
     setAuthed(true);
 
-    authFetchAdmin(`/admin/tournaments`)
-      .then(r => r.json())
+    authFetchAdmin(`/admin/tournaments?_edit=${Date.now()}`)
+      .then(async r => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error ?? `Could not load tournaments (${r.status})`);
+        }
+        return r.json();
+      })
       .then((list: any[]) => {
         const t = list.find(x => x.id === tournamentId);
         if (!t) { toast({ title: "Match not found", variant: "destructive" }); navigate("/286c81443d1fb388d1b9a8e3b280824c/matches_management"); return; }
