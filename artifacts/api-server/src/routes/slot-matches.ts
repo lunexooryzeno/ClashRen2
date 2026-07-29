@@ -1934,10 +1934,6 @@ router.patch("/admin/slot-matches/:mid/override-winner", requireAdmin, async (re
   if (!body.winnerId) { res.status(400).json({ error: "winnerId required" }); return; }
   const match = await db.query.slotMatchesTable.findFirst({ where: eq(slotMatchesTable.id, mid) });
   if (!match) { res.status(404).json({ error: "Match not found" }); return; }
-  if (match.winnerId != null || match.status === "completed" || match.verificationStatus === "reward_distributed") {
-    res.status(400).json({ error: "This match already has a finalized winner" });
-    return;
-  }
   const validPlayerIds = [match.player1Id, match.player2Id].filter(Boolean) as number[];
   if (!validPlayerIds.includes(body.winnerId)) { res.status(400).json({ error: "Winner must be a match participant" }); return; }
 
@@ -1948,6 +1944,28 @@ router.patch("/admin/slot-matches/:mid/override-winner", requireAdmin, async (re
     res.status(400).json({ error: "Prize must be a non-negative whole number" });
     return;
   }
+
+  // If a previous winner already received a prize, revoke it before crediting the new one.
+  if (match.winnerId != null && (match.prizeAmountDiamonds ?? 0) > 0) {
+    const prevPrize = match.prizeAmountDiamonds!;
+    await db.update(usersTable)
+      .set({ diamondBalance: sql`diamond_balance - ${prevPrize}` })
+      .where(eq(usersTable.id, match.winnerId));
+    await db.insert(walletTransactionsTable).values({
+      userId: match.winnerId,
+      type: "prize",
+      amount: -prevPrize,
+      label: `Match Prize Revoked (Admin Override) 🔄`,
+      tournamentId: match.slotId,
+    });
+    await db.insert(notificationsTable).values({
+      userId: match.winnerId,
+      type: "result",
+      title: "Prize Revoked",
+      body: `Your match prize of ${prevPrize} 🪙 was revoked due to an admin decision correction.`,
+    });
+  }
+
   const now = new Date();
   if (prize > 0) {
     await creditMatchPrize(mid, body.winnerId, prize, match.slotId);

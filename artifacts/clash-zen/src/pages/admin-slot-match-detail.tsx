@@ -717,8 +717,9 @@ export default function AdminSlotMatchDetailPage() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Failed");
-      showToast(`Winner overridden & ${overridePrize > 0 ? `${overridePrize} 🪙 credited` : "no prize set"}`);
-      await loadVerifications(String(match!.id));
+      showToast(`Winner confirmed & ${overridePrize > 0 ? `${overridePrize} 🪙 credited` : "recorded (no prize)"}`);
+      setOverrideWinnerId(null);
+      await Promise.all([fetchMatch(), loadVerifications(String(match!.id))]);
     } catch (e: any) { showToast(e.message ?? "Failed", "err"); }
     setOverriding(false);
   }
@@ -1513,63 +1514,88 @@ export default function AdminSlotMatchDetailPage() {
                         );
                       })()}
 
-                      {/* Manual winner decision — available for disputed and
-                          unresolved matches when stats cannot decide safely. */}
-                      {match.winnerId == null && match.status !== "completed" && (
-                        <div className="rounded-2xl overflow-hidden space-y-0"
-                          style={{ border: "1px solid rgba(249,115,22,0.35)", background: "rgba(249,115,22,0.05)" }}>
+                      {/* ── Admin: Decide / Override Winner ──
+                          Always visible — admin can declare or correct the winner at any time. */}
+                      {(() => {
+                        const hasWinner = match.winnerId != null;
+                        const prevWinner = hasWinner
+                          ? (match.winnerId === match.player1Id ? match.player1 : match.player2)
+                          : null;
+                        const accentColor = hasWinner ? "rgba(251,191,36,0.35)" : "rgba(249,115,22,0.35)";
+                        const accentBg    = hasWinner ? "rgba(251,191,36,0.05)" : "rgba(249,115,22,0.05)";
+                        const accentBorder = hasWinner ? "rgba(251,191,36,0.18)" : "rgba(249,115,22,0.18)";
+                        return (
+                          <div className="rounded-2xl overflow-hidden"
+                            style={{ border: `1px solid ${accentColor}`, background: accentBg }}>
 
-                          {/* Banner */}
-                          <div className="flex items-center gap-3 px-3 py-3 border-b"
-                            style={{ borderColor: "rgba(249,115,22,0.18)" }}>
-                            <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />
-                            <div>
-                              <p className="text-[11px] text-orange-300 font-black">Admin Winner Decision</p>
-                              <p className="text-[10px] text-orange-500">Tap a player below to decide the official winner, then confirm.</p>
+                            {/* Banner */}
+                            <div className="flex items-center gap-3 px-3 py-3 border-b"
+                              style={{ borderColor: accentBorder }}>
+                              {hasWinner
+                                ? <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                                : <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                {hasWinner ? (
+                                  <>
+                                    <p className="text-[11px] text-amber-300 font-black">Override Winner</p>
+                                    <p className="text-[10px] text-amber-600 truncate">
+                                      Current: <span className="font-bold text-amber-400">{prevWinner?.inGameName ?? `User #${match.winnerId}`}</span>
+                                      {match.prizeAmountDiamonds > 0 && ` · ${match.prizeAmountDiamonds} 🪙 credited`}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-[11px] text-orange-300 font-black">Decide Winner & Distribute Prize</p>
+                                    <p className="text-[10px] text-orange-500">Select the winner and set the prize amount.</p>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Player selector */}
-                          <div className="flex gap-2 p-3">
-                            {[
-                              { id: match.player1Id, player: match.player1, label: "Player 1" },
-                              ...(match.player2Id ? [{ id: match.player2Id, player: match.player2, label: "Player 2" }] : []),
-                            ].map(({ id, player, label }) => {
-                              const name = player?.inGameName ?? label;
-                              const initials = name.slice(0, 2).toUpperCase();
-                              const selected = overrideWinnerId === id;
-                              return (
-                                <button
-                                  key={id}
-                                  onClick={() => setOverrideWinnerId(selected ? null : id)}
-                                  className="flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all active:scale-95"
-                                  style={{
-                                    background: selected ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                                    border: `1.5px solid ${selected ? "rgba(34,197,94,0.55)" : "rgba(255,255,255,0.1)"}`,
-                                    boxShadow: selected ? "0 0 0 3px rgba(34,197,94,0.1)" : "none",
-                                  }}>
-                                  {player?.profilePicture ? (
-                                    <img src={player.profilePicture} className="w-9 h-9 rounded-full object-cover" />
-                                  ) : (
-                                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-black"
-                                      style={{ background: selected ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)", color: selected ? "#4ade80" : "#71717a" }}>
-                                      {initials}
-                                    </div>
-                                  )}
-                                  <p className="text-[11px] font-black truncate max-w-full px-1"
-                                    style={{ color: selected ? "#4ade80" : "#a1a1aa" }}>{name}</p>
-                                  {selected && (
-                                    <div className="flex items-center gap-1 text-[9px] font-black text-green-400">
-                                      <CheckCircle2 className="w-3 h-3" /> Winner
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
+                            {/* Player selector */}
+                            <div className="flex gap-2 p-3">
+                              {[
+                                { id: match.player1Id, player: match.player1, label: "Player 1" },
+                                ...(match.player2Id ? [{ id: match.player2Id, player: match.player2, label: "Player 2" }] : []),
+                              ].map(({ id, player, label }) => {
+                                const name = player?.inGameName ?? label;
+                                const initials = name.slice(0, 2).toUpperCase();
+                                const selected = overrideWinnerId === id;
+                                const isCurrentWinner = match.winnerId === id;
+                                return (
+                                  <button
+                                    key={id}
+                                    onClick={() => setOverrideWinnerId(selected ? null : id)}
+                                    className="flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all active:scale-95 relative"
+                                    style={{
+                                      background: selected ? "rgba(34,197,94,0.15)" : isCurrentWinner ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.04)",
+                                      border: `1.5px solid ${selected ? "rgba(34,197,94,0.55)" : isCurrentWinner ? "rgba(251,191,36,0.35)" : "rgba(255,255,255,0.1)"}`,
+                                      boxShadow: selected ? "0 0 0 3px rgba(34,197,94,0.1)" : "none",
+                                    }}>
+                                    {isCurrentWinner && !selected && (
+                                      <span className="absolute top-1.5 right-1.5 text-[8px] font-black text-amber-400 uppercase tracking-wide">current</span>
+                                    )}
+                                    {player?.profilePicture ? (
+                                      <img src={player.profilePicture} className="w-9 h-9 rounded-full object-cover" />
+                                    ) : (
+                                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-black"
+                                        style={{ background: selected ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.07)", color: selected ? "#4ade80" : "#71717a" }}>
+                                        {initials}
+                                      </div>
+                                    )}
+                                    <p className="text-[11px] font-black truncate max-w-full px-1"
+                                      style={{ color: selected ? "#4ade80" : "#a1a1aa" }}>{name}</p>
+                                    {selected && (
+                                      <div className="flex items-center gap-1 text-[9px] font-black text-green-400">
+                                        <CheckCircle2 className="w-3 h-3" /> Selected
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
 
-                          {/* Prize input + confirm button */}
-                          {overrideWinnerId && (
+                            {/* Prize input + confirm button */}
                             <div className="px-3 pb-3 space-y-2">
                               <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
                                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1583,19 +1609,26 @@ export default function AdminSlotMatchDetailPage() {
                                   placeholder="0"
                                 />
                               </div>
+                              {hasWinner && match.prizeAmountDiamonds > 0 && !overrideWinnerId && (
+                                <p className="text-[9px] text-amber-600 text-center px-2">
+                                  ⚠ Overriding will revoke {match.prizeAmountDiamonds} 🪙 from the current winner before crediting the new one.
+                                </p>
+                              )}
                               <button
                                 onClick={overrideWinner}
-                                disabled={overriding}
-                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[12px] font-black transition-all active:scale-95 disabled:opacity-50"
+                                disabled={overriding || !overrideWinnerId}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[12px] font-black transition-all active:scale-95 disabled:opacity-40"
                                 style={{ background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.45)", color: "#4ade80" }}>
                                 {overriding
                                   ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Confirming…</>
-                                  : <><Trophy className="w-3.5 h-3.5" /> Confirm Official Winner</>}
+                                  : overrideWinnerId
+                                    ? <><Trophy className="w-3.5 h-3.5" /> {hasWinner ? "Override Winner" : "Confirm Winner"} & Distribute Prize</>
+                                    : <><Trophy className="w-3.5 h-3.5" /> Select a player above</>}
                               </button>
                             </div>
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Failed banner */}
                       {match.verificationStatus === "failed" && (
