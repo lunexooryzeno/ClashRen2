@@ -987,24 +987,42 @@ router.delete("/admin/slot-matches/:mid", requireAdmin, async (req, res) => {
   const match = await db.query.slotMatchesTable.findFirst({ where: eq(slotMatchesTable.id, mid) });
   if (!match) { res.status(404).json({ error: "Match not found" }); return; }
 
+  // removeFromTournament=true → also delete the players' tournament registrations.
+  // Default (false) keeps players registered so they can be re-paired.
+  const removeFromTournament = req.query.removeFromTournament === "true";
+
   await db.delete(slotMatchesTable).where(eq(slotMatchesTable.id, mid));
 
-  // Respond immediately after the delete
   res.json({ ok: true });
 
-  // Clear participant assignments in background (non-critical cleanup)
-  for (const userId of [match.player1Id, match.player2Id]) {
-    if (userId == null) continue;
-    db.update(tournamentParticipantsTable)
-      .set({ waveNumber: null, matchNumber: null, seatNumber: null })
-      .where(
-        and(
-          eq(tournamentParticipantsTable.tournamentId, match.slotId),
-          eq(tournamentParticipantsTable.slotIndex, match.slotIndex),
-          eq(tournamentParticipantsTable.userId, userId),
+  // Background cleanup — run after responding so the client isn't blocked.
+  const playerIds = [match.player1Id, match.player2Id].filter(Boolean) as number[];
+  for (const userId of playerIds) {
+    if (removeFromTournament) {
+      // Full unregister: remove them from the tournament entirely.
+      db.delete(tournamentParticipantsTable)
+        .where(
+          and(
+            eq(tournamentParticipantsTable.tournamentId, match.slotId),
+            eq(tournamentParticipantsTable.slotIndex, match.slotIndex),
+            eq(tournamentParticipantsTable.userId, userId),
+          )
         )
-      )
-      .catch(() => {});
+        .catch(() => {});
+    } else {
+      // Match-only delete: clear slot assignment so players can be re-paired,
+      // but leave them registered in the tournament.
+      db.update(tournamentParticipantsTable)
+        .set({ waveNumber: null, matchNumber: null, seatNumber: null })
+        .where(
+          and(
+            eq(tournamentParticipantsTable.tournamentId, match.slotId),
+            eq(tournamentParticipantsTable.slotIndex, match.slotIndex),
+            eq(tournamentParticipantsTable.userId, userId),
+          )
+        )
+        .catch(() => {});
+    }
   }
 });
 

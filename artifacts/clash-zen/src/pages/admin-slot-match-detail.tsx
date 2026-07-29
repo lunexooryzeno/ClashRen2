@@ -6,7 +6,7 @@ import {
   Key, Eye, EyeOff, Gamepad2, Bell, Copy,
   ChevronDown, ChevronUp, Zap, RotateCcw, Skull,
   Play, Timer, Radio, CheckCheck, XCircle, Send,
-  TriangleAlert, UserCheck, TrendingUp, Crown, Database, Pencil,
+  TriangleAlert, UserCheck, TrendingUp, Crown, Database, Pencil, Trash2, UserMinus,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -378,6 +378,11 @@ export default function AdminSlotMatchDetailPage() {
   // Activity log
   const [logExpanded, setLogExpanded] = useState(false);
 
+  // Delete match
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteRemovePlayers, setDeleteRemovePlayers] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // Emergency panel
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [replaceModal, setReplaceModal] = useState(false);
@@ -712,6 +717,20 @@ export default function AdminSlotMatchDetailPage() {
     finally { setRefetchingStats(false); }
   }
 
+  async function deleteMatch() {
+    if (!match) return;
+    setDeleting(true);
+    try {
+      const url = `/admin/slot-matches/${match.id}${deleteRemovePlayers ? "?removeFromTournament=true" : ""}`;
+      const r = await authFetchAdmin(url, { method: "DELETE" });
+      if (!r.ok) throw new Error((await r.json()).error ?? "Delete failed");
+      showToast(deleteRemovePlayers ? "Match deleted & players unregistered" : "Match deleted — players still registered");
+      setDeleteModal(false);
+      setTimeout(() => navigate(`/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/${matchId}`), 800);
+    } catch (e: any) { showToast(e.message ?? "Delete failed", "err"); }
+    setDeleting(false);
+  }
+
   async function overrideWinner() {
     if (!overrideWinnerId) { showToast("Select a winner", "err"); return; }
     setOverriding(true);
@@ -799,6 +818,15 @@ export default function AdminSlotMatchDetailPage() {
             <StatusIcon s={match.status} />
             {match.status}
           </span>
+        )}
+        {match && (
+          <button
+            onClick={() => { setDeleteRemovePlayers(false); setDeleteModal(true); }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all active:scale-95"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}
+            title="Delete match">
+            <Trash2 className="w-4 h-4 text-red-400" />
+          </button>
         )}
       </div>
 
@@ -1826,6 +1854,111 @@ export default function AdminSlotMatchDetailPage() {
           <p className="text-center text-[9px] text-zinc-700 pb-2">
             Created {format(new Date(match.createdAt), "d MMM yyyy, h:mm a")}
           </p>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════
+          DELETE MATCH MODAL
+      ════════════════════════════════════════════ */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteModal(false); }}>
+          <div className="w-full max-w-md rounded-t-3xl p-6 space-y-5"
+            style={{ background: "#131315", border: "1px solid rgba(255,255,255,0.08)" }}>
+
+            {/* Title */}
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(239,68,68,0.12)" }}>
+                <Trash2 className="w-4 h-4 text-red-400" />
+              </div>
+              <div>
+                <p className="text-[14px] font-black text-white">Delete Match</p>
+                <p className="text-[10px] text-zinc-500">
+                  #{match ? fmtMatchId(match) : ""}
+                  {match?.player1 && ` · ${match.player1.inGameName}`}
+                  {match?.player2 && ` vs ${match.player2.inGameName}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Mode toggle */}
+            <div className="space-y-2">
+              {/* Option A — match only (default) */}
+              <button
+                onClick={() => setDeleteRemovePlayers(false)}
+                className="w-full flex items-start gap-3 p-3.5 rounded-xl text-left transition-all"
+                style={{
+                  background: !deleteRemovePlayers ? "rgba(99,102,241,0.1)" : "rgba(255,255,255,0.03)",
+                  border: `1.5px solid ${!deleteRemovePlayers ? "rgba(99,102,241,0.45)" : "rgba(255,255,255,0.08)"}`,
+                }}>
+                <div className="w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center"
+                  style={{ borderColor: !deleteRemovePlayers ? "#818cf8" : "#52525b" }}>
+                  {!deleteRemovePlayers && <div className="w-2 h-2 rounded-full bg-indigo-400" />}
+                </div>
+                <div>
+                  <p className="text-[12px] font-black text-white">Delete match only</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">
+                    Removes this match record. Players stay registered in the tournament and can be re-paired.
+                  </p>
+                </div>
+              </button>
+
+              {/* Option B — also unregister */}
+              <button
+                onClick={() => setDeleteRemovePlayers(true)}
+                className="w-full flex items-start gap-3 p-3.5 rounded-xl text-left transition-all"
+                style={{
+                  background: deleteRemovePlayers ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.03)",
+                  border: `1.5px solid ${deleteRemovePlayers ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.08)"}`,
+                }}>
+                <div className="w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center"
+                  style={{ borderColor: deleteRemovePlayers ? "#f87171" : "#52525b" }}>
+                  {deleteRemovePlayers && <div className="w-2 h-2 rounded-full bg-red-400" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[12px] font-black text-white">Delete match & unregister players</p>
+                    <UserMinus className="w-3 h-3 text-red-400 shrink-0" />
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">
+                    Also removes both players from this tournament slot. This cannot be undone.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Warning note */}
+            <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
+              style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
+              <TriangleAlert className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-red-400">
+                {deleteRemovePlayers
+                  ? "Both players will be removed from the tournament. Their entry fees are not automatically refunded."
+                  : "The match pairing and room data will be permanently removed. Players keep their tournament spots."}
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteModal(false)}
+                className="flex-1 py-3 rounded-xl text-[12px] font-bold text-zinc-400 transition-all active:scale-95"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                Cancel
+              </button>
+              <button
+                onClick={deleteMatch}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-xl text-[12px] font-black transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.45)", color: "#f87171" }}>
+                {deleting
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Deleting…</>
+                  : <><Trash2 className="w-3.5 h-3.5" /> {deleteRemovePlayers ? "Delete & Unregister" : "Delete Match"}</>}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
