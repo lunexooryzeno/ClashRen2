@@ -120,9 +120,18 @@ async function enrichMatchForAdmin(m: typeof slotMatchesTable.$inferSelect) {
     limit: 20,
   });
 
+  // Expose the tournament prize pool so the admin UI can pre-fill the prize
+  // input when no match-level prize has been set yet.
+  const tournament = await db.query.tournamentsTable.findFirst({
+    where: eq(tournamentsTable.id, m.slotId),
+    columns: { prizePoolDiamonds: true },
+  });
+  const tournamentPrizePool = tournament?.prizePoolDiamonds ?? 0;
+
   return {
     ...base,
     roomStatus: deriveRoomStatus(m),
+    tournamentPrizePool,
     playerStatuses: playerStatuses.map(ps => ({
       ...ps,
       viewedAt: ps.viewedAt?.toISOString() ?? null,
@@ -1937,7 +1946,9 @@ router.patch("/admin/slot-matches/:mid/override-winner", requireAdmin, async (re
   const validPlayerIds = [match.player1Id, match.player2Id].filter(Boolean) as number[];
   if (!validPlayerIds.includes(body.winnerId)) { res.status(400).json({ error: "Winner must be a match participant" }); return; }
 
-  const prize = body.prizeAmountDiamonds !== undefined
+  // Use the explicitly provided prize only when the caller has set a value > 0.
+  // A value of 0 (or no value at all) means "use whatever the tournament prize pool is."
+  const prize = (body.prizeAmountDiamonds !== undefined && body.prizeAmountDiamonds > 0)
     ? body.prizeAmountDiamonds
     : await resolveMatchPrize(match);
   if (!Number.isInteger(prize) || prize < 0) {

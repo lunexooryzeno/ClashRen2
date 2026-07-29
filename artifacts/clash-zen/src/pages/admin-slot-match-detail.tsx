@@ -108,6 +108,7 @@ interface SlotMatchDetail {
   matchMode: string | null;
   prizeAmountDiamonds: number;
   rewardDistributedAt: string | null;
+  tournamentPrizePool: number;
   player1: SlotMatchPlayer | null;
   player2: SlotMatchPlayer | null;
   playerStatuses: PlayerStatus[];
@@ -458,7 +459,9 @@ export default function AdminSlotMatchDetailPage() {
       setEditShareMode(data.credentialShareMode ?? "both");
       if (data.gameMode) setConfigGameMode(data.gameMode as "br" | "cs");
       if (data.matchMode) setConfigMatchMode(data.matchMode as "normal" | "career" | "ranked");
-      if (data.prizeAmountDiamonds) { setConfigPrize(data.prizeAmountDiamonds); setOverridePrize(data.prizeAmountDiamonds); }
+      const effectivePrize = data.prizeAmountDiamonds || data.tournamentPrizePool || 0;
+      setConfigPrize(effectivePrize);
+      setOverridePrize(effectivePrize);
       await loadVerifications(String(data.id));
     } catch (e: any) {
       setMatch(null);
@@ -527,7 +530,9 @@ export default function AdminSlotMatchDetailPage() {
         }
         if (data.gameMode) setConfigGameMode(data.gameMode as "br" | "cs");
         if (data.matchMode) setConfigMatchMode(data.matchMode as "normal" | "career" | "ranked");
-        if (data.prizeAmountDiamonds) { setConfigPrize(data.prizeAmountDiamonds); setOverridePrize(data.prizeAmountDiamonds); }
+        const effectivePrize = data.prizeAmountDiamonds || data.tournamentPrizePool || 0;
+        setConfigPrize(effectivePrize);
+        setOverridePrize(effectivePrize);
         // Only reload verifications when the verification status changes
         if (data.verificationStatus !== lastVerifStatus) {
           lastVerifStatus = data.verificationStatus;
