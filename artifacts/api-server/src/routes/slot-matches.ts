@@ -2035,4 +2035,54 @@ router.patch("/admin/slot-matches/:mid/override-winner", requireAdmin, async (re
   res.json({ ok: true, winnerId: body.winnerId, prize });
 });
 
+// ── Admin: Repair prize for a match where winner was set but prize never sent ─
+// Safe to call multiple times — checks reward_distributed before crediting.
+router.post("/admin/slot-matches/:mid/repair-prize", requireAdmin, async (req, res) => {
+  const mid = await resolveSlotMatchId(String(req.params.mid));
+  if (!mid) { res.status(404).json({ error: "Match not found" }); return; }
+
+  const match = await db.query.slotMatchesTable.findFirst({ where: eq(slotMatchesTable.id, mid) });
+  if (!match) { res.status(404).json({ error: "Match not found" }); return; }
+  if (!match.winnerId) { res.status(400).json({ error: "No winner declared on this match yet" }); return; }
+  if (match.verificationStatus === "reward_distributed") {
+    res.status(400).json({ error: "Prize already distributed to this winner" });
+    return;
+  }
+
+  const prize = await resolveMatchPrize(match);
+  if (prize <= 0) {
+    res.status(400).json({ error: "No prize configured for this match or tournament" });
+    return;
+  }
+
+  await creditMatchPrize(mid, match.winnerId, prize, match.slotId);
+
+  await db.update(slotMatchVerificationsTable)
+    .set({ rewardGranted: true })
+    .where(and(
+      eq(slotMatchVerificationsTable.slotMatchId, mid),
+      eq(slotMatchVerificationsTable.userId, match.winnerId),
+    ));
+
+  await db.update(tournamentParticipantsTable)
+    .set({ placement: 1, diamondsWon: prize })
+    .where(and(
+      eq(tournamentParticipantsTable.tournamentId, match.slotId),
+      eq(tournamentParticipantsTable.userId, match.winnerId),
+      eq(tournamentParticipantsTable.slotIndex, match.slotIndex),
+    ));
+
+  await db.update(slotMatchesTable).set({
+    verificationStatus: "reward_distributed",
+    rewardDistributedAt: new Date(),
+    prizeAmountDiamonds: prize,
+  }).where(eq(slotMatchesTable.id, mid));
+
+  await logMatchEvent(mid, "admin", "prize_repaired", { winnerId: match.winnerId, prize });
+
+  const updated = await db.query.slotMatchesTable.findFirst({ where: eq(slotMatchesTable.id, mid) });
+  if (updated) { const enriched = await enrichMatchForAdmin(updated); pushToMatchAdmins(mid, "match_update", enriched); }
+  res.json({ ok: true, winnerId: match.winnerId, prize });
+});
+
 export default router;

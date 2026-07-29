@@ -717,6 +717,19 @@ export default function AdminSlotMatchDetailPage() {
     finally { setRefetchingStats(false); }
   }
 
+  async function repairPrize() {
+    if (!match) return;
+    setOverriding(true);
+    try {
+      const r = await authFetchAdmin(`/admin/slot-matches/${match.id}/repair-prize`, { method: "POST" });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? "Failed");
+      showToast(`Prize repaired — ${data.prize} 🪙 sent to winner`);
+      await Promise.all([fetchMatch(), loadVerifications(String(match.id))]);
+    } catch (e: any) { showToast(e.message ?? "Failed", "err"); }
+    setOverriding(false);
+  }
+
   async function deleteMatch() {
     if (!match) return;
     setDeleting(true);
@@ -1482,6 +1495,38 @@ export default function AdminSlotMatchDetailPage() {
                           )}
                         </div>
                       )}
+
+                      {/* ── Repair Prize banner ──────────────────────────────
+                          Shown when a winner is declared but prize was never sent.
+                          One-tap fix — no need to re-select the winner. */}
+                      {match.winnerId && match.verificationStatus === "winner_decided" && (() => {
+                        const winnerName = match.winnerId === match.player1Id
+                          ? (match.player1?.inGameName ?? `User #${match.player1Id}`)
+                          : (match.player2?.inGameName ?? `User #${match.player2Id}`);
+                        return (
+                          <div className="rounded-2xl overflow-hidden"
+                            style={{ border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.07)" }}>
+                            <div className="flex items-center gap-3 px-3 py-3">
+                              <TriangleAlert className="w-4 h-4 text-red-400 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-black text-red-300">Prize Not Sent</p>
+                                <p className="text-[10px] text-red-500 truncate">
+                                  Winner <span className="font-bold text-red-400">{winnerName}</span> was declared but never received their prize.
+                                </p>
+                              </div>
+                              <button
+                                onClick={repairPrize}
+                                disabled={overriding}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black transition-all active:scale-95 disabled:opacity-50 shrink-0"
+                                style={{ background: "rgba(34,197,94,0.2)", border: "1px solid rgba(34,197,94,0.45)", color: "#4ade80" }}>
+                                {overriding
+                                  ? <RefreshCw className="w-3 h-3 animate-spin" />
+                                  : <><Trophy className="w-3 h-3" /> Send Prize</>}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Winner Before → After Stats Card */}
                       {match.winnerId && (() => {
