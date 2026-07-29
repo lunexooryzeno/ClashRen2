@@ -136,7 +136,6 @@ export default function ModeTournaments() {
   );
 
   const tournaments = (allTournaments ?? [])
-    .filter(t => !isBookingClosed(t))
     .filter(t => {
       const m = (t.gameMode ?? "").toLowerCase();
       if (mode === "solo")  return m.includes("solo");

@@ -93,7 +93,7 @@ function SlideSelector({ mode, accent, glow }: {
     return true;
   });
 
-  const tournaments = (active === "knockouts" ? knockoutList : tournamentList).filter(t => !isBookingClosed(t));
+  const tournaments = (active === "knockouts" ? knockoutList : tournamentList);
 
   const TOURNAMENT_COLOR = "#eab308";
 

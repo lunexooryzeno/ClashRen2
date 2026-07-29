@@ -441,7 +441,7 @@ export default function Home() {
         </div>
 
         {/* ── Upcoming Schedule ── */}
-        {(upcomingLoading || (upcoming && upcoming.filter(t => t.filledSlots < t.maxSlots && !isBookingClosed(t)).length > 0)) && (
+        {(upcomingLoading || (upcoming && upcoming.length > 0)) && (
           <div className="mb-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-heading text-base font-extrabold text-white flex items-center gap-2 tracking-wide uppercase">
@@ -455,7 +455,7 @@ export default function Home() {
             <div className="flex overflow-x-auto pb-3 -mx-4 px-4 gap-3 snap-x snap-mandatory hide-scrollbar">
               {upcomingLoading
                 ? [1,2,3].map(i => <Skeleton key={i} className="h-44 min-w-[260px] rounded-2xl bg-white/5 snap-center flex-shrink-0" />)
-                : upcoming!.filter(t => t.filledSlots < t.maxSlots && !isBookingClosed(t)).slice(0, 6).map((t, i) => {
+                : upcoming!.slice(0, 6).map((t, i) => {
                 const start = new Date(t.startTime);
                 const dayLabel = isToday(start) ? "Today" : isTomorrow(start) ? "Tomorrow" : format(start, "EEE d MMM");
                 const timeLabel = format(start, "h:mm a");
@@ -539,8 +539,8 @@ export default function Home() {
           <div className="flex overflow-x-auto pb-3 -mx-4 px-4 gap-3 snap-x snap-mandatory hide-scrollbar">
             {upcomingLoading
               ? [1, 2, 3].map(i => <Skeleton key={i} className="h-40 min-w-[272px] rounded-2xl bg-white/5 snap-center flex-shrink-0" />)
-              : upcoming && upcoming.filter(t => t.filledSlots < t.maxSlots && !isBookingClosed(t)).length > 0
-                ? upcoming.filter(t => t.filledSlots < t.maxSlots && !isBookingClosed(t)).map(t => (
+              : upcoming && upcoming.length > 0
+                ? upcoming.map(t => (
                     <div key={t.id} className="min-w-[272px] snap-center flex-shrink-0">
                       <TournamentCard tournament={t} showJoinButton />
                     </div>

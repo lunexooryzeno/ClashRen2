@@ -70,7 +70,7 @@ export default function KnockoutMode() {
     return m.includes(mode);
   });
 
-  const filtered = (filter === "free" ? tournaments.filter(t => t.entryFeeDiamonds === 0) : tournaments).filter(t => !isBookingClosed(t));
+  const filtered = (filter === "free" ? tournaments.filter(t => t.entryFeeDiamonds === 0) : tournaments);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "hsl(var(--background))" }}>
