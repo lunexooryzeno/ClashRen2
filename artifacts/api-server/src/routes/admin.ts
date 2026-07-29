@@ -141,8 +141,18 @@ function formatTournament(t: typeof tournamentsTable.$inferSelect) {
 }
 
 router.get("/admin/tournaments", requireAdmin, async (_req, res) => {
+  res.set("Cache-Control", "no-store");
   const tournaments = await db.query.tournamentsTable.findMany();
   res.json(tournaments.map(formatTournament));
+});
+
+router.get("/admin/tournaments/:id", requireAdmin, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid tournament id" }); return; }
+  const tournament = await db.query.tournamentsTable.findFirst({ where: eq(tournamentsTable.id, id) });
+  if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
+  res.json(formatTournament(tournament));
 });
 
 router.post("/admin/tournaments", requireAdmin, async (req, res) => {

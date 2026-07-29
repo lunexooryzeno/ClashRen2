@@ -236,16 +236,15 @@ export default function AdminKnockoutEditPage() {
     if (!session) { navigate(`/286c81443d1fb388d1b9a8e3b280824c`); return; }
     setAuthed(true);
 
-    authFetchAdmin(`/admin/tournaments?_edit=${Date.now()}`)
+    authFetchAdmin(`/admin/tournaments/${tournamentId}`)
       .then(async r => {
         if (!r.ok) {
           const body = await r.json().catch(() => ({})) as { error?: string };
-          throw new Error(body.error ?? `Could not load tournaments (${r.status})`);
+          throw new Error(body.error ?? `Could not load match (${r.status})`);
         }
         return r.json();
       })
-      .then((list: any[]) => {
-        const t = list.find(x => x.id === tournamentId);
+      .then((t: any) => {
         if (!t) { toast({ title: "Match not found", variant: "destructive" }); navigate("/286c81443d1fb388d1b9a8e3b280824c/matches_management"); return; }
         setOriginal(t);
         setShareMode((t.credentialShareMode as "room_only" | "ff_only" | "both") ?? "both");
@@ -303,7 +302,7 @@ export default function AdminKnockoutEditPage() {
           fixedMatchTime: savedFixedMatchTime ?? null,
         });
       })
-      .catch(() => toast({ title: "Failed to load match", variant: "destructive" }))
+      .catch((e: unknown) => toast({ title: "Failed to load match", description: e instanceof Error ? e.message : String(e), variant: "destructive" }))
       .finally(() => setLoading(false));
   }, [tournamentId]);
 
