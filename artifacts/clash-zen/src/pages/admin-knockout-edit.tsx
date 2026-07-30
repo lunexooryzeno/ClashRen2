@@ -220,6 +220,7 @@ export default function AdminKnockoutEditPage() {
     matchSettings: { ...DEFAULT_MATCH_SETTINGS }, credentialUnlockMinutes: null,
   });
   const [knockoutTeamFormat, setKnockoutTeamFormat] = useState("Solo");
+  const [shareMode, setShareMode] = useState<"room_only" | "ff_only" | "both">("both");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [customRuleInput, setCustomRuleInput] = useState("");
@@ -390,6 +391,7 @@ export default function AdminKnockoutEditPage() {
         estimatedDuration: form.estimatedDuration || undefined,
         matchSettings: ms,
         credentialUnlockMinutes: form.credentialUnlockMinutes,
+        credentialShareMode: shareMode,
       };
 
       const res = await authFetchAdmin(`/admin/tournaments/${tournamentId}`, { method: "PUT", body: JSON.stringify(body) });
