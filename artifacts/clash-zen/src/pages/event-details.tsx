@@ -738,6 +738,42 @@ export default function EventDetails() {
                 </div>
              </div>
            )}
+
+           {/* Placement Prizes breakdown */}
+           {(() => {
+             const prizes: number[] = Array.isArray(ms.placementPrizes) ? (ms.placementPrizes as number[]) : [];
+             const active = prizes.map((v, i) => ({ place: i + 1, amount: typeof v === "number" ? v : 0 })).filter(p => p.amount > 0);
+             if (active.length === 0) return null;
+             const ord = (n: number) => { const s = n % 100; if (s >= 11 && s <= 13) return `${n}th`; switch (n % 10) { case 1: return `${n}st`; case 2: return `${n}nd`; case 3: return `${n}rd`; default: return `${n}th`; } };
+             return (
+               <div className="rounded-2xl p-4 border border-amber-500/15 bg-gradient-to-b from-amber-500/5 to-transparent">
+                 <div className="flex items-center gap-2 mb-3">
+                   <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                   <p className="text-[11px] font-bold text-amber-400/80 uppercase tracking-wider">Placement Prizes</p>
+                 </div>
+                 <div className="space-y-1.5">
+                   {active.map(({ place, amount }) => {
+                     const label = ord(place);
+                     const medalColor = place === 1 ? "#fbbf24" : place === 2 ? "#9ca3af" : place === 3 ? "#d97706" : "#71717a";
+                     const rowBg = place === 1 ? "rgba(251,191,36,0.10)" : place === 2 ? "rgba(161,161,170,0.08)" : place === 3 ? "rgba(217,119,6,0.09)" : "rgba(255,255,255,0.03)";
+                     return (
+                       <div key={place} className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                         style={{ background: rowBg, border: `1px solid ${medalColor}25` }}>
+                         <div className="w-8 shrink-0 text-center">
+                           <span className="text-[12px] font-black tabular-nums" style={{ color: medalColor }}>{label}</span>
+                         </div>
+                         <p className="flex-1 text-[12px] text-zinc-400 font-medium">{label} Place</p>
+                         <div className="flex items-center gap-1 shrink-0">
+                           <span className="text-[14px] font-black text-white tabular-nums">{amount}</span>
+                           <CoinIcon className="w-3.5 h-3.5 text-amber-400" />
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+             );
+           })()}
         </div>
 
         {/* ── 13. Your 1v1 Match (only when matchmaking has a real match) ── */}

@@ -618,6 +618,38 @@ export default function MyMatchDetailPage() {
           ))}
         </div>
 
+        {/* Placement Prizes breakdown */}
+        {(() => {
+          const prizes: number[] = Array.isArray(ms.placementPrizes) ? (ms.placementPrizes as number[]) : [];
+          const active = prizes.map((v, i) => ({ place: i + 1, amount: typeof v === "number" ? v : 0 })).filter(p => p.amount > 0);
+          if (active.length === 0) return null;
+          const ord = (n: number) => { const s = n % 100; if (s >= 11 && s <= 13) return `${n}th`; switch (n % 10) { case 1: return `${n}st`; case 2: return `${n}nd`; case 3: return `${n}rd`; default: return `${n}th`; } };
+          return (
+            <div className="rounded-2xl mb-4 overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Placement Prizes</span>
+              </div>
+              <div className="px-4 py-2 space-y-0">
+                {active.map(({ place, amount }) => {
+                  const label = ord(place);
+                  const medalColor = place === 1 ? "#fbbf24" : place === 2 ? "#9ca3af" : place === 3 ? "#d97706" : "#71717a";
+                  return (
+                    <div key={place} className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
+                      <span className="text-[12px] font-black w-8 shrink-0 tabular-nums" style={{ color: medalColor }}>{label}</span>
+                      <span className="flex-1 text-[12px] text-zinc-400">{label} Place</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[13px] font-bold text-white tabular-nums">{amount}</span>
+                        <CoinIcon className="w-3 h-3 text-amber-400" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Room Credentials (always visible when upcoming/ongoing) ── */}
         {(isUpcoming || isOngoing) && (
           <div className="mb-4">

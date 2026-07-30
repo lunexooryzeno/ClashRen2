@@ -142,7 +142,9 @@ function formatTournament(t: typeof tournamentsTable.$inferSelect) {
 
 router.get("/admin/tournaments", requireAdmin, async (_req, res) => {
   res.set("Cache-Control", "no-store");
-  const tournaments = await db.query.tournamentsTable.findMany();
+  const tournaments = await db.query.tournamentsTable.findMany({
+    where: (t) => sql`${t.status} != 'admin_hidden'`,
+  });
   res.json(tournaments.map(formatTournament));
 });
 
@@ -261,6 +263,14 @@ router.delete("/admin/tournaments/:id", requireAdmin, async (req, res) => {
 
   const tournament = await db.query.tournamentsTable.findFirst({ where: eq(tournamentsTable.id, id) });
   if (!tournament) { res.status(404).json({ error: "Tournament not found" }); return; }
+
+  // ── MODE: admin_only (remove from admin panel, users still see it) ──────────
+  if (mode === "admin_only") {
+    await db.update(tournamentsTable).set({ status: "admin_hidden" }).where(eq(tournamentsTable.id, id));
+    await writeLog(id, "match_admin_hidden", "tournament", `${tournament.title} · removed from admin view only`);
+    res.json({ message: "Match removed from admin view. Registered players can still see it." });
+    return;
+  }
 
   // ── MODE: hide (only remove from listings, participants unaffected) ─────────
   if (mode === "hide") {

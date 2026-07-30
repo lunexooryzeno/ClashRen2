@@ -3,7 +3,7 @@ import { useLocation, useParams } from "wouter";
 import {
   ArrowLeft, Users, Eye, ExternalLink, Lock, Clock, ChevronDown,
   SlidersHorizontal, ArrowUpDown, Layers, Swords, Trash2, CheckCircle2,
-  AlertCircle, Hourglass, RefreshCw, UserX, Check, ChevronRight,
+  AlertCircle, Hourglass, RefreshCw, UserX, Check, ChevronRight, X,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -194,6 +194,10 @@ export default function AdminMatchPlayersPage() {
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [deletingMatchId, setDeletingMatchId] = useState<number | null>(null);
 
+  // Remove-player confirmation
+  const [kickTarget, setKickTarget] = useState<Participant | null>(null);
+  const [kickBusy, setKickBusy] = useState(false);
+
   const [filterSlot, setFilterSlot] = useState<number | null>(() => {
     try {
       const hash = window.location.hash;
@@ -316,6 +320,26 @@ export default function AdminMatchPlayersPage() {
 
   function handleViewMatchPlayers(m: SlotMatch) {
     navigate(`/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/${matchId}/slot-match/${m.displayId ?? m.id}`);
+  }
+
+  async function handleKickPlayer(participant: Participant) {
+    setKickBusy(true);
+    try {
+      const res = await authFetchAdmin(`/admin/tournaments/${matchId}/participants/${participant.userId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        showToast(err.error ?? "Failed to remove player");
+        return;
+      }
+      setPlayers(prev => prev.filter(p => p.id !== participant.id));
+      setMeta(prev => prev ? { ...prev, filledSlots: Math.max(0, prev.filledSlots - 1), totalBookings: Math.max(0, prev.totalBookings - 1) } : prev);
+      showToast(`${participant.inGameName || "Player"} removed and refunded`, "success");
+    } catch {
+      showToast("Network error removing player");
+    } finally {
+      setKickBusy(false);
+      setKickTarget(null);
+    }
   }
 
   /* Derived */
@@ -616,6 +640,12 @@ export default function AdminMatchPlayersPage() {
                     title="View in User Management">
                     <ExternalLink className="w-3 h-3 text-indigo-400" />
                   </button>
+                  <button onClick={() => setKickTarget(p)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all active:scale-95"
+                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}
+                    title="Remove player">
+                    <UserX className="w-3 h-3 text-rose-400" />
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2 px-3 pb-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
@@ -647,6 +677,50 @@ export default function AdminMatchPlayersPage() {
           })
         )}
       </div>
+
+      {/* Remove player confirmation sheet */}
+      {kickTarget && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.75)" }}>
+          <div className="w-full max-w-sm rounded-t-3xl flex flex-col pb-6"
+            style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.08)", borderBottom: "none" }}>
+            <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                <UserX className="w-4 h-4 text-rose-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-white">Remove Player?</p>
+                <p className="text-[11px] text-zinc-400 truncate mt-0.5">{kickTarget.inGameName || "Unknown"} · {kickTarget.phone}</p>
+              </div>
+              <button onClick={() => setKickTarget(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0"
+                style={{ background: "rgba(255,255,255,0.05)" }}>
+                <X className="w-3.5 h-3.5 text-zinc-500" />
+              </button>
+            </div>
+
+            <div className="mx-5 px-3 py-3 rounded-xl mb-4"
+              style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
+              <p className="text-[11px] text-zinc-300 leading-relaxed">
+                This player will be <span className="text-rose-300 font-bold">removed from the match</span> and their entry fee will be automatically refunded to their wallet.
+              </p>
+            </div>
+
+            <div className="flex gap-3 px-5">
+              <button onClick={() => setKickTarget(null)} disabled={kickBusy}
+                className="flex-1 py-3 rounded-2xl text-[12px] font-bold text-zinc-300 disabled:opacity-50"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                Cancel
+              </button>
+              <button onClick={() => handleKickPlayer(kickTarget)} disabled={kickBusy}
+                className="flex-1 py-3 rounded-2xl text-[12px] font-bold text-white disabled:opacity-50"
+                style={{ background: "rgba(239,68,68,0.25)", border: "1px solid rgba(239,68,68,0.45)" }}>
+                {kickBusy ? "Removing…" : "Remove & Refund"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toastMsg && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl text-[12px] font-semibold text-white shadow-xl z-50 whitespace-nowrap"

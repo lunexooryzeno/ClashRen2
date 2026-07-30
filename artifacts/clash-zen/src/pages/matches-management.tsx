@@ -688,6 +688,7 @@ interface MatchSettingsForm {
   onlyHeadshot: boolean;
   emulators: boolean;
   showCountdown: boolean;
+  placementPrizes: number[]; // index 0 = 1st place, up to 19 = 20th place
 }
 
 const DEFAULT_MATCH_SETTINGS: MatchSettingsForm = {
@@ -704,6 +705,7 @@ const DEFAULT_MATCH_SETTINGS: MatchSettingsForm = {
   onlyHeadshot: false,
   emulators: false,
   showCountdown: false,
+  placementPrizes: [],
 };
 
 interface TournamentForm {
@@ -799,6 +801,13 @@ function TournamentFormModal({
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showPlacementPrizes, setShowPlacementPrizes] = useState<boolean>(() => {
+    if (!initial?.matchSettings) return false;
+    try {
+      const ms = JSON.parse(initial.matchSettings);
+      return Array.isArray(ms.placementPrizes) && ms.placementPrizes.some((v: number) => v > 0);
+    } catch { return false; }
+  });
 
   async function handleImageUpload(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -1100,6 +1109,77 @@ function TournamentFormModal({
               <InputField label="Per Kill (🪙)" value={form.perKillDiamonds} onChange={v => set("perKillDiamonds", Number(v))} type="number" />
               <InputField label="Max Slots" value={form.maxSlots} onChange={v => set("maxSlots", Number(v))} type="number" />
             </div>
+
+            {/* Placement Prizes — only for BR modes (Solo / Duo / Squad), not Knockout */}
+            {!isKnockout && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowPlacementPrizes(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all"
+                  style={{
+                    background: showPlacementPrizes ? "rgba(251,191,36,0.07)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${showPlacementPrizes ? "rgba(251,191,36,0.28)" : "rgba(255,255,255,0.08)"}`,
+                  }}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[12px] font-bold text-zinc-300">Placement Prizes</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border text-zinc-600 border-zinc-700">Optional</span>
+                    {(form.matchSettings.placementPrizes ?? []).filter(v => v > 0).length > 0 && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-400">
+                        {(form.matchSettings.placementPrizes ?? []).filter(v => v > 0).length} prizes set
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-500 transition-transform", showPlacementPrizes && "rotate-180")} />
+                </button>
+
+                {showPlacementPrizes && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-[10px] text-zinc-600 px-0.5">
+                      Set the diamond prize per placement rank. Leave blank or 0 to skip that rank.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th",
+                         "11th","12th","13th","14th","15th","16th","17th","18th","19th","20th"]
+                      ).map((label, i) => {
+                        const prizes = form.matchSettings.placementPrizes ?? [];
+                        const val = prizes[i] ?? 0;
+                        const medalColor = i === 0 ? "#fbbf24" : i === 1 ? "#9ca3af" : i === 2 ? "#d97706" : "#52525b";
+                        return (
+                          <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl"
+                            style={{
+                              background: val > 0 ? "rgba(251,191,36,0.06)" : "rgba(255,255,255,0.025)",
+                              border: `1px solid ${val > 0 ? "rgba(251,191,36,0.2)" : "rgba(255,255,255,0.06)"}`,
+                            }}>
+                            <span className="text-[11px] font-black w-8 shrink-0 tabular-nums" style={{ color: medalColor }}>{label}</span>
+                            <input
+                              type="text" inputMode="numeric"
+                              value={val === 0 ? "" : String(val)}
+                              onChange={e => {
+                                const newVal = Number(e.target.value.replace(/[^0-9]/g, "")) || 0;
+                                const arr: number[] = Array(20).fill(0).map((_, idx) => prizes[idx] ?? 0);
+                                arr[i] = newVal;
+                                setMs("placementPrizes", arr);
+                              }}
+                              placeholder="0"
+                              className="flex-1 min-w-0 bg-transparent text-[12px] text-white font-bold outline-none placeholder:text-zinc-700 text-right"
+                            />
+                            <CoinIcon className="w-3 h-3 text-amber-400 shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMs("placementPrizes", Array(20).fill(0))}
+                      className="text-[10px] text-zinc-600 hover:text-rose-400 transition-colors">
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1600,6 +1680,7 @@ function TournamentListCard({ t, onEdit, onDelete, onGenSlug, onPlayers }: {
 
 // ── Match Delete Dialog ───────────────────────────────────────────────────────
 const DELETE_OPTIONS: { mode: string; emoji: string; title: string; desc: string; badge: string; badgeColor: string; impact: "soft" | "medium" | "hard" | "critical" }[] = [
+  { mode: "admin_only",       emoji: "🙈", title: "Remove from Admin View",     desc: "Removes this match from the admin panel only. Players who registered or played can still see it in their history and match pages. No refunds, no notifications.",  badge: "Default · Admin Only",        badgeColor: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",    impact: "soft"     },
   { mode: "cancel_notify",    emoji: "🔔", title: "Cancel & Notify",            desc: "Marks match as cancelled, refunds all registered players and sends push notifications. Match stays visible in their history.",        badge: "Soft · Reversible",           badgeColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", impact: "soft"     },
   { mode: "cancel_silent",    emoji: "🔕", title: "Cancel Silently",            desc: "Same as above but no push notifications are sent. Players are refunded quietly without any alerts.",                                    badge: "Soft · No Notifs",            badgeColor: "text-sky-400 bg-sky-500/10 border-sky-500/20",             impact: "soft"     },
   { mode: "hide",             emoji: "👁️", title: "Hide from Listings",         desc: "Hides the match from the lobby so new players can't see or join it. Registered players are completely unaffected.",                   badge: "Safe · No Data Lost",         badgeColor: "text-zinc-400 bg-white/5 border-white/10",                  impact: "soft"     },
@@ -1719,7 +1800,7 @@ export default function MatchesManagement() {
   const [editKTarget, setEditKTarget] = useState<ApiTournament | null>(null);
   const [deleteKId, setDeleteKId] = useState<number | null>(null);
   const [deletingK, setDeletingK] = useState(false);
-  const [deleteKMode, setDeleteKMode] = useState<string>("cancel_notify");
+  const [deleteKMode, setDeleteKMode] = useState<string>("admin_only");
 
   const [apiTournaments, setApiTournaments] = useState<ApiTournament[]>([]);
   const [tLoading, setTLoading] = useState(false);
@@ -1727,7 +1808,7 @@ export default function MatchesManagement() {
   const [editTTarget, setEditTTarget] = useState<ApiTournament | null>(null);
   const [deleteTId, setDeleteTId] = useState<number | null>(null);
   const [deletingT, setDeletingT] = useState(false);
-  const [deleteTMode, setDeleteTMode] = useState<string>("cancel_notify");
+  const [deleteTMode, setDeleteTMode] = useState<string>("admin_only");
   const [deleteMatchReason, setDeleteMatchReason] = useState<string>("");
 
 
@@ -1777,8 +1858,8 @@ export default function MatchesManagement() {
   async function execMatchDelete(id: number, mode: string, reason: string, kind: "k" | "t") {
     const setDeleting = kind === "k" ? setDeletingK : setDeletingT;
     const resetDialog = () => {
-      if (kind === "k") { setDeleteKId(null); setDeleteKMode("cancel_notify"); }
-      else              { setDeleteTId(null); setDeleteTMode("cancel_notify"); }
+      if (kind === "k") { setDeleteKId(null); setDeleteKMode("admin_only"); }
+      else              { setDeleteTId(null); setDeleteTMode("admin_only"); }
       setDeleteMatchReason("");
     };
     setDeleting(true);
@@ -1812,7 +1893,10 @@ export default function MatchesManagement() {
           toast({ title: "Action failed", description: b?.detail ?? b?.error ?? "Unknown error", variant: "destructive" });
           return;
         }
-        if (mode === "hide") {
+        if (mode === "admin_only") {
+          setApiTournaments(prev => prev.filter(t => t.id !== id));
+          toast({ title: `${label} removed from admin`, description: "Removed from admin view. Registered players can still see it." });
+        } else if (mode === "hide") {
           setApiTournaments(prev => prev.map(t => t.id === id ? { ...t, status: "hidden" } : t));
           toast({ title: `${label} hidden`, description: "Hidden from listings. Registered players unaffected." });
         } else if (mode === "registered_only") {

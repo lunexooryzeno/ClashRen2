@@ -77,8 +77,8 @@ function formatTournament(
 router.get("/tournaments", async (req, res) => {
   const { status } = req.query as { status?: string };
   const tournaments = status
-    ? await db.query.tournamentsTable.findMany({ where: eq(tournamentsTable.status, status), orderBy: [desc(tournamentsTable.startTime)] })
-    : await db.query.tournamentsTable.findMany({ orderBy: [desc(tournamentsTable.startTime)] });
+    ? await db.query.tournamentsTable.findMany({ where: and(eq(tournamentsTable.status, status), sql`${tournamentsTable.status} != 'admin_hidden'`), orderBy: [desc(tournamentsTable.startTime)] })
+    : await db.query.tournamentsTable.findMany({ where: sql`${tournamentsTable.status} != 'admin_hidden'`, orderBy: [desc(tournamentsTable.startTime)] });
 
   const payload = getTokenPayload(req);
   const userId = payload?.userId ?? null;
