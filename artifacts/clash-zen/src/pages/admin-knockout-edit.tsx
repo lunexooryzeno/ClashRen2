@@ -662,7 +662,17 @@ export default function AdminKnockoutEditPage() {
           <div>
             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Registration Closes</p>
             <div className="flex items-center gap-2 flex-wrap">
-              {[5, 10, 15, 20, 30].map(mins => {
+              {([
+                { mins: 0,  label: "Immediately" },
+                { mins: 1,  label: "1 min" },
+                { mins: 2,  label: "2 min" },
+                { mins: 3,  label: "3 min" },
+                { mins: 5,  label: "5 min" },
+                { mins: 10, label: "10 min" },
+                { mins: 15, label: "15 min" },
+                { mins: 20, label: "20 min" },
+                { mins: 30, label: "30 min" },
+              ]).map(({ mins, label }) => {
                 const active = form.registrationCloseMinutes === mins;
                 return (
                   <button key={mins} type="button" onClick={() => set("registrationCloseMinutes", mins)}
@@ -671,7 +681,7 @@ export default function AdminKnockoutEditPage() {
                       background: active ? "rgba(251,191,36,0.15)" : "rgba(255,255,255,0.04)",
                       border: `1.5px solid ${active ? "rgba(251,191,36,0.50)" : "rgba(255,255,255,0.08)"}`,
                       color: active ? "#fbbf24" : "#52525b",
-                    }}>{mins} min</button>
+                    }}>{label}</button>
                 );
               })}
             </div>
@@ -679,7 +689,10 @@ export default function AdminKnockoutEditPage() {
               style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.15)" }}>
               <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <p className="text-[11px] text-zinc-400">
-                Booking closes <span className="text-amber-400 font-bold">{form.registrationCloseMinutes} minutes</span> before each slot starts.
+                {form.registrationCloseMinutes === 0
+                  ? <>Booking closes <span className="text-amber-400 font-bold">immediately</span> when each slot starts.</>
+                  : <>Booking closes <span className="text-amber-400 font-bold">{form.registrationCloseMinutes} {form.registrationCloseMinutes === 1 ? "minute" : "minutes"}</span> before each slot starts.</>
+                }
               </p>
             </div>
           </div>
