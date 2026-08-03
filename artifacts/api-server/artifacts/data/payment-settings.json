@@ -3,7 +3,7 @@
   "upiName": "BharatPe Merchant",
   "ratePerDiamond": 1,
   "minTopup": 10,
-  "minWithdrawal": 20,
+  "minWithdrawal": 10,
   "maxWithdrawal": 0,
   "isEnabled": true,
   "withdrawalEnabled": true,

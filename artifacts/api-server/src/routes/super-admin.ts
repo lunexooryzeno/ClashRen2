@@ -736,10 +736,10 @@ router.get("/super-admin/geo-analytics", requireSuperAdmin, async (_req, res) =>
   const [sessions, users] = await Promise.all([
     db.query.deviceSessionsTable.findMany({
       columns: { userId: true, country: true, region: true, language: true, isEmulator: true, lastSeenAt: true },
-    }),
+    }).catch(() => [] as { userId: number; country: string | null; region: string | null; language: string | null; isEmulator: boolean; lastSeenAt: Date }[]),
     db.query.usersTable.findMany({
       columns: { id: true, diamondBalance: true, lastSeenAt: true },
-    }),
+    }).catch(() => [] as { id: number; diamondBalance: number; lastSeenAt: Date | null }[]),
   ]);
 
   const now = Date.now();
@@ -797,11 +797,12 @@ router.get("/super-admin/analytics", requireSuperAdmin, async (req, res) => {
   const since = new Date(now - windowMs);
 
   const [users, participants] = await Promise.all([
-    db.query.usersTable.findMany({ columns: { id: true, createdAt: true, lastSeenAt: true } }),
+    db.query.usersTable.findMany({ columns: { id: true, createdAt: true, lastSeenAt: true } })
+      .catch(() => [] as { id: number; createdAt: Date; lastSeenAt: Date | null }[]),
     db.query.tournamentParticipantsTable.findMany({
       columns: { id: true, joinedAt: true },
       where: gte(tournamentParticipantsTable.joinedAt, since),
-    }),
+    }).catch(() => [] as { id: number; joinedAt: Date }[]),
   ]);
 
   function toDay(d: Date) { return d.toISOString().slice(0, 10); }
@@ -1009,8 +1010,8 @@ router.get("/super-admin/mode-analytics", requireSuperAdmin, async (req, res) =>
   const since = new Date(now - days * DAY);
 
   const [tournaments, allParticipants] = await Promise.all([
-    db.select().from(tournamentsTable),
-    db.select().from(tournamentParticipantsTable),
+    db.select().from(tournamentsTable).catch(() => [] as (typeof tournamentsTable.$inferSelect)[]),
+    db.select().from(tournamentParticipantsTable).catch(() => [] as (typeof tournamentParticipantsTable.$inferSelect)[]),
   ]);
 
   // Filter participants to the period

@@ -326,6 +326,15 @@ export default function AdminUsersPage() {
     }
   }, [analyticsPeriod]);
 
+  // Auto-refresh the analytics (including Online Now count) every 30 seconds
+  useEffect(() => {
+    if (phase !== "unlocked" || !token) return;
+    const interval = setInterval(() => {
+      loadAnalytics(token, analyticsPeriod);
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [phase, token, analyticsPeriod, loadAnalytics]);
+
   const handleAuth = async () => {
     const li = getLockout();
     if (li.lockoutUntil && Date.now() < li.lockoutUntil) {

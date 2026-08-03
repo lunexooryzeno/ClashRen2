@@ -158,14 +158,20 @@ app.get("/api/admin/banners/uploads/:filename", (req, res, next) => {
   });
 });
 
-// Serve uploaded avatar/profile-picture images
-app.use(
-  "/api/users/uploads/avatars",
-  express.static(join(UPLOADS_DIR, "avatars"), {
-    maxAge: "7d",
-    immutable: false,
-  }),
-);
+// Serve uploaded avatar/profile-picture images.
+// Use an explicit handler with multiple candidate paths so it works both in
+// dev (cwd = api-server/) and in the deployed bundle (cwd = api-server/dist/).
+app.get("/api/users/uploads/avatars/:filename", (req, res, next) => {
+  const filename = basename(req.params.filename);
+  const candidates = [
+    join(UPLOADS_DIR, "avatars", filename),
+    join(process.cwd(), "..", "data", "uploads", "avatars", filename),
+    join(process.cwd(), "..", "..", "artifacts", "data", "uploads", "avatars", filename),
+  ];
+  const filePath = candidates.find((candidate) => existsSync(candidate));
+  if (!filePath) { next(); return; }
+  res.sendFile(filePath, { maxAge: "7d", immutable: false });
+});
 
 // Serve uploaded tournament/match images
 app.use(
