@@ -200,7 +200,7 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
 
           {/* Prize Pool */}
           <div className="flex flex-col items-center gap-0.5 border-l border-white/5">
-            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Prize</span>
+            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Price Pool</span>
             <div className="flex items-center gap-0.5">
               <CoinIcon className="w-3 h-3 text-orange-400" />
               <span className="text-[13px] font-bold text-orange-300">{tournament.prizePoolDiamonds.toLocaleString()}</span>
