@@ -6,7 +6,8 @@ import {
   CheckCircle, Gamepad2, Swords, Zap, Users, Globe,
   Clock, Calendar, Star, MapPin, Tag, FileText,
   Plus, Trash2, Palette, ChevronDown, ToggleLeft, ToggleRight,
-  Pencil, Save,
+  Pencil, Save, Heart, Activity, ArrowUp, RotateCcw,
+  Flame, Monitor,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +75,16 @@ interface MatchSettingsForm {
   onlyHeadshot: boolean; emulators: boolean; showCountdown: boolean;
   autoDeleteCondition: string; autoDeleteMinValue: number;
   winLogic: string;
+  // Extended fields
+  revivalAvailable: boolean;
+  autoHeal: boolean;
+  fallDamage: boolean;
+  friendlyFire: boolean;
+  vehicles: boolean;
+  redZone: boolean;
+  gameplayRules: Record<string, boolean>;
+  winDecidedBy: string;
+  customSettings: { key: string; value: string }[];
 }
 const DEFAULT_MATCH_SETTINGS: MatchSettingsForm = {
   teamFormat: "Solo", minLevel: 40, rounds: "9 (First to 5 wins)",
@@ -81,7 +92,16 @@ const DEFAULT_MATCH_SETTINGS: MatchSettingsForm = {
   ammoLimit: false, gunAttributes: false, weaponSkins: false,
   onlyHeadshot: false, emulators: false, showCountdown: false,
   autoDeleteCondition: "none", autoDeleteMinValue: 5,
-  winLogic: "standard",
+  winLogic: "manual",
+  revivalAvailable: false,
+  autoHeal: false,
+  fallDamage: true,
+  friendlyFire: false,
+  vehicles: false,
+  redZone: true,
+  gameplayRules: {},
+  winDecidedBy: "screenshot_verification",
+  customSettings: [],
 };
 
 interface SlotEntry { hour: number; minute: number; endHour: number; endMinute: number; }
@@ -100,6 +120,11 @@ function fmt12(h: number, m: number) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${h12}:${pad(m)} ${ampm}`;
 }
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 interface TournamentForm {
   title: string; gameMode: string; startDate: string;
@@ -111,6 +136,8 @@ interface TournamentForm {
   description: string; map: string; region: string;
   estimatedDuration: string; matchSettings: MatchSettingsForm;
   fixedMatchTime: string | null; // e.g. "20:00" — fixed match start time (optional)
+  placementRewards: { place: number; diamonds: number }[];
+  bonusRewards: { mvpKills: number; mostDamage: number; participation: number };
 }
 
 const EMPTY_FORM: TournamentForm = {
@@ -123,6 +150,8 @@ const EMPTY_FORM: TournamentForm = {
   description: "", map: "Bermuda", region: "India", estimatedDuration: "20 min",
   matchSettings: { ...DEFAULT_MATCH_SETTINGS },
   fixedMatchTime: null,
+  placementRewards: [],
+  bonusRewards: { mvpKills: 0, mostDamage: 0, participation: 0 },
 };
 
 const CS1V1_TEMPLATE: TournamentForm = {
@@ -146,6 +175,9 @@ const CS1V1_TEMPLATE: TournamentForm = {
   statusColor: "purple",
   description: "Head-to-head Clash Squad 1v1 knockout. First to clear the enemy wins.",
   map: "Bermuda", region: "India", estimatedDuration: "15 min",
+  fixedMatchTime: null,
+  placementRewards: [],
+  bonusRewards: { mvpKills: 0, mostDamage: 0, participation: 0 },
   matchSettings: {
     ...DEFAULT_MATCH_SETTINGS,
     teamFormat: "Clash Squad",
@@ -192,6 +224,9 @@ const CS1V1_HEALING_TEMPLATE: TournamentForm = {
   entryFeeDiamonds: 0, prizePoolDiamonds: 0,
   maxSlots: 2, perKillDiamonds: 0,
   imageUrl: "",
+  fixedMatchTime: null,
+  placementRewards: [],
+  bonusRewards: { mvpKills: 0, mostDamage: 0, participation: 0 },
   rules: [
     "🏥 THIS IS A HEALING BATTLE — DO NOT attack your opponent",
     "✅ WIN CONDITION: Deal ZERO damage to your opponent and survive",
@@ -248,13 +283,25 @@ const BUILTIN_TEMPLATES: MatchTemplate[] = [
   },
 ];
 
+/** Backfill any fields added after a template was first saved (forward-compat). */
+function normalizeTemplateDefaults(f: Partial<TournamentForm>): TournamentForm {
+  return {
+    ...EMPTY_FORM,
+    ...f,
+    matchSettings: { ...DEFAULT_MATCH_SETTINGS, ...(f.matchSettings ?? {}) },
+  };
+}
+
 function loadTemplates(): MatchTemplate[] {
   try {
     const raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
     let stored: MatchTemplate[] = [];
     if (raw) {
       const parsed = JSON.parse(raw) as MatchTemplate[];
-      if (Array.isArray(parsed) && parsed.length > 0) stored = parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Normalize each stored template's defaults so old entries don't crash on new fields
+        stored = parsed.map(t => ({ ...t, defaults: normalizeTemplateDefaults(t.defaults) }));
+      }
     }
     // Inject any builtin templates missing from stored list (so new builtins auto-appear)
     let result = [...stored];
@@ -310,10 +357,10 @@ function Label({ children }: { children: React.ReactNode }) {
   return <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{children}</label>;
 }
 
-function Field({ label, children, hint }: { label?: string; children: React.ReactNode; hint?: string }) {
+function Field({ label, children, hint }: { label?: React.ReactNode; children: React.ReactNode; hint?: string }) {
   return (
     <div className="flex flex-col gap-1">
-      {label && <Label>{label}</Label>}
+      {label && <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">{label}</label>}
       {children}
       {hint && <p className="text-[10px] text-zinc-600 mt-0.5">{hint}</p>}
     </div>
@@ -387,6 +434,9 @@ export default function AdminKnockoutNewPage() {
   const [uploading, setUploading] = useState(false);
   const [customRuleInput, setCustomRuleInput] = useState("");
   const [tmplTagInput, setTmplTagInput] = useState("");
+  const [customSettingKey, setCustomSettingKey] = useState("");
+  const [customSettingValue, setCustomSettingValue] = useState("");
+  const [customGameplayRule, setCustomGameplayRule] = useState("");
 
   function set<K extends keyof TournamentForm>(k: K, v: TournamentForm[K]) {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -470,6 +520,8 @@ export default function AdminKnockoutNewPage() {
         slotEndTime: firstSlot.endTime,
         registrationCloseMinutes: form.registrationCloseMinutes,
         fixedMatchTime: form.fixedMatchTime ?? null,
+        placementRewards: form.placementRewards,
+        bonusRewards: form.bonusRewards,
       });
 
       const body = {
@@ -508,7 +560,7 @@ export default function AdminKnockoutNewPage() {
   }
 
   function applyTemplate(tmpl: MatchTemplate) {
-    setForm({ ...tmpl.defaults, startDate: todayStr() });
+    setForm({ ...normalizeTemplateDefaults(tmpl.defaults), startDate: todayStr() });
     setKnockoutTeamFormat(tmpl.teamFormat);
     setSelectedTemplateId(tmpl.id);
     setScreen("form");
@@ -1397,10 +1449,12 @@ export default function AdminKnockoutNewPage() {
         </div>
 
         {/* ── Prize Settings ── */}
-        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="rounded-2xl p-4 space-y-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHead icon={CoinIcon} label="Prize Settings" color="#eab308" />
+
+          {/* Entry fee + Max Slots */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Entry Fee">
+            <Field label={<><CoinIcon className="w-3 h-3 text-blue-400" />Entry Fee</>}>
               <div className="relative">
                 <CoinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400 pointer-events-none" />
                 <input type="text" inputMode="numeric" value={form.entryFeeDiamonds}
@@ -1409,27 +1463,7 @@ export default function AdminKnockoutNewPage() {
                   style={inputStyle} />
               </div>
             </Field>
-            <Field label="Prize Pool">
-              <div className="relative">
-                <Star className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 pointer-events-none" />
-                <input type="text" inputMode="numeric" value={form.prizePoolDiamonds}
-                  onChange={e => set("prizePoolDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-yellow-500/30"
-                  style={inputStyle} />
-              </div>
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Per Kill Bonus">
-              <div className="relative">
-                <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400 pointer-events-none" />
-                <input type="text" inputMode="numeric" value={form.perKillDiamonds}
-                  onChange={e => set("perKillDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-                  style={inputStyle} />
-              </div>
-            </Field>
-            <Field label="Max Slots">
+            <Field label={<><Users className="w-3 h-3" />Max Slots</>}>
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
                 <input type="text" inputMode="numeric" value={form.maxSlots}
@@ -1439,64 +1473,396 @@ export default function AdminKnockoutNewPage() {
               </div>
             </Field>
           </div>
+
+          {/* Per Kill Bonus */}
+          <Field label={<><Zap className="w-3 h-3 text-emerald-400" />Per Kill Bonus</>}>
+            <div className="relative">
+              <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400 pointer-events-none" />
+              <input type="text" inputMode="numeric" value={form.perKillDiamonds}
+                onChange={e => set("perKillDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
+                className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                style={inputStyle} />
+            </div>
+          </Field>
+
+          {/* Placement Rewards */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Placement Rewards</p>
+              <button type="button"
+                onClick={() => set("placementRewards", [...form.placementRewards, { place: form.placementRewards.length + 1, diamonds: 0 }])}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all active:scale-95"
+                style={{ background: "rgba(234,179,8,0.15)", border: "1px solid rgba(234,179,8,0.3)", color: "#fbbf24" }}>
+                <Plus className="w-3 h-3" /> Add Place
+              </button>
+            </div>
+            {form.placementRewards.length === 0 ? (
+              <p className="text-[11px] text-zinc-600 italic px-1">No placement rewards set. Click "Add Place" to define prizes.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {form.placementRewards.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg shrink-0"
+                      style={{
+                        background: i === 0 ? "rgba(234,179,8,0.15)" : i === 1 ? "rgba(148,163,184,0.12)" : i === 2 ? "rgba(180,83,9,0.12)" : "rgba(255,255,255,0.05)",
+                        border: i === 0 ? "1px solid rgba(234,179,8,0.3)" : i === 1 ? "1px solid rgba(148,163,184,0.2)" : i === 2 ? "1px solid rgba(180,83,9,0.2)" : "1px solid rgba(255,255,255,0.08)",
+                      }}>
+                      <span className="text-sm">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅"}</span>
+                      <span className="text-[11px] font-bold ml-1" style={{ color: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#cd7c2f" : "#71717a" }}>
+                        {ordinal(r.place)}
+                      </span>
+                    </div>
+                    <div className="relative flex-1">
+                      <CoinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 pointer-events-none" />
+                      <input type="text" inputMode="numeric" value={r.diamonds}
+                        onChange={e => set("placementRewards", form.placementRewards.map((x, j) => j === i ? { ...x, diamonds: Number(e.target.value.replace(/[^0-9]/g, "")) } : x))}
+                        placeholder="💎 Diamonds"
+                        className="w-full pl-8 pr-3 py-2 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-yellow-500/30"
+                        style={inputStyle} />
+                    </div>
+                    <button type="button"
+                      onClick={() => set("placementRewards", form.placementRewards.filter((_, j) => j !== i).map((x, j) => ({ ...x, place: j + 1 })))}
+                      className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-red-500/20"
+                      style={{ color: "#ef4444" }}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bonus Rewards */}
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Bonus Rewards</p>
+            <div className="flex flex-col gap-2">
+              {([ { key: "mvpKills" as const, label: "MVP / Most Kills", icon: "🎯" },
+                  { key: "mostDamage" as const, label: "Most Damage", icon: "💥" },
+                  { key: "participation" as const, label: "Participation Reward", icon: "🎁" },
+              ] as const).map(b => (
+                <div key={b.key} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span className="text-base shrink-0">{b.icon}</span>
+                  <span className="flex-1 text-[12px] font-semibold text-zinc-300">{b.label}</span>
+                  <div className="relative w-28">
+                    <CoinIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-yellow-400 pointer-events-none" />
+                    <input type="text" inputMode="numeric" value={form.bonusRewards[b.key]}
+                      onChange={e => set("bonusRewards", { ...form.bonusRewards, [b.key]: Number(e.target.value.replace(/[^0-9]/g, "")) })}
+                      placeholder="0"
+                      className="w-full pl-7 pr-2 py-2 rounded-lg text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+                      style={inputStyle} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Prize Pool Cap + Auto-calculate */}
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Limits & Validation</p>
+            <Field label={<><Star className="w-3 h-3 text-yellow-400" />Total Prize Pool Cap (0 = no cap)</>}>
+              <div className="relative">
+                <Star className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 pointer-events-none" />
+                <input type="text" inputMode="numeric" value={form.prizePoolDiamonds}
+                  onChange={e => set("prizePoolDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-yellow-500/30"
+                  style={inputStyle} />
+              </div>
+            </Field>
+            <button type="button"
+              onClick={() => {
+                const placementTotal = form.placementRewards.reduce((s, r) => s + r.diamonds, 0);
+                const bonusTotal = form.bonusRewards.mvpKills + form.bonusRewards.mostDamage + form.bonusRewards.participation;
+                const killTotal = form.perKillDiamonds * Math.max(1, form.maxSlots);
+                set("prizePoolDiamonds", placementTotal + bonusTotal + killTotal);
+              }}
+              className="mt-2 flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all active:scale-95 w-full"
+              style={{ background: "rgba(234,179,8,0.10)", border: "1px solid rgba(234,179,8,0.22)", color: "#fbbf24" }}>
+              <RefreshCw className="w-3.5 h-3.5" />
+              Auto-Calculate Total
+            </button>
+          </div>
+
+          {/* Payout Summary */}
+          {(() => {
+            const placementTotal = form.placementRewards.reduce((s, r) => s + r.diamonds, 0);
+            const bonusTotal = form.bonusRewards.mvpKills + form.bonusRewards.mostDamage + form.bonusRewards.participation;
+            const estKillTotal = form.perKillDiamonds * form.maxSlots;
+            const totalPayout = placementTotal + bonusTotal + estKillTotal;
+            const hasAny = form.placementRewards.length > 0 || bonusTotal > 0 || form.perKillDiamonds > 0;
+            if (!hasAny) return null;
+            const revenue = form.entryFeeDiamonds * form.maxSlots;
+            const margin = revenue - totalPayout;
+            return (
+              <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(234,179,8,0.05)", border: "1px solid rgba(234,179,8,0.15)" }}>
+                <p className="text-[10px] font-bold text-yellow-500/70 uppercase tracking-widest mb-2">Payout Summary</p>
+                {form.placementRewards.map((r, i) => (
+                  <div key={i} className="flex justify-between text-[11px]">
+                    <span className="text-zinc-500">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🏅"} {ordinal(r.place)} Place</span>
+                    <span className="text-zinc-300 font-semibold">💎 {r.diamonds}</span>
+                  </div>
+                ))}
+                {form.perKillDiamonds > 0 && (
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-zinc-500">⚡ Per Kill × {form.maxSlots} slots (est.)</span>
+                    <span className="text-zinc-300 font-semibold">💎 {estKillTotal}</span>
+                  </div>
+                )}
+                {form.bonusRewards.mvpKills > 0 && (
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-zinc-500">🎯 MVP / Most Kills</span>
+                    <span className="text-zinc-300 font-semibold">💎 {form.bonusRewards.mvpKills}</span>
+                  </div>
+                )}
+                {form.bonusRewards.mostDamage > 0 && (
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-zinc-500">💥 Most Damage</span>
+                    <span className="text-zinc-300 font-semibold">💎 {form.bonusRewards.mostDamage}</span>
+                  </div>
+                )}
+                {form.bonusRewards.participation > 0 && (
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-zinc-500">🎁 Participation</span>
+                    <span className="text-zinc-300 font-semibold">💎 {form.bonusRewards.participation}</span>
+                  </div>
+                )}
+                <div className="h-px mt-1" style={{ background: "rgba(234,179,8,0.2)" }} />
+                <div className="flex justify-between text-[12px] font-bold mt-1">
+                  <span className="text-yellow-500/80">Total Payout</span>
+                  <span className="text-yellow-400">💎 {totalPayout}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-zinc-500">Revenue ({form.maxSlots} × {form.entryFeeDiamonds})</span>
+                  <span className="text-zinc-300">💎 {revenue}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-zinc-500">Margin</span>
+                  <span className={margin >= 0 ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
+                    {margin >= 0 ? "+" : ""}{margin} 💎
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── Match Settings ── */}
-        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="rounded-2xl p-4 space-y-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHead icon={Settings} label="Match Settings" color="#06b6d4" />
+
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Team Format">
+            <Field label={<><Users className="w-3 h-3" />Team Format</>}>
               <SelectInput value={form.matchSettings.teamFormat} options={TEAM_FORMATS} onChange={v => { setMs("teamFormat", v); setKnockoutTeamFormat(v); }} />
             </Field>
-            <Field label="Minimum Level">
+            <Field label={<><Shield className="w-3 h-3" />Min Level</>}>
               <TextInput value={form.matchSettings.minLevel} onChange={v => setMs("minLevel", Number(v))} type="number" />
             </Field>
           </div>
-          <Field label="Rounds">
+          <Field label={<><RotateCcw className="w-3 h-3" />Rounds</>}>
             <TextInput value={form.matchSettings.rounds} onChange={v => setMs("rounds", v)} placeholder="e.g. 9 (First to 5 wins)" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="HP">
+            <Field label={<><Heart className="w-3 h-3 text-red-400" />HP</>}>
               <TextInput value={form.matchSettings.hp} onChange={v => setMs("hp", Number(v))} type="number" />
             </Field>
-            <Field label="EP">
+            <Field label={<><Zap className="w-3 h-3 text-cyan-400" />EP</>}>
               <TextInput value={form.matchSettings.ep} onChange={v => setMs("ep", Number(v))} type="number" />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Movement Speed">
+            <Field label={<><Activity className="w-3 h-3" />Movement Speed</>}>
               <TextInput value={form.matchSettings.movementSpeed} onChange={v => setMs("movementSpeed", v)} placeholder="100%" />
             </Field>
-            <Field label="Jump Height">
+            <Field label={<><ArrowUp className="w-3 h-3" />Jump Height</>}>
               <TextInput value={form.matchSettings.jumpHeight} onChange={v => setMs("jumpHeight", v)} placeholder="100%" />
             </Field>
           </div>
+
           <div className="space-y-2">
-            <Toggle value={form.matchSettings.ammoLimit} onChange={v => setMs("ammoLimit", v)} label="Ammo Limit" />
-            <Toggle value={form.matchSettings.gunAttributes} onChange={v => setMs("gunAttributes", v)} label="Gun Attributes" />
-            <Toggle value={form.matchSettings.weaponSkins} onChange={v => setMs("weaponSkins", v)} label="Weapon Skins" />
-            <Toggle value={form.matchSettings.onlyHeadshot} onChange={v => setMs("onlyHeadshot", v)} label="Only Headshot" />
-            <Toggle value={form.matchSettings.emulators} onChange={v => setMs("emulators", v)} label="Emulators Allowed" />
+            <Toggle value={form.matchSettings.ammoLimit} onChange={v => setMs("ammoLimit", v)} label="Ammo Limit" desc="Restrict ammo count per weapon" />
+            <Toggle value={form.matchSettings.gunAttributes} onChange={v => setMs("gunAttributes", v)} label="Gun Attributes" desc="Enable weapon stat bonuses" />
+            <Toggle value={form.matchSettings.weaponSkins} onChange={v => setMs("weaponSkins", v)} label="Weapon Skins" desc="Allow cosmetic weapon skins" />
+            <Toggle value={form.matchSettings.onlyHeadshot} onChange={v => setMs("onlyHeadshot", v)} label="Only Headshot" desc="Damage only from headshots" />
+            <Toggle value={form.matchSettings.emulators} onChange={v => setMs("emulators", v)} label="Emulators Allowed" desc="Allow PC emulator players" />
+            <Toggle value={form.matchSettings.revivalAvailable} onChange={v => setMs("revivalAvailable", v)} label="Revival Available" desc="Players can be revived by teammates" />
+            <Toggle value={form.matchSettings.autoHeal} onChange={v => setMs("autoHeal", v)} label="Auto Heal" desc="HP regenerates automatically" />
+            <Toggle value={form.matchSettings.fallDamage} onChange={v => setMs("fallDamage", v)} label="Fall Damage" desc="Enable fall damage" />
+            <Toggle value={form.matchSettings.friendlyFire} onChange={v => setMs("friendlyFire", v)} label="Friendly Fire" desc="Teammates can damage each other" />
+            <Toggle value={form.matchSettings.vehicles} onChange={v => setMs("vehicles", v)} label="Vehicles" desc="Enable vehicles on the map" />
+            <Toggle value={form.matchSettings.redZone} onChange={v => setMs("redZone", v)} label="Red Zone" desc="Enable airstrike / red zone" />
           </div>
-          <Field label="Win Logic" hint="How the auto-verify system decides the winner after the match">
-            <div className="grid grid-cols-2 gap-2 mt-0.5">
-              {[
-                { val: "standard", icon: "⚔️", label: "Standard", desc: "Highest score wins" },
-                { val: "healing_battle", icon: "💚", label: "Healing Battle", desc: "0 damage = win" },
-              ].map(opt => {
-                const active = (form.matchSettings.winLogic ?? "standard") === opt.val;
-                return (
-                  <button key={opt.val} type="button" onClick={() => setMs("winLogic", opt.val)}
-                    className="flex flex-col gap-0.5 py-2.5 px-3 rounded-xl text-left transition-all active:scale-95"
-                    style={{ background: active ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${active ? "rgba(168,85,247,0.45)" : "rgba(255,255,255,0.08)"}` }}>
-                    <span className="text-base leading-none">{opt.icon}</span>
-                    <span className="text-[11px] font-bold mt-1" style={{ color: active ? "#c084fc" : "#a1a1aa" }}>{opt.label}</span>
-                    <span className="text-[9px] text-zinc-600">{opt.desc}</span>
-                  </button>
-                );
-              })}
+
+          {/* Win Logic — Manual only */}
+          <div>
+            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1.5">Win Logic</label>
+            <p className="text-[10px] text-zinc-600 mb-2">Admin reviews results and manually declares the winner.</p>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: "rgba(168,85,247,0.12)", border: "1.5px solid rgba(168,85,247,0.4)" }}>
+              <span className="text-lg">👑</span>
+              <div>
+                <p className="text-[12px] font-bold" style={{ color: "#c084fc" }}>Manual</p>
+                <p className="text-[10px] text-zinc-500">Admin reviews screenshots & decides winner</p>
+              </div>
             </div>
-          </Field>
+          </div>
+
+          {/* Custom Settings */}
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">⚙️ Custom Settings</p>
+            {form.matchSettings.customSettings.length > 0 && (
+              <div className="flex flex-col gap-1.5 mb-2">
+                {form.matchSettings.customSettings.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                    style={{ background: "rgba(6,182,212,0.07)", border: "1px solid rgba(6,182,212,0.18)" }}>
+                    <span className="text-[11px] font-bold text-cyan-400 flex-1">{s.key}</span>
+                    <span className="text-[11px] text-zinc-300 mr-2">{s.value}</span>
+                    <button type="button"
+                      onClick={() => setMs("customSettings", form.matchSettings.customSettings.filter((_, j) => j !== i))}
+                      className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-red-500/20 transition-all shrink-0"
+                      style={{ color: "#ef4444" }}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input value={customSettingKey} onChange={e => setCustomSettingKey(e.target.value)}
+                placeholder="Setting name…"
+                className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none"
+                style={inputStyle} />
+              <input value={customSettingValue} onChange={e => setCustomSettingValue(e.target.value)}
+                placeholder="Value…"
+                className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none"
+                style={inputStyle} />
+              <button type="button"
+                onClick={() => {
+                  if (!customSettingKey.trim()) return;
+                  setMs("customSettings", [...form.matchSettings.customSettings, { key: customSettingKey.trim(), value: customSettingValue.trim() }]);
+                  setCustomSettingKey(""); setCustomSettingValue("");
+                }}
+                className="shrink-0 flex items-center justify-center w-10 rounded-xl text-white transition-all active:scale-95"
+                style={{ background: "rgba(6,182,212,0.2)", border: "1px solid rgba(6,182,212,0.4)" }}>
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Gameplay Rules ── */}
+        <div className="rounded-2xl p-4 space-y-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <SectionHead icon={Gamepad2} label="Gameplay Rules" color="#22d3ee" />
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { key: "headshotsOnly",      emoji: "🎯", label: "Headshots Only",       desc: "Body shots deal no damage" },
+              { key: "bodyShotsAllowed",   emoji: "🔫", label: "Body Shots Allowed",   desc: "Normal damage hit zones" },
+              { key: "revivalsAllowed",    emoji: "💊", label: "Revivals Allowed",      desc: "Down players can be revived" },
+              { key: "unlimitedAmmo",      emoji: "📦", label: "Unlimited Ammo",        desc: "No ammo constraint" },
+              { key: "airdropsEnabled",    emoji: "📦", label: "Airdrops Enabled",      desc: "Supply drops appear on map" },
+              { key: "vehiclesEnabled",    emoji: "🚗", label: "Vehicles Enabled",      desc: "Vehicles spawn on map" },
+              { key: "characterSkills",    emoji: "⚡", label: "Character Skills",      desc: "Active & passive skills on" },
+              { key: "petsAllowed",        emoji: "🐾", label: "Pets Allowed",          desc: "Pet companions enabled" },
+              { key: "glooWallAllowed",    emoji: "🧱", label: "Gloo Wall Allowed",     desc: "Gloo wall throwable enabled" },
+              { key: "grenadesAllowed",    emoji: "💣", label: "Grenades Allowed",      desc: "Throwable grenades on" },
+              { key: "snipersAllowed",     emoji: "🔭", label: "Snipers Allowed",       desc: "Sniper rifles permitted" },
+              { key: "meleeOnly",          emoji: "🗡️", label: "Melee Only",            desc: "Only fists & melee weapons" },
+            ] as const).map(rule => {
+              const active = !!form.matchSettings.gameplayRules[rule.key];
+              return (
+                <button key={rule.key} type="button"
+                  onClick={() => setMs("gameplayRules", { ...form.matchSettings.gameplayRules, [rule.key]: !active })}
+                  className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-all active:scale-95"
+                  style={{
+                    background: active ? "rgba(34,211,238,0.1)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${active ? "rgba(34,211,238,0.4)" : "rgba(255,255,255,0.08)"}`,
+                  }}>
+                  <span className="text-base leading-none mt-0.5 shrink-0">{rule.emoji}</span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold leading-tight" style={{ color: active ? "#67e8f9" : "#a1a1aa" }}>{rule.label}</p>
+                    <p className="text-[9px] text-zinc-600 leading-tight mt-0.5">{rule.desc}</p>
+                  </div>
+                  <div className="ml-auto shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full" style={{ background: active ? "#22d3ee" : "#3f3f46" }} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active custom gameplay rules */}
+          {Object.entries(form.matchSettings.gameplayRules).filter(([k, v]) => v && !["headshotsOnly","bodyShotsAllowed","revivalsAllowed","unlimitedAmmo","airdropsEnabled","vehiclesEnabled","characterSkills","petsAllowed","glooWallAllowed","grenadesAllowed","snipersAllowed","meleeOnly"].includes(k)).map(([k]) => (
+            <div key={k} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+              style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.25)" }}>
+              <span className="text-[11px] font-bold text-cyan-300 flex-1">✅ {k}</span>
+              <button type="button"
+                onClick={() => { const next = { ...form.matchSettings.gameplayRules }; delete next[k]; setMs("gameplayRules", next); }}
+                className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-red-500/20 shrink-0"
+                style={{ color: "#ef4444" }}>
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+
+          {/* Custom rule input */}
+          <div className="flex gap-2">
+            <input value={customGameplayRule} onChange={e => setCustomGameplayRule(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const k = customGameplayRule.trim();
+                  if (!k) return;
+                  setMs("gameplayRules", { ...form.matchSettings.gameplayRules, [k]: true });
+                  setCustomGameplayRule("");
+                }
+              }}
+              placeholder="Add custom gameplay rule…"
+              className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none"
+              style={inputStyle} />
+            <button type="button"
+              onClick={() => {
+                const k = customGameplayRule.trim();
+                if (!k) return;
+                setMs("gameplayRules", { ...form.matchSettings.gameplayRules, [k]: true });
+                setCustomGameplayRule("");
+              }}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[12px] font-bold text-white transition-all active:scale-95"
+              style={{ background: "rgba(34,211,238,0.18)", border: "1px solid rgba(34,211,238,0.35)" }}>
+              <Plus className="w-3.5 h-3.5" /> Add
+            </button>
+          </div>
+        </div>
+
+        {/* ── Result Rules ── */}
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <SectionHead icon={CheckCircle} label="Result Rules" color="#a855f7" />
+          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Winner Decided By</label>
+          <div className="flex flex-col gap-2">
+            {([
+              { val: "auto_result",           emoji: "⚡", label: "Auto Result System",     desc: "System auto-verifies using kill & score data", color: "#fbbf24" },
+              { val: "admin_verification",    emoji: "👑", label: "Admin Verification",      desc: "Admin manually reviews and declares the winner", color: "#a855f7" },
+              { val: "screenshot_verification", emoji: "📸", label: "Screenshot Verification", desc: "Players submit screenshots; admin validates proof", color: "#06b6d4" },
+            ] as const).map(opt => {
+              const active = (form.matchSettings.winDecidedBy ?? "screenshot_verification") === opt.val;
+              return (
+                <button key={opt.val} type="button" onClick={() => setMs("winDecidedBy", opt.val)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all active:scale-[0.98]"
+                  style={{
+                    background: active ? `${opt.color}18` : "rgba(255,255,255,0.03)",
+                    border: `1.5px solid ${active ? `${opt.color}55` : "rgba(255,255,255,0.08)"}`,
+                  }}>
+                  <span className="text-xl shrink-0">{opt.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold" style={{ color: active ? opt.color : "#a1a1aa" }}>{opt.label}</p>
+                    <p className="text-[10px] text-zinc-600 mt-0.5 leading-snug">{opt.desc}</p>
+                  </div>
+                  <div className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ border: `2px solid ${active ? opt.color : "#3f3f46"}`, background: active ? `${opt.color}33` : "transparent" }}>
+                    {active && <div className="w-2 h-2 rounded-full" style={{ background: opt.color }} />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── Match Rules ── */}
