@@ -376,8 +376,11 @@ export default function EventDetails() {
   const isFull = tm.filledSlots >= tm.maxSlots;
   const t = tm as any;
 
-  const ms: Record<string, string | number | boolean> = (() => {
-    try { return t.matchSettings ? JSON.parse(t.matchSettings) : {}; } catch { return {}; }
+  const ms: Record<string, any> = (() => {
+    try {
+      if (!t.matchSettings) return {};
+      return typeof t.matchSettings === "string" ? JSON.parse(t.matchSettings) : t.matchSettings;
+    } catch { return {}; }
   })();
   const gameModeInfo    = parseGameMode(tm.gameMode ?? "");
   const msTeamFormat    = String(ms.teamFormat ?? (gameModeInfo.teamFormat ?? tm.gameMode));
@@ -393,6 +396,37 @@ export default function EventDetails() {
   const msOnlyHeadshot    = ms.onlyHeadshot  ? "Yes" : "No";
   const msEmulators       = ms.emulators     ? "Allowed" : "Not Allowed";
   const msFixedMatchTime: string | null = (ms.fixedMatchTime as string | undefined) ?? null;
+  const placementRewards: { place: number; amount: number }[] = (() => {
+    if (Array.isArray(ms.placementRewards)) {
+      return ms.placementRewards
+        .map((reward: any, index: number) => ({
+          place: Number(reward?.place) || index + 1,
+          amount: Number(reward?.diamonds) || 0,
+        }))
+        .filter(reward => reward.amount > 0);
+    }
+    // Keep older matches compatible with the previous number[] format.
+    if (Array.isArray(ms.placementPrizes)) {
+      return ms.placementPrizes
+        .map((amount: any, index: number) => ({ place: index + 1, amount: Number(amount) || 0 }))
+        .filter(reward => reward.amount > 0);
+    }
+    return [];
+  })();
+  const bonusRewards = {
+    mvpKills: Number(ms.bonusRewards?.mvpKills) || 0,
+    mostDamage: Number(ms.bonusRewards?.mostDamage) || 0,
+    participation: Number(ms.bonusRewards?.participation) || 0,
+  };
+  const bonusRewardItems = [
+    { label: "MVP / Most Kills", icon: "🎯", amount: bonusRewards.mvpKills },
+    { label: "Most Damage", icon: "💥", amount: bonusRewards.mostDamage },
+    { label: "Participation Reward", icon: "🎁", amount: bonusRewards.participation },
+  ].filter(reward => reward.amount > 0);
+  const configuredRewardTotal =
+    placementRewards.reduce((total, reward) => total + reward.amount, 0) +
+    bonusRewardItems.reduce((total, reward) => total + reward.amount, 0);
+  const resultMethod = String(ms.winDecidedBy ?? "");
 
   const roomUnlocked = !roomOpenCountdown;
   const showRoomDetails = tm.isJoined && tm.roomId && t.credentialsReleased;
@@ -739,41 +773,74 @@ export default function EventDetails() {
              </div>
            )}
 
-           {/* Placement Prizes breakdown */}
-           {(() => {
-             const prizes: number[] = Array.isArray(ms.placementPrizes) ? (ms.placementPrizes as number[]) : [];
-             const active = prizes.map((v, i) => ({ place: i + 1, amount: typeof v === "number" ? v : 0 })).filter(p => p.amount > 0);
-             if (active.length === 0) return null;
-             const ord = (n: number) => { const s = n % 100; if (s >= 11 && s <= 13) return `${n}th`; switch (n % 10) { case 1: return `${n}st`; case 2: return `${n}nd`; case 3: return `${n}rd`; default: return `${n}th`; } };
-             return (
-               <div className="rounded-2xl p-4 border border-amber-500/15 bg-gradient-to-b from-amber-500/5 to-transparent">
-                 <div className="flex items-center gap-2 mb-3">
-                   <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                   <p className="text-[11px] font-bold text-amber-400/80 uppercase tracking-wider">Placement Prizes</p>
-                 </div>
-                 <div className="space-y-1.5">
-                   {active.map(({ place, amount }) => {
-                     const label = ord(place);
-                     const medalColor = place === 1 ? "#fbbf24" : place === 2 ? "#9ca3af" : place === 3 ? "#d97706" : "#71717a";
-                     const rowBg = place === 1 ? "rgba(251,191,36,0.10)" : place === 2 ? "rgba(161,161,170,0.08)" : place === 3 ? "rgba(217,119,6,0.09)" : "rgba(255,255,255,0.03)";
-                     return (
-                       <div key={place} className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                         style={{ background: rowBg, border: `1px solid ${medalColor}25` }}>
-                         <div className="w-8 shrink-0 text-center">
-                           <span className="text-[12px] font-black tabular-nums" style={{ color: medalColor }}>{label}</span>
-                         </div>
-                         <p className="flex-1 text-[12px] text-zinc-400 font-medium">{label} Place</p>
-                         <div className="flex items-center gap-1 shrink-0">
-                           <span className="text-[14px] font-black text-white tabular-nums">{amount}</span>
-                           <CoinIcon className="w-3.5 h-3.5 text-amber-400" />
-                         </div>
-                       </div>
-                     );
-                   })}
-                 </div>
-               </div>
-             );
-           })()}
+            {/* Full rewards breakdown configured by the admin */}
+            {(placementRewards.length > 0 || bonusRewardItems.length > 0 || configuredRewardTotal > 0 || resultMethod) && (
+              <div className="space-y-3">
+                {placementRewards.length > 0 && (
+                  <div className="rounded-2xl p-4 border border-amber-500/15 bg-gradient-to-b from-amber-500/5 to-transparent">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                      <p className="text-[11px] font-bold text-amber-400/80 uppercase tracking-wider">Placement Prizes</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {placementRewards.map(({ place, amount }) => {
+                        const label = (() => {
+                          const suffix = place % 100 >= 11 && place % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[place % 10] ?? "th";
+                          return `${place}${suffix}`;
+                        })();
+                        const medal = place === 1 ? "🥇" : place === 2 ? "🥈" : place === 3 ? "🥉" : "🏅";
+                        const medalColor = place === 1 ? "#fbbf24" : place === 2 ? "#9ca3af" : place === 3 ? "#d97706" : "#71717a";
+                        const rowBg = place === 1 ? "rgba(251,191,36,0.10)" : place === 2 ? "rgba(161,161,170,0.08)" : place === 3 ? "rgba(217,119,6,0.09)" : "rgba(255,255,255,0.03)";
+                        return (
+                          <div key={`${place}-${amount}`} className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                            style={{ background: rowBg, border: `1px solid ${medalColor}25` }}>
+                            <span className="text-base w-7 text-center">{medal}</span>
+                            <p className="flex-1 text-[12px] text-zinc-400 font-medium">{label} Place</p>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="text-[14px] font-black text-white tabular-nums">{amount}</span>
+                              <CoinIcon className="w-3.5 h-3.5 text-amber-400" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {bonusRewardItems.length > 0 && (
+                  <div className="rounded-2xl p-4 border border-violet-500/15 bg-gradient-to-b from-violet-500/5 to-transparent">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-3.5 h-3.5 text-violet-400" />
+                      <p className="text-[11px] font-bold text-violet-400/80 uppercase tracking-wider">Bonus Rewards</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {bonusRewardItems.map(({ label, icon, amount }) => (
+                        <div key={label} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                          <span className="text-base w-7 text-center">{icon}</span>
+                          <p className="flex-1 text-[12px] text-zinc-400 font-medium">{label}</p>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[14px] font-black text-white tabular-nums">{amount}</span>
+                            <CoinIcon className="w-3.5 h-3.5 text-violet-400" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {resultMethod && (
+                  <div className="rounded-2xl px-4 py-3 border border-cyan-500/15 bg-cyan-500/[0.04] flex items-center gap-3">
+                    <CheckCircle className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-bold text-cyan-400/70 uppercase tracking-wider">Winner Decided By</p>
+                      <p className="text-[12px] font-bold text-white mt-0.5">
+                        {resultMethod === "auto_result" ? "Auto Result System" : resultMethod === "admin_verification" ? "Admin Verification" : resultMethod === "screenshot_verification" ? "Screenshot Verification" : resultMethod}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
         </div>
 
         {/* ── 13. Your 1v1 Match (only when matchmaking has a real match) ── */}
