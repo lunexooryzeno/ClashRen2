@@ -6,6 +6,7 @@ import {
   CheckCircle, Gamepad2, Swords, Zap, Users, Globe,
   Clock, Calendar, Star, MapPin, Tag, FileText,
   Plus, Trash2, Palette, ChevronDown, Key, Unlock,
+  Heart, Activity, ArrowUp, RotateCcw,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { useToast } from "@/hooks/use-toast";
@@ -47,7 +48,7 @@ function resolveImageUrl(url: string | null | undefined): string {
 const MAPS = ["Bermuda", "Kalahari", "Purgatory", "Nexterra", "Alpine", "Bermuda Remastered", "Iron Cage"];
 const REGIONS = ["India", "Asia", "Europe", "North America", "South America", "Global"];
 const DURATIONS = ["10 min", "15 min", "20 min", "25 min", "30 min", "45 min", "1 hour"];
-const TEAM_FORMATS = ["Solo", "Duo", "Squad"];
+const TEAM_FORMATS = ["Solo", "Duo", "Squad", "Clash Squad"];
 const STATUS_OPTIONS = ["upcoming", "ongoing", "completed", "cancelled"];
 const RULE_TEMPLATES = [
   "No teaming allowed",
@@ -90,6 +91,12 @@ interface MatchSettingsForm {
   ammoLimit: boolean; gunAttributes: boolean; weaponSkins: boolean;
   onlyHeadshot: boolean; emulators: boolean; showCountdown: boolean;
   autoDeleteCondition: string; autoDeleteMinValue: number;
+  winLogic: string;
+  revivalAvailable: boolean; autoHeal: boolean; fallDamage: boolean;
+  friendlyFire: boolean; vehicles: boolean; redZone: boolean;
+  gameplayRules: Record<string, boolean>;
+  winDecidedBy: string;
+  customSettings: { key: string; value: string }[];
 }
 const DEFAULT_MATCH_SETTINGS: MatchSettingsForm = {
   teamFormat: "Solo", minLevel: 40, rounds: "9 (First to 5 wins)",
@@ -97,6 +104,11 @@ const DEFAULT_MATCH_SETTINGS: MatchSettingsForm = {
   ammoLimit: false, gunAttributes: false, weaponSkins: false,
   onlyHeadshot: false, emulators: false, showCountdown: false,
   autoDeleteCondition: "none", autoDeleteMinValue: 5,
+  winLogic: "manual",
+  revivalAvailable: false, autoHeal: false, fallDamage: true,
+  friendlyFire: false, vehicles: false, redZone: true,
+  gameplayRules: {}, winDecidedBy: "screenshot_verification",
+  customSettings: [],
 };
 
 interface TournamentForm {
@@ -110,6 +122,8 @@ interface TournamentForm {
   estimatedDuration: string; matchSettings: MatchSettingsForm;
   credentialUnlockMinutes: number | null;
   fixedMatchTime: string | null; // e.g. "20:00" — fixed match start time (optional)
+  placementRewards: { place: number; diamonds: number }[];
+  bonusRewards: { mvpKills: number; mostDamage: number; participation: number };
 }
 
 const BADGE_COLORS = [
@@ -217,13 +231,19 @@ export default function AdminKnockoutEditPage() {
     maxSlots: 100, perKillDiamonds: 0,
     imageUrl: "", rules: "", shortTitle: "", statusLabel: "", statusColor: "green",
     description: "", map: "Bermuda", region: "India", estimatedDuration: "20 min",
-    matchSettings: { ...DEFAULT_MATCH_SETTINGS }, credentialUnlockMinutes: null,
+     matchSettings: { ...DEFAULT_MATCH_SETTINGS }, credentialUnlockMinutes: null,
+     fixedMatchTime: null,
+     placementRewards: [],
+     bonusRewards: { mvpKills: 0, mostDamage: 0, participation: 0 },
   });
   const [knockoutTeamFormat, setKnockoutTeamFormat] = useState("Solo");
   const [shareMode, setShareMode] = useState<"room_only" | "ff_only" | "both">("both");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [customRuleInput, setCustomRuleInput] = useState("");
+  const [customSettingKey, setCustomSettingKey] = useState("");
+  const [customSettingValue, setCustomSettingValue] = useState("");
+  const [customGameplayRule, setCustomGameplayRule] = useState("");
 
   function set<K extends keyof TournamentForm>(k: K, v: TournamentForm[K]) {
     setForm(prev => ({ ...prev, [k]: v }));
@@ -253,8 +273,13 @@ export default function AdminKnockoutEditPage() {
         const dt = t.startTime ? new Date(t.startTime) : new Date();
         const pad = (n: number) => String(n).padStart(2, "0");
 
-        let ms: MatchSettingsForm & Record<string, any> = { ...DEFAULT_MATCH_SETTINGS };
-        try { if (t.matchSettings) ms = { ...DEFAULT_MATCH_SETTINGS, ...JSON.parse(t.matchSettings) }; } catch {}
+         let ms: MatchSettingsForm & Record<string, any> = { ...DEFAULT_MATCH_SETTINGS };
+         try {
+           if (t.matchSettings) {
+             const parsed = typeof t.matchSettings === "string" ? JSON.parse(t.matchSettings) : t.matchSettings;
+             ms = { ...DEFAULT_MATCH_SETTINGS, ...parsed };
+           }
+         } catch {}
 
         // Reconstruct slotEntries from stored timeSlots (new format) or fall back to startTime
         let slotEntries: SlotEntry[] = [];
@@ -301,6 +326,16 @@ export default function AdminKnockoutEditPage() {
           matchSettings: { ...(restMs as MatchSettingsForm), teamFormat: derivedFormat },
           credentialUnlockMinutes: t.credentialUnlockMinutes ?? null,
           fixedMatchTime: savedFixedMatchTime ?? null,
+           placementRewards: Array.isArray(ms.placementRewards)
+             ? ms.placementRewards.map((r: any, i: number) => ({ place: Number(r?.place) || i + 1, diamonds: Number(r?.diamonds) || 0 }))
+             : Array.isArray(ms.placementPrizes)
+               ? ms.placementPrizes.map((amount: any, i: number) => ({ place: i + 1, diamonds: Number(amount) || 0 }))
+               : [],
+           bonusRewards: {
+             mvpKills: Number(ms.bonusRewards?.mvpKills) || 0,
+             mostDamage: Number(ms.bonusRewards?.mostDamage) || 0,
+             participation: Number(ms.bonusRewards?.participation) || 0,
+           },
         });
       })
       .catch((e: unknown) => toast({ title: "Failed to load match", description: e instanceof Error ? e.message : String(e), variant: "destructive" }))
@@ -370,6 +405,8 @@ export default function AdminKnockoutEditPage() {
         slotEndTime: firstSlot.endTime,
         registrationCloseMinutes: form.registrationCloseMinutes,
         fixedMatchTime: form.fixedMatchTime ?? null,
+       placementRewards: form.placementRewards,
+       bonusRewards: form.bonusRewards,
       });
 
       const body = {
@@ -849,7 +886,7 @@ export default function AdminKnockoutEditPage() {
         </div>
 
         {/* ── Prize Settings ── */}
-        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="rounded-2xl p-4 space-y-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHead icon={CoinIcon} label="Prize Settings" color="#eab308" />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Entry Fee">
@@ -857,27 +894,7 @@ export default function AdminKnockoutEditPage() {
                 <CoinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-400 pointer-events-none" />
                 <input type="text" inputMode="numeric" value={form.entryFeeDiamonds}
                   onChange={e => set("entryFeeDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-yellow-500/30"
-                  style={inputStyle} />
-              </div>
-            </Field>
-            <Field label="Prize Pool">
-              <div className="relative">
-                <Star className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 pointer-events-none" />
-                <input type="text" inputMode="numeric" value={form.prizePoolDiamonds}
-                  onChange={e => set("prizePoolDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-yellow-500/30"
-                  style={inputStyle} />
-              </div>
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Per Kill Bonus">
-              <div className="relative">
-                <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400 pointer-events-none" />
-                <input type="text" inputMode="numeric" value={form.perKillDiamonds}
-                  onChange={e => set("perKillDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none"
                   style={inputStyle} />
               </div>
             </Field>
@@ -891,10 +908,90 @@ export default function AdminKnockoutEditPage() {
               </div>
             </Field>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Total Prize Pool Cap">
+              <div className="relative">
+                <Star className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 pointer-events-none" />
+                <input type="text" inputMode="numeric" value={form.prizePoolDiamonds}
+                  onChange={e => set("prizePoolDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none"
+                  style={inputStyle} />
+              </div>
+            </Field>
+            <Field label="Per Kill Bonus">
+              <div className="relative">
+                <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400 pointer-events-none" />
+                <input type="text" inputMode="numeric" value={form.perKillDiamonds}
+                  onChange={e => set("perKillDiamonds", Number(e.target.value.replace(/[^0-9]/g, "")))}
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-[13px] text-white focus:outline-none"
+                  style={inputStyle} />
+              </div>
+            </Field>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Placement Rewards</p>
+              <button type="button"
+                onClick={() => set("placementRewards", [...form.placementRewards, { place: form.placementRewards.length + 1, diamonds: 0 }])}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                style={{ background: "rgba(234,179,8,0.15)", border: "1px solid rgba(234,179,8,0.3)", color: "#fbbf24" }}>
+                <Plus className="w-3 h-3" /> Add Place
+              </button>
+            </div>
+            <div className="space-y-2">
+              {form.placementRewards.length === 0 && <p className="text-[11px] text-zinc-600 italic">No placement rewards set.</p>}
+              {form.placementRewards.map((reward, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-16 text-[11px] font-bold text-amber-400">{reward.place}{reward.place === 1 ? "st" : reward.place === 2 ? "nd" : reward.place === 3 ? "rd" : "th"}</span>
+                  <div className="relative flex-1">
+                    <CoinIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-yellow-400 pointer-events-none" />
+                    <input type="text" inputMode="numeric" value={reward.diamonds}
+                      onChange={e => set("placementRewards", form.placementRewards.map((x, j) => j === i ? { ...x, diamonds: Number(e.target.value.replace(/[^0-9]/g, "")) } : x))}
+                      className="w-full pl-8 pr-3 py-2 rounded-xl text-[13px] text-white focus:outline-none"
+                      style={inputStyle} />
+                  </div>
+                  <button type="button" onClick={() => set("placementRewards", form.placementRewards.filter((_, j) => j !== i).map((x, j) => ({ ...x, place: j + 1 })))}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: "#ef4444" }}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Bonus Rewards</p>
+            <div className="space-y-2">
+              {([
+                { key: "mvpKills" as const, label: "MVP / Most Kills" },
+                { key: "mostDamage" as const, label: "Most Damage" },
+                { key: "participation" as const, label: "Participation Reward" },
+              ]).map(reward => (
+                <div key={reward.key} className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span className="flex-1 text-[12px] text-zinc-300">{reward.label}</span>
+                  <input type="text" inputMode="numeric" value={form.bonusRewards[reward.key]}
+                    onChange={e => set("bonusRewards", { ...form.bonusRewards, [reward.key]: Number(e.target.value.replace(/[^0-9]/g, "")) })}
+                    className="w-24 px-2.5 py-2 rounded-lg text-[13px] text-white focus:outline-none" style={inputStyle} />
+                  <CoinIcon className="w-3.5 h-3.5 text-yellow-400" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <button type="button"
+            onClick={() => set("prizePoolDiamonds",
+              form.placementRewards.reduce((sum, reward) => sum + reward.diamonds, 0) +
+              form.bonusRewards.mvpKills + form.bonusRewards.mostDamage + form.bonusRewards.participation +
+              form.perKillDiamonds * Math.max(1, form.maxSlots))}
+            className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl text-[12px] font-bold"
+            style={{ background: "rgba(234,179,8,0.10)", border: "1px solid rgba(234,179,8,0.22)", color: "#fbbf24" }}>
+            <RefreshCw className="w-3.5 h-3.5" /> Auto-Calculate Total
+          </button>
         </div>
 
         {/* ── Match Settings ── */}
-        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="rounded-2xl p-4 space-y-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHead icon={Settings} label="Match Settings" color="#06b6d4" />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Team Format">
@@ -908,27 +1005,88 @@ export default function AdminKnockoutEditPage() {
             <TextInput value={form.matchSettings.rounds} onChange={v => setMs("rounds", v)} placeholder="e.g. 9 (First to 5 wins)" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="HP">
-              <TextInput value={form.matchSettings.hp} onChange={v => setMs("hp", Number(v))} type="number" />
-            </Field>
-            <Field label="EP">
-              <TextInput value={form.matchSettings.ep} onChange={v => setMs("ep", Number(v))} type="number" />
-            </Field>
+            <Field label="HP"><TextInput value={form.matchSettings.hp} onChange={v => setMs("hp", Number(v))} type="number" /></Field>
+            <Field label="EP"><TextInput value={form.matchSettings.ep} onChange={v => setMs("ep", Number(v))} type="number" /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Movement Speed">
-              <TextInput value={form.matchSettings.movementSpeed} onChange={v => setMs("movementSpeed", v)} placeholder="100%" />
-            </Field>
-            <Field label="Jump Height">
-              <TextInput value={form.matchSettings.jumpHeight} onChange={v => setMs("jumpHeight", v)} placeholder="100%" />
-            </Field>
+            <Field label="Movement Speed"><TextInput value={form.matchSettings.movementSpeed} onChange={v => setMs("movementSpeed", v)} placeholder="100%" /></Field>
+            <Field label="Jump Height"><TextInput value={form.matchSettings.jumpHeight} onChange={v => setMs("jumpHeight", v)} placeholder="100%" /></Field>
           </div>
           <div className="space-y-2">
-            <Toggle value={form.matchSettings.ammoLimit} onChange={v => setMs("ammoLimit", v)} label="Ammo Limit" />
-            <Toggle value={form.matchSettings.gunAttributes} onChange={v => setMs("gunAttributes", v)} label="Gun Attributes" />
-            <Toggle value={form.matchSettings.weaponSkins} onChange={v => setMs("weaponSkins", v)} label="Weapon Skins" />
-            <Toggle value={form.matchSettings.onlyHeadshot} onChange={v => setMs("onlyHeadshot", v)} label="Only Headshot" />
-            <Toggle value={form.matchSettings.emulators} onChange={v => setMs("emulators", v)} label="Emulators Allowed" />
+            <Toggle value={form.matchSettings.ammoLimit} onChange={v => setMs("ammoLimit", v)} label="Ammo Limit" desc="Restrict ammo count per weapon" />
+            <Toggle value={form.matchSettings.gunAttributes} onChange={v => setMs("gunAttributes", v)} label="Gun Attributes" desc="Enable weapon stat bonuses" />
+            <Toggle value={form.matchSettings.weaponSkins} onChange={v => setMs("weaponSkins", v)} label="Weapon Skins" desc="Allow cosmetic weapon skins" />
+            <Toggle value={form.matchSettings.onlyHeadshot} onChange={v => setMs("onlyHeadshot", v)} label="Only Headshot" desc="Damage only from headshots" />
+            <Toggle value={form.matchSettings.emulators} onChange={v => setMs("emulators", v)} label="Emulators Allowed" desc="Allow PC emulator players" />
+            <Toggle value={form.matchSettings.revivalAvailable} onChange={v => setMs("revivalAvailable", v)} label="Revival Available" desc="Players can be revived by teammates" />
+            <Toggle value={form.matchSettings.autoHeal} onChange={v => setMs("autoHeal", v)} label="Auto Heal" desc="HP regenerates automatically" />
+            <Toggle value={form.matchSettings.fallDamage} onChange={v => setMs("fallDamage", v)} label="Fall Damage" desc="Enable fall damage" />
+            <Toggle value={form.matchSettings.friendlyFire} onChange={v => setMs("friendlyFire", v)} label="Friendly Fire" desc="Teammates can damage each other" />
+            <Toggle value={form.matchSettings.vehicles} onChange={v => setMs("vehicles", v)} label="Vehicles" desc="Enable vehicles on the map" />
+            <Toggle value={form.matchSettings.redZone} onChange={v => setMs("redZone", v)} label="Red Zone" desc="Enable airstrike / red zone" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Win Logic</p>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "rgba(168,85,247,0.12)", border: "1.5px solid rgba(168,85,247,0.4)" }}>
+              <span className="text-lg">👑</span>
+              <div><p className="text-[12px] font-bold text-purple-300">Manual</p><p className="text-[10px] text-zinc-500">Admin reviews results and declares the winner</p></div>
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Custom Settings</p>
+            {form.matchSettings.customSettings.map((setting, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl mb-1.5" style={{ background: "rgba(6,182,212,0.07)", border: "1px solid rgba(6,182,212,0.18)" }}>
+                <span className="text-[11px] font-bold text-cyan-400 flex-1">{setting.key}</span>
+                <span className="text-[11px] text-zinc-300">{setting.value}</span>
+                <button type="button" onClick={() => setMs("customSettings", form.matchSettings.customSettings.filter((_, j) => j !== i))} className="text-red-400"><X className="w-3 h-3" /></button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <input value={customSettingKey} onChange={e => setCustomSettingKey(e.target.value)} placeholder="Setting name…" className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none" style={inputStyle} />
+              <input value={customSettingValue} onChange={e => setCustomSettingValue(e.target.value)} placeholder="Value…" className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none" style={inputStyle} />
+              <button type="button" onClick={() => { if (!customSettingKey.trim()) return; setMs("customSettings", [...form.matchSettings.customSettings, { key: customSettingKey.trim(), value: customSettingValue.trim() }]); setCustomSettingKey(""); setCustomSettingValue(""); }} className="w-10 rounded-xl flex items-center justify-center text-cyan-300" style={{ background: "rgba(6,182,212,0.2)", border: "1px solid rgba(6,182,212,0.4)" }}><Plus className="w-3.5 h-3.5" /></button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Gameplay Rules ── */}
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <SectionHead icon={Gamepad2} label="Gameplay Rules" color="#22d3ee" />
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ["headshotsOnly", "🎯", "Headshots Only"], ["bodyShotsAllowed", "🔫", "Body Shots Allowed"],
+              ["revivalsAllowed", "💊", "Revivals Allowed"], ["unlimitedAmmo", "📦", "Unlimited Ammo"],
+              ["airdropsEnabled", "🛩️", "Airdrops Enabled"], ["vehiclesEnabled", "🚗", "Vehicles Enabled"],
+              ["characterSkills", "⚡", "Character Skills Allowed"], ["petsAllowed", "🐾", "Pets Allowed"],
+              ["glooWallAllowed", "🧱", "Gloo Wall Allowed"], ["grenadesAllowed", "💣", "Grenades Allowed"],
+              ["snipersAllowed", "🔭", "Snipers Allowed"], ["meleeOnly", "🗡️", "Melee Only"],
+            ] as const).map(([key, emoji, label]) => {
+              const active = !!form.matchSettings.gameplayRules[key];
+              return <button key={key} type="button" onClick={() => setMs("gameplayRules", { ...form.matchSettings.gameplayRules, [key]: !active })} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-left" style={{ background: active ? "rgba(34,211,238,0.1)" : "rgba(255,255,255,0.03)", border: `1px solid ${active ? "rgba(34,211,238,0.4)" : "rgba(255,255,255,0.08)"}` }}><span>{emoji}</span><span className="text-[11px] font-bold" style={{ color: active ? "#67e8f9" : "#a1a1aa" }}>{label}</span></button>;
+            })}
+          </div>
+          {Object.entries(form.matchSettings.gameplayRules).filter(([key, enabled]) => enabled && !["headshotsOnly","bodyShotsAllowed","revivalsAllowed","unlimitedAmmo","airdropsEnabled","vehiclesEnabled","characterSkills","petsAllowed","glooWallAllowed","grenadesAllowed","snipersAllowed","meleeOnly"].includes(key)).map(([key]) => (
+            <div key={key} className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.25)" }}><span className="text-[11px] text-cyan-300 flex-1">✅ {key}</span><button type="button" onClick={() => { const next = { ...form.matchSettings.gameplayRules }; delete next[key]; setMs("gameplayRules", next); }} className="text-red-400"><X className="w-3 h-3" /></button></div>
+          ))}
+          <div className="flex gap-2">
+            <input value={customGameplayRule} onChange={e => setCustomGameplayRule(e.target.value)} placeholder="Add custom gameplay rule…" className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white placeholder:text-zinc-600 focus:outline-none" style={inputStyle} />
+            <button type="button" onClick={() => { const key = customGameplayRule.trim(); if (!key) return; setMs("gameplayRules", { ...form.matchSettings.gameplayRules, [key]: true }); setCustomGameplayRule(""); }} className="px-4 rounded-xl text-[12px] font-bold text-cyan-200" style={{ background: "rgba(34,211,238,0.18)", border: "1px solid rgba(34,211,238,0.35)" }}><Plus className="w-3.5 h-3.5 inline mr-1" />Add</button>
+          </div>
+        </div>
+
+        {/* ── Result Rules ── */}
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <SectionHead icon={CheckCircle} label="Result Rules" color="#a855f7" />
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Winner Decided By</p>
+          <div className="space-y-2">
+            {([
+              ["auto_result", "⚡", "Auto Result System", "System verifies kill & score data"],
+              ["admin_verification", "👑", "Admin Verification", "Admin manually declares the winner"],
+              ["screenshot_verification", "📸", "Screenshot Verification", "Admin validates submitted screenshots"],
+            ] as const).map(([value, emoji, label, description]) => {
+              const active = form.matchSettings.winDecidedBy === value;
+              return <button key={value} type="button" onClick={() => setMs("winDecidedBy", value)} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left" style={{ background: active ? "rgba(168,85,247,0.12)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${active ? "rgba(168,85,247,0.45)" : "rgba(255,255,255,0.08)"}` }}><span className="text-xl">{emoji}</span><span className="flex-1"><span className="block text-[12px] font-bold" style={{ color: active ? "#c084fc" : "#a1a1aa" }}>{label}</span><span className="block text-[10px] text-zinc-600">{description}</span></span><span className="w-4 h-4 rounded-full border-2" style={{ borderColor: active ? "#a855f7" : "#3f3f46", background: active ? "#a855f733" : "transparent" }} /></button>;
+            })}
           </div>
         </div>
 

@@ -963,7 +963,7 @@ export default function EventDetails() {
                 </div>
                 <div className="p-3.5 flex flex-col gap-1">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Map</span>
-                  <span className="text-[13px] font-bold text-white">{tm.mapName}</span>
+                  <span className="text-[13px] font-bold text-white">{t.map ?? (tm as any).mapName ?? "—"}</span>
                 </div>
                 <div className="p-3.5 flex flex-col gap-1">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">Team Format</span>
