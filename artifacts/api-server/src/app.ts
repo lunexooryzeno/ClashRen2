@@ -173,23 +173,35 @@ app.get("/api/users/uploads/avatars/:filename", (req, res, next) => {
   res.sendFile(filePath, { maxAge: "7d", immutable: false });
 });
 
-// Serve uploaded tournament/match images
-app.use(
-  "/api/admin/tournaments/uploads",
-  express.static(join(UPLOADS_DIR, "tournaments"), {
-    maxAge: "7d",
-    immutable: false,
-  }),
-);
+// Serve uploaded tournament/match images.
+// Use the same multi-candidate path resolution as banners and avatars so the
+// route works whether the server runs from the source tree, the compiled bundle
+// in api-server/dist/, or a standalone Hostinger deployment.
+app.get("/api/admin/tournaments/uploads/:filename", (req, res, next) => {
+  const filename = basename(req.params.filename);
+  const candidates = [
+    join(UPLOADS_DIR, "tournaments", filename),
+    join(process.cwd(), "..", "data", "uploads", "tournaments", filename),
+    join(process.cwd(), "..", "..", "artifacts", "data", "uploads", "tournaments", filename),
+  ];
+  const filePath = candidates.find((candidate) => existsSync(candidate));
+  if (!filePath) { next(); return; }
+  res.sendFile(filePath, { maxAge: "7d", immutable: false });
+});
 
-// Serve dispute screenshot uploads
-app.use(
-  "/api/slots/uploads/disputes",
-  express.static(join(UPLOADS_DIR, "disputes"), {
-    maxAge: "7d",
-    immutable: false,
-  }),
-);
+// Serve dispute screenshot uploads.
+// Same multi-candidate resolution as above.
+app.get("/api/slots/uploads/disputes/:filename", (req, res, next) => {
+  const filename = basename(req.params.filename);
+  const candidates = [
+    join(UPLOADS_DIR, "disputes", filename),
+    join(process.cwd(), "..", "data", "uploads", "disputes", filename),
+    join(process.cwd(), "..", "..", "artifacts", "data", "uploads", "disputes", filename),
+  ];
+  const filePath = candidates.find((candidate) => existsSync(candidate));
+  if (!filePath) { next(); return; }
+  res.sendFile(filePath, { maxAge: "7d", immutable: false });
+});
 
 app.use("/api", router);
 
