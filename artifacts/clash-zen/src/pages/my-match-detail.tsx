@@ -793,6 +793,20 @@ export default function MyMatchDetailPage() {
           </div>
         )}
 
+        {data && t.assignment?.teamNumber != null && (
+          <div className="mb-4 rounded-2xl p-4 flex items-center gap-3" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.28)" }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: "rgba(168,85,247,0.16)" }}>📍</div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-violet-300">Your Assignment</p>
+              <p className="text-[15px] font-black text-white mt-0.5">
+                Team / Slot {t.assignment.teamNumber}
+                {t.assignment.memberNumber != null && <span className="text-violet-300"> · Member {t.assignment.memberNumber}</span>}
+              </p>
+              <p className="text-[11px] text-zinc-400 mt-1">Please be present in your assigned slot/team before the match starts.</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Rules ── */}
         {data && (
           <div className="mb-4">

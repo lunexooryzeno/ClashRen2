@@ -61,13 +61,29 @@ interface MatchMeta {
   timeSlots: TimeSlot[];
 }
 
-type MatchType = "1v1" | "2v2" | "4v4";
+type TeamSize = "solo" | "duo" | "trio" | "squad" | "5-player" | "6-player";
+type MatchFormat = "none" | "1v1" | "2v2" | "3v3" | "4v4" | "5v5" | "6v6";
 
-const MATCH_TYPE_SIZES: Record<MatchType, number> = {
-  "1v1": 1,
-  "2v2": 2,
-  "4v4": 4,
+const TEAM_SIZE_VALUES: TeamSize[] = ["solo", "duo", "trio", "squad", "5-player", "6-player"];
+const TEAM_SIZE_LABELS: Record<TeamSize, string> = {
+  solo: "Solo", duo: "Duo", trio: "Trio", squad: "Squad (4)", "5-player": "5-player", "6-player": "6-player",
 };
+const TEAM_SIZE_COUNTS: Record<TeamSize, number> = {
+  solo: 1, duo: 2, trio: 3, squad: 4, "5-player": 5, "6-player": 6,
+};
+const MATCH_FORMAT_VALUES: MatchFormat[] = ["none", "1v1", "2v2", "3v3", "4v4", "5v5", "6v6"];
+
+function formatLabel(format: MatchFormat): string {
+  return format === "none" ? "None" : format;
+}
+
+function formatTeamSize(teamSize: TeamSize): number {
+  return TEAM_SIZE_COUNTS[teamSize];
+}
+
+function isCompatibleFormat(teamSize: TeamSize, format: MatchFormat): boolean {
+  return format === "none" || format === `${TEAM_SIZE_COUNTS[teamSize]}v${TEAM_SIZE_COUNTS[teamSize]}`;
+}
 
 function formatSlotTime(slot: TimeSlot): string {
   try {
@@ -86,12 +102,12 @@ interface MatchRow {
   scheduledTime: string | null;
 }
 
-function makeEmptyRow(type: MatchType): MatchRow {
-  const size = MATCH_TYPE_SIZES[type];
+function makeEmptyRow(teamSize: TeamSize, format: MatchFormat): MatchRow {
+  const size = formatTeamSize(teamSize);
   return {
     id: Math.random().toString(36).slice(2),
     teamA: Array(size).fill(null),
-    teamB: Array(size).fill(null),
+    teamB: format === "none" ? [] : Array(size).fill(null),
     scheduledTime: null,
   };
 }
@@ -109,25 +125,38 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 function buildShuffledRows(
   playerIds: number[],
-  matchType: MatchType,
+  teamSize: TeamSize,
+  format: MatchFormat,
 ): { newRows: MatchRow[]; unassigned: number[] } {
-  const size = MATCH_TYPE_SIZES[matchType];
-  const perMatch = size * 2;
+  const size = formatTeamSize(teamSize);
   const shuffled = shuffleArray(playerIds);
+  const teams: number[][] = [];
+  for (let i = 0; i < shuffled.length; i += size) teams.push(shuffled.slice(i, i + size));
   const newRows: MatchRow[] = [];
 
-  for (let i = 0; i + perMatch <= shuffled.length; i += perMatch) {
-    const group = shuffled.slice(i, i + perMatch);
-    newRows.push({
-      id: Math.random().toString(36).slice(2),
-      teamA: group.slice(0, size),
-      teamB: group.slice(size, perMatch),
-      scheduledTime: null,
-    });
+  if (format === "none") {
+    for (const team of teams) {
+      newRows.push({
+        id: Math.random().toString(36).slice(2),
+        teamA: Array(size).fill(null).map((_, i) => team[i] ?? null),
+        teamB: [],
+        scheduledTime: null,
+      });
+    }
+  } else {
+    for (let i = 0; i < teams.length; i += 2) {
+      const teamA = teams[i] ?? [];
+      const teamB = teams[i + 1] ?? [];
+      newRows.push({
+        id: Math.random().toString(36).slice(2),
+        teamA: Array(size).fill(null).map((_, j) => teamA[j] ?? null),
+        teamB: Array(size).fill(null).map((_, j) => teamB[j] ?? null),
+        scheduledTime: null,
+      });
+    }
   }
 
-  const unassigned = shuffled.slice(newRows.length * perMatch);
-  return { newRows, unassigned };
+  return { newRows, unassigned: [] };
 }
 
 /* ─── Confirmation Dialog ────────────────────────────────────── */
@@ -285,15 +314,16 @@ interface EmptySlotEntry {
 interface AssignSlotPickerProps {
   player: Participant;
   rows: MatchRow[];
-  matchType: MatchType;
+  teamSize: TeamSize;
+  matchFormat: MatchFormat;
   onAssign: (rowIdx: number, team: "teamA" | "teamB", slotIdx: number) => void;
   onClose: () => void;
 }
 
-function AssignSlotPicker({ player, rows, matchType, onAssign, onClose }: AssignSlotPickerProps) {
+function AssignSlotPicker({ player, rows, teamSize, matchFormat, onAssign, onClose }: AssignSlotPickerProps) {
   const emptySlots = useMemo<EmptySlotEntry[]>(() => {
     const slots: EmptySlotEntry[] = [];
-    const size = MATCH_TYPE_SIZES[matchType];
+    const size = formatTeamSize(teamSize);
     for (let ri = 0; ri < rows.length; ri++) {
       const row = rows[ri];
       row.teamA.forEach((v, si) => {
@@ -318,7 +348,7 @@ function AssignSlotPicker({ player, rows, matchType, onAssign, onClose }: Assign
       });
     }
     return slots;
-  }, [rows, matchType]);
+  }, [rows, teamSize, matchFormat]);
 
   return (
     <div
@@ -634,7 +664,8 @@ function PlayerSlotButton({ playerId, players, usedIds, onSelect }: PlayerSlotBu
 interface MatchRowCardProps {
   row: MatchRow;
   index: number;
-  matchType: MatchType;
+  teamSize: TeamSize;
+  matchFormat: MatchFormat;
   players: Participant[];
   allUsedIds: Set<number>;
   timeSlot: TimeSlot | null;
@@ -645,7 +676,7 @@ interface MatchRowCardProps {
 }
 
 function MatchRowCard({
-  row, index, matchType, players, allUsedIds, timeSlot,
+  row, index, teamSize, matchFormat, players, allUsedIds, timeSlot,
   onUpdate, onRemove, onReshuffle, dupPlayerIds,
 }: MatchRowCardProps) {
   const [timePickerOpen, setTimePickerOpen] = useState(false);
@@ -686,7 +717,7 @@ function MatchRowCard({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold text-zinc-500">Match {index + 1}</span>
+          <span className="text-[11px] font-bold text-zinc-500">{matchFormat === "none" ? (teamSize === "solo" ? "Slot" : "Team") : "Match"} {index + 1}</span>
           {hasDup && (
             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-rose-400" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
               Duplicate
@@ -724,22 +755,26 @@ function MatchRowCard({
             />
           ))}
         </div>
-        <div className="shrink-0 flex flex-col items-center">
-          <span className="text-[10px] font-black px-2 py-1 rounded-lg" style={{ color: "#f97316", background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)" }}>
-            VS
-          </span>
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          {row.teamB.map((pid, si) => (
-            <PlayerSlotButton
-              key={si}
-              playerId={pid}
-              players={players}
-              usedIds={allUsedIds}
-              onSelect={id => updateSlot("teamB", si, id)}
-            />
-          ))}
-        </div>
+        {matchFormat !== "none" && (
+          <>
+            <div className="shrink-0 flex flex-col items-center">
+              <span className="text-[10px] font-black px-2 py-1 rounded-lg" style={{ color: "#f97316", background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)" }}>
+                VS
+              </span>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+              {row.teamB.map((pid, si) => (
+                <PlayerSlotButton
+                  key={si}
+                  playerId={pid}
+                  players={players}
+                  usedIds={allUsedIds}
+                  onSelect={id => updateSlot("teamB", si, id)}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {timeSlot && (
@@ -796,8 +831,9 @@ export default function AdminMakeMatchesPage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const [matchType, setMatchType] = useState<MatchType>("1v1");
-  const [rows, setRows] = useState<MatchRow[]>([makeEmptyRow("1v1")]);
+  const [teamSize, setTeamSize] = useState<TeamSize>("solo");
+  const [matchFormat, setMatchFormat] = useState<MatchFormat>("none");
+  const [rows, setRows] = useState<MatchRow[]>([makeEmptyRow("solo", "none")]);
   const [unassignedPlayers, setUnassignedPlayers] = useState<number[]>([]);
   // Players explicitly removed from the pool — excluded from shuffle and player picker
   const [excludedPlayerIds, setExcludedPlayerIds] = useState<Set<number>>(new Set());
@@ -834,18 +870,32 @@ export default function AdminMakeMatchesPage() {
             );
             if (composedRes.ok) {
               const composed = await composedRes.json() as {
-                matchType: MatchType | null;
+                matchType: string | null;
                 rows: Array<{ teamA: number[]; teamB: number[]; scheduledTime: string | null }>;
               };
               if (composed.matchType && composed.rows.length > 0) {
-                const size = MATCH_TYPE_SIZES[composed.matchType] ?? 1;
+                let restoredTeamSize: TeamSize = "solo";
+                let restoredFormat: MatchFormat = "none";
+                if (composed.matchType.includes("|")) {
+                  const [savedTeamSize, savedFormat] = composed.matchType.split("|");
+                  if (TEAM_SIZE_VALUES.includes(savedTeamSize as TeamSize)) restoredTeamSize = savedTeamSize as TeamSize;
+                  if (MATCH_FORMAT_VALUES.includes(savedFormat as MatchFormat)) restoredFormat = savedFormat as MatchFormat;
+                } else if (composed.matchType === "2v2") {
+                  restoredTeamSize = "duo"; restoredFormat = "2v2";
+                } else if (composed.matchType === "4v4") {
+                  restoredTeamSize = "squad"; restoredFormat = "4v4";
+                } else if (composed.matchType === "1v1") {
+                  restoredTeamSize = "solo"; restoredFormat = "1v1";
+                }
+                const size = formatTeamSize(restoredTeamSize);
                 const restoredRows: MatchRow[] = composed.rows.map(r => ({
                   id: Math.random().toString(36).slice(2),
                   teamA: Array(size).fill(null).map((_, i) => r.teamA[i] ?? null),
-                  teamB: Array(size).fill(null).map((_, i) => r.teamB[i] ?? null),
+                  teamB: restoredFormat === "none" ? [] : Array(size).fill(null).map((_, i) => r.teamB[i] ?? null),
                   scheduledTime: r.scheduledTime,
                 }));
-                setMatchType(composed.matchType);
+                setTeamSize(restoredTeamSize);
+                setMatchFormat(restoredFormat);
                 setRows(restoredRows);
                 setUnassignedPlayers([]);
               }
@@ -923,7 +973,7 @@ export default function AdminMakeMatchesPage() {
 
   function doShuffle() {
     const playerIds = effectiveSlotPlayers.map(p => p.userId);
-    const { newRows, unassigned } = buildShuffledRows(playerIds, matchType);
+    const { newRows, unassigned } = buildShuffledRows(playerIds, teamSize, matchFormat);
     setRows(newRows);
     setUnassignedPlayers(unassigned);
     setSaveSuccess(false);
@@ -937,16 +987,18 @@ export default function AdminMakeMatchesPage() {
     }
   }
 
-  function changeMatchType(type: MatchType) {
-    setMatchType(type);
-    setRows([makeEmptyRow(type)]);
+  function changeTeamSize(nextTeamSize: TeamSize) {
+    setTeamSize(nextTeamSize);
+    const nextFormat = isCompatibleFormat(nextTeamSize, matchFormat) ? matchFormat : "none";
+    setMatchFormat(nextFormat);
+    setRows([makeEmptyRow(nextTeamSize, nextFormat)]);
     setUnassignedPlayers([]);
     setExcludedPlayerIds(new Set());
     setSaveSuccess(false);
   }
 
   function addRow() {
-    setRows(prev => [...prev, makeEmptyRow(matchType)]);
+    setRows(prev => [...prev, makeEmptyRow(teamSize, matchFormat)]);
     setSaveSuccess(false);
   }
 
@@ -988,8 +1040,8 @@ export default function AdminMakeMatchesPage() {
 
   function reshuffleRow(idx: number) {
     const row = rows[idx];
-    const size = MATCH_TYPE_SIZES[matchType];
-    const perMatch = size * 2;
+    const size = formatTeamSize(teamSize);
+    const perMatch = matchFormat === "none" ? size : size * 2;
 
     const rowPlayers = [...row.teamA, ...row.teamB].filter((id): id is number => id !== null);
     // Pool = current unassigned + this row's players, minus excluded
@@ -1003,7 +1055,7 @@ export default function AdminMakeMatchesPage() {
     const newRow: MatchRow = {
       ...row,
       teamA: Array(size).fill(null).map((_, i) => picked[i] ?? null),
-      teamB: Array(size).fill(null).map((_, i) => picked[size + i] ?? null),
+      teamB: matchFormat === "none" ? [] : Array(size).fill(null).map((_, i) => picked[size + i] ?? null),
     };
 
     setUnassignedPlayers(newUnassigned);
@@ -1057,7 +1109,8 @@ export default function AdminMakeMatchesPage() {
         method: "POST",
         body: JSON.stringify({
           slotIndex,
-          matchType,
+          teamSize,
+          matchFormat,
           rows: rows.map(row => ({
             teamA: row.teamA,
             teamB: row.teamB,
@@ -1072,14 +1125,14 @@ export default function AdminMakeMatchesPage() {
       }
       setSaveSuccess(true);
 
-      if (matchType === "1v1") {
+      if (matchFormat === "1v1") {
         const rowsMissingTimeNow = rows.filter(r => !r.scheduledTime);
         if (rowsMissingTimeNow.length === 0) {
           const finalizeRes = await authFetchAdmin(`/admin/slots/${tournamentId}/save-custom-matches`, {
             method: "POST",
             body: JSON.stringify({
               slotIndex,
-              matchType,
+              matchType: "1v1",
               matches: rows.map(row => ({
                 teamA: row.teamA,
                 teamB: row.teamB,
@@ -1162,20 +1215,24 @@ export default function AdminMakeMatchesPage() {
               className="flex items-center gap-1 p-1 rounded-xl"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
             >
-              {(["1v1", "2v2", "4v4"] as MatchType[]).map(type => (
-                <button
-                  key={type}
-                  onClick={() => changeMatchType(type)}
-                  className="flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all active:scale-95"
-                  style={
-                    matchType === type
-                      ? { background: "linear-gradient(135deg, #6366f1, #a855f7)", color: "#fff" }
-                      : { color: "#71717a" }
-                  }
-                >
-                  {type}
-                </button>
-              ))}
+              <select value={teamSize} onChange={e => changeTeamSize(e.target.value as TeamSize)}
+                className="w-full bg-transparent px-3 py-2 text-[12px] font-bold text-white outline-none">
+                {TEAM_SIZE_VALUES.map(value => <option key={value} value={value} style={{ background: "#18181b" }}>{TEAM_SIZE_LABELS[value]}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="px-4 pb-2">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Match Format</p>
+            <div className="rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <select value={matchFormat} onChange={e => {
+                const next = e.target.value as MatchFormat;
+                setMatchFormat(next);
+                setRows([makeEmptyRow(teamSize, next)]);
+                setUnassignedPlayers([]);
+                setSaveSuccess(false);
+              }} className="w-full bg-transparent px-3 py-2.5 text-[12px] font-bold text-white outline-none">
+                {MATCH_FORMAT_VALUES.map(value => <option key={value} value={value} disabled={!isCompatibleFormat(teamSize, value)} style={{ background: "#18181b" }}>{formatLabel(value)}{!isCompatibleFormat(teamSize, value) ? " (select matching team size)" : ""}</option>)}
+              </select>
             </div>
           </div>
 
@@ -1271,7 +1328,8 @@ export default function AdminMakeMatchesPage() {
                 key={row.id}
                 row={row}
                 index={i}
-                matchType={matchType}
+                teamSize={teamSize}
+                matchFormat={matchFormat}
                 players={effectiveSlotPlayers}
                 allUsedIds={allUsedIds}
                 timeSlot={timeSlots[slotIndex] ?? null}
@@ -1389,7 +1447,8 @@ export default function AdminMakeMatchesPage() {
         <AssignSlotPicker
           player={assigningPlayer}
           rows={rows}
-          matchType={matchType}
+          teamSize={teamSize}
+          matchFormat={matchFormat}
           onAssign={(rowIdx, team, slotIdx) => assignUnassignedToSlot(assigningPlayerId, rowIdx, team, slotIdx)}
           onClose={() => setAssigningPlayerId(null)}
         />

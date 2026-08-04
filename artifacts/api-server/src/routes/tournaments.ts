@@ -69,6 +69,12 @@ function formatTournament(
     credentialUnlockAt: t.credentialUnlockMinutes != null
       ? new Date(t.startTime.getTime() - t.credentialUnlockMinutes * 60 * 1000).toISOString()
       : null,
+     assignment: participant ? {
+       slotIndex: participant.slotIndex ?? 0,
+       teamNumber: participant.matchNumber ?? null,
+       memberNumber: participant.seatNumber ?? null,
+       waveNumber: participant.waveNumber ?? null,
+     } : null,
     cancelReason: t.cancelReason ?? null,
   };
 }

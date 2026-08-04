@@ -632,6 +632,8 @@ router.post("/admin/slots/:id/save-custom-matches", requireAdmin, async (req, re
 
   const body = req.body as {
     slotIndex?: number;
+    teamSize?: string;
+    matchFormat?: string;
     matchType?: string;
     matches: Array<{
       teamA: (number | null)[];
@@ -805,6 +807,8 @@ router.post("/admin/slots/:id/composed-matches", requireAdmin, async (req, res) 
 
   const body = req.body as {
     slotIndex?: number;
+    teamSize?: string;
+    matchFormat?: string;
     matchType?: string;
     rows: Array<{
       teamA: (number | null)[];
@@ -814,11 +818,24 @@ router.post("/admin/slots/:id/composed-matches", requireAdmin, async (req, res) 
   };
 
   const slotIndex = body.slotIndex ?? 0;
-  const matchType = (body.matchType ?? "1v1") as string;
+  const VALID_TEAM_SIZES = ["solo", "duo", "trio", "squad", "5-player", "6-player"];
+  const VALID_FORMATS = ["none", "1v1", "2v2", "3v3", "4v4", "5v5", "6v6"];
+  const legacyMatchType = body.matchType ?? "";
+  const legacyDefaults: Record<string, [string, string]> = {
+    "1v1": ["solo", "1v1"], "2v2": ["duo", "2v2"], "4v4": ["squad", "4v4"],
+  };
+  const legacy = legacyDefaults[legacyMatchType];
+  const teamSize = (body.teamSize ?? legacy?.[0] ?? "solo") as string;
+  const matchFormat = (body.matchFormat ?? legacy?.[1] ?? "none") as string;
+  const matchType = `${teamSize}|${matchFormat}`;
 
-  const VALID_TYPES = ["1v1", "2v2", "4v4"];
-  if (!VALID_TYPES.includes(matchType)) {
-    res.status(400).json({ error: `Invalid matchType. Must be one of: ${VALID_TYPES.join(", ")}` });
+  if (!VALID_TEAM_SIZES.includes(teamSize) || !VALID_FORMATS.includes(matchFormat)) {
+    res.status(400).json({ error: "Invalid team size or match format" });
+    return;
+  }
+  const expectedFormat = `${({ solo: 1, duo: 2, trio: 3, squad: 4, "5-player": 5, "6-player": 6 } as Record<string, number>)[teamSize]}v${({ solo: 1, duo: 2, trio: 3, squad: 4, "5-player": 5, "6-player": 6 } as Record<string, number>)[teamSize]}`;
+  if (matchFormat !== "none" && matchFormat !== expectedFormat) {
+    res.status(400).json({ error: `Match format must be None or ${expectedFormat} for ${teamSize}` });
     return;
   }
 
@@ -858,6 +875,34 @@ router.post("/admin/slots/:id/composed-matches", requireAdmin, async (req, res) 
   }));
 
   await db.insert(composedSlotMatchesTable).values(inserts);
+
+  // Persist the generated team/match assignment on every participant. The
+  // existing participant fields are used by the player API and admin lists:
+  // matchNumber is the visible team/match number, waveNumber is the composed
+  // assignment marker, and seatNumber is the player's position in the group.
+  await db.update(tournamentParticipantsTable)
+    .set({ waveNumber: null, matchNumber: null, seatNumber: null })
+    .where(and(
+      eq(tournamentParticipantsTable.tournamentId, slotId),
+      eq(tournamentParticipantsTable.slotIndex, slotIndex),
+    ));
+
+  for (let rowIndex = 0; rowIndex < body.rows.length; rowIndex++) {
+    const row = body.rows[rowIndex];
+    const assigned = [
+      ...row.teamA.map((userId, memberIndex) => ({ userId, seatNumber: memberIndex + 1 })),
+      ...row.teamB.map((userId, memberIndex) => ({ userId, seatNumber: memberIndex + 1 })),
+    ].filter((entry): entry is { userId: number; seatNumber: number } => entry.userId != null);
+    for (const entry of assigned) {
+      await db.update(tournamentParticipantsTable)
+        .set({ waveNumber: 1, matchNumber: rowIndex + 1, seatNumber: entry.seatNumber })
+        .where(and(
+          eq(tournamentParticipantsTable.tournamentId, slotId),
+          eq(tournamentParticipantsTable.slotIndex, slotIndex),
+          eq(tournamentParticipantsTable.userId, entry.userId),
+        ));
+    }
+  }
 
   res.json({ saved: inserts.length });
 });
@@ -1099,7 +1144,17 @@ router.get("/slots/:id/my-match", requireAuth, async (req, res) => {
       eq(slotMatchesTable.waveNumber, participant.waveNumber!),
     ),
   });
-  if (!match) { res.json({ matchmaking: false }); return; }
+  if (!match) {
+    res.json({
+      matchmaking: false,
+      assignment: {
+        teamNumber: participant.matchNumber,
+        memberNumber: participant.seatNumber,
+        waveNumber: participant.waveNumber,
+      },
+    });
+    return;
+  }
 
   const now = new Date();
   // Hidden override always wins — admin hide takes precedence over any timing logic.
@@ -1288,6 +1343,11 @@ router.get("/slots/:id/my-match", requireAuth, async (req, res) => {
             ),
           }))
         : false,
+    },
+    assignment: {
+      teamNumber: participant.matchNumber,
+      memberNumber: participant.seatNumber,
+      waveNumber: participant.waveNumber,
     },
     opponent: opponent ?? null,
   });

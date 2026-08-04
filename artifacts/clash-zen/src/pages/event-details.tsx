@@ -211,6 +211,7 @@ export default function EventDetails() {
       seat: string; roomId: string | null; roomPassword: string | null; isUnlocked: boolean;
     };
     opponent?: { id: number; inGameName: string; uid: string; profilePicture: string | null; } | null;
+     assignment?: { teamNumber: number | null; memberNumber: number | null; waveNumber: number | null };
   }>(null);
   const [myMatchLoading, setMyMatchLoading] = useState(false);
   const [showMatchRoom, setShowMatchRoom] = useState(false);
@@ -1066,6 +1067,20 @@ export default function EventDetails() {
               )}
             </div>
          </div>
+
+         {tm.isJoined && (myMatch?.assignment?.teamNumber ?? t.assignment?.teamNumber) != null && (
+           <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.28)", animation: "sectionIn 0.6s cubic-bezier(0.22,1,0.36,1) both", animationDelay: "340ms" }}>
+             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: "rgba(168,85,247,0.16)" }}>📍</div>
+             <div className="min-w-0 flex-1">
+               <p className="text-[10px] font-black uppercase tracking-widest text-violet-300">Your Assignment</p>
+               <p className="text-[15px] font-black text-white mt-0.5">
+                 Team / Slot {myMatch?.assignment?.teamNumber ?? t.assignment.teamNumber}
+                 {(myMatch?.assignment?.memberNumber ?? t.assignment.memberNumber) != null && <span className="text-violet-300"> · Member {myMatch?.assignment?.memberNumber ?? t.assignment.memberNumber}</span>}
+               </p>
+               <p className="text-[11px] text-zinc-400 mt-1">Please be present in your assigned slot/team before the match starts.</p>
+             </div>
+           </div>
+         )}
 
         {/* ── 8. Complaint Policy ── */}
         <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(45,28,0,0.55)", border: "1px solid rgba(251,191,36,0.2)", animation: "sectionIn 0.6s cubic-bezier(0.22,1,0.36,1) both", animationDelay: "320ms" }}>
