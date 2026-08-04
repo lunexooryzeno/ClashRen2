@@ -891,7 +891,7 @@ router.post("/admin/slots/:id/composed-matches", requireAdmin, async (req, res) 
     const row = body.rows[rowIndex];
     const assigned = [
       ...row.teamA.map((userId, memberIndex) => ({ userId, seatNumber: memberIndex + 1 })),
-      ...row.teamB.map((userId, memberIndex) => ({ userId, seatNumber: memberIndex + 1 })),
+      ...row.teamB.map((userId, memberIndex) => ({ userId, seatNumber: row.teamA.length + memberIndex + 1 })),
     ].filter((entry): entry is { userId: number; seatNumber: number } => entry.userId != null);
     for (const entry of assigned) {
       await db.update(tournamentParticipantsTable)
