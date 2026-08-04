@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Calendar, Users, Trophy, Swords, ShieldAlert, ArrowLeft, Key, CheckCircle, Clock, Swords as SwordsIcon, Copy, Lock, Unlock, Gamepad2, ShieldCheck, Zap, BadgeCheck, Bot, AlertTriangle, FileSearch, Wallet, Crosshair, ChevronDown, ListFilter, Check, Monitor, Video, Ban } from "lucide-react";
+import { Calendar, Users, Trophy, Swords, ShieldAlert, ArrowLeft, Key, CheckCircle, Clock, Swords as SwordsIcon, Copy, Lock, Unlock, Gamepad2, ShieldCheck, Zap, BadgeCheck, Bot, AlertTriangle, FileSearch, Wallet, Crosshair, ChevronDown, ListFilter, Check, Monitor, Video, Ban, Target, HeartPulse, Package, Plane, Car, PawPrint, BrickWall, Bomb } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { useAuth } from "@/lib/auth";
 
@@ -429,26 +429,36 @@ export default function EventDetails() {
     bonusRewardItems.reduce((total, reward) => total + reward.amount, 0);
   const resultMethod = String(ms.winDecidedBy ?? "");
   const gameplayRuleItems = [
-    { key: "headshotsOnly", emoji: "🎯", label: "Headshots Only", description: "Body shots deal no damage" },
-    { key: "bodyShotsAllowed", emoji: "🔫", label: "Body Shots Allowed", description: "Normal damage hit zones" },
-    { key: "revivalsAllowed", emoji: "💊", label: "Revivals Allowed", description: "Down players can be revived" },
-    { key: "unlimitedAmmo", emoji: "📦", label: "Unlimited Ammo", description: "No ammo constraint" },
-    { key: "airdropsEnabled", emoji: "🛩️", label: "Airdrops Enabled", description: "Supply drops appear on the map" },
-    { key: "vehiclesEnabled", emoji: "🚗", label: "Vehicles Enabled", description: "Vehicles spawn on the map" },
-    { key: "horseAllowed", emoji: "🐎", label: "Horse Allowed", description: "Horse mounts are available" },
-    { key: "characterSkills", emoji: "⚡", label: "Character Skills Allowed", description: "Active and passive skills are enabled" },
-    { key: "petsAllowed", emoji: "🐾", label: "Pets Allowed", description: "Pet companions are enabled" },
-    { key: "glooWallAllowed", emoji: "🧱", label: "Gloo Wall Allowed", description: "Gloo wall throwable is enabled" },
-    { key: "grenadesAllowed", emoji: "💣", label: "Grenades Allowed", description: "Throwable grenades are enabled" },
-    { key: "snipersAllowed", emoji: "🔭", label: "Snipers Allowed", description: "Sniper rifles are permitted" },
-    { key: "meleeOnly", emoji: "🗡️", label: "Melee Only", description: "Only fists and melee weapons" },
+    { key: "headshotsOnly", icon: Crosshair, label: "Headshots Only", description: "Body shots deal no damage" },
+    { key: "bodyShotsAllowed", icon: Target, label: "Body Shots Allowed", description: "Normal damage hit zones" },
+    { key: "revivalsAllowed", icon: HeartPulse, label: "Revivals Allowed", description: "Down players can be revived" },
+    { key: "unlimitedAmmo", icon: Package, label: "Unlimited Ammo", description: "No ammo constraint" },
+    { key: "airdropsEnabled", icon: Plane, label: "Airdrops Enabled", description: "Supply drops appear on the map" },
+    { key: "vehiclesEnabled", icon: Car, label: "Vehicles Enabled", description: "Vehicles spawn on the map" },
+    { key: "horseAllowed", icon: Gamepad2, label: "Horse Allowed", description: "Horse mounts are available" },
+    { key: "characterSkills", icon: Zap, label: "Character Skills Allowed", description: "Active and passive skills are enabled" },
+    { key: "petsAllowed", icon: PawPrint, label: "Pets Allowed", description: "Pet companions are enabled" },
+    { key: "glooWallAllowed", icon: BrickWall, label: "Gloo Wall Allowed", description: "Gloo wall throwable is enabled" },
+    { key: "grenadesAllowed", icon: Bomb, label: "Grenades Allowed", description: "Throwable grenades are enabled" },
+    { key: "snipersAllowed", icon: Crosshair, label: "Snipers Allowed", description: "Sniper rifles are permitted" },
+    { key: "meleeOnly", icon: Swords, label: "Melee Only", description: "Only fists and melee weapons" },
   ] as const;
   const gameplayRules = (ms.gameplayRules && typeof ms.gameplayRules === "object")
     ? ms.gameplayRules as Record<string, boolean>
     : {};
   const customGameplayRules = Object.entries(gameplayRules)
-    .filter(([key, enabled]) => enabled && !gameplayRuleItems.some(rule => rule.key === key))
-    .map(([key]) => key);
+    .filter(([key]) => !gameplayRuleItems.some(rule => rule.key === key))
+    .map(([key, enabled]) => ({
+      key,
+      enabled: !!enabled,
+      icon: Gamepad2,
+      label: key,
+      description: "Custom gameplay rule",
+    }));
+  const sortedGameplayRules = [
+    ...gameplayRuleItems.map(rule => ({ ...rule, enabled: !!gameplayRules[rule.key] })),
+    ...customGameplayRules,
+  ].sort((a, b) => Number(b.enabled) - Number(a.enabled));
 
   const roomUnlocked = !roomOpenCountdown;
   const showRoomDetails = tm.isJoined && tm.roomId && t.credentialsReleased;
@@ -1035,34 +1045,27 @@ export default function EventDetails() {
             </div>
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
               <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-x sm:divide-y-0 divide-border">
-                {gameplayRuleItems.map(rule => {
-                  const enabled = !!gameplayRules[rule.key];
+                {sortedGameplayRules.map(rule => {
+                  const RuleIcon = rule.icon;
+                  const enabled = rule.enabled;
                   return (
                     <div key={rule.key} className="flex items-center gap-3 p-3.5 border-b border-border last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
                       style={{ background: enabled ? "rgba(34,211,238,0.06)" : "transparent" }}>
-                      <span className="text-xl leading-none">{rule.emoji}</span>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${enabled ? "bg-cyan-500/15" : "bg-muted/50"}`}>
+                        <RuleIcon className={`w-4 h-4 ${enabled ? "text-cyan-300" : "text-muted-foreground"}`} />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <p className={`text-[12px] font-bold ${enabled ? "text-cyan-200" : "text-zinc-500"}`}>{rule.label}</p>
                         <p className="text-[10px] text-zinc-600 mt-0.5">{rule.description}</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${enabled ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-zinc-600"}`}>
-                        {enabled ? "On" : "Off"}
+                        {enabled ? "Allowed" : "Not Allowed"}
                       </span>
                     </div>
                   );
                 })}
-                {customGameplayRules.map(rule => (
-                  <div key={rule} className="flex items-center gap-3 p-3.5 border-b border-border" style={{ background: "rgba(34,211,238,0.06)" }}>
-                    <span className="text-xl leading-none">✅</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-bold text-cyan-200">{rule}</p>
-                      <p className="text-[10px] text-zinc-600 mt-0.5">Custom gameplay rule</p>
-                    </div>
-                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400">On</span>
-                  </div>
-                ))}
               </div>
-              {!gameplayRuleItems.some(rule => gameplayRules[rule.key]) && customGameplayRules.length === 0 && (
+              {!sortedGameplayRules.some(rule => rule.enabled) && sortedGameplayRules.length === 0 && (
                 <p className="px-4 py-4 text-[11px] text-zinc-600 italic">No gameplay rules have been configured for this match.</p>
               )}
             </div>
