@@ -1760,6 +1760,7 @@ export default function AdminKnockoutNewPage() {
               { key: "unlimitedAmmo",      emoji: "📦", label: "Unlimited Ammo",        desc: "No ammo constraint" },
               { key: "airdropsEnabled",    emoji: "📦", label: "Airdrops Enabled",      desc: "Supply drops appear on map" },
               { key: "vehiclesEnabled",    emoji: "🚗", label: "Vehicles Enabled",      desc: "Vehicles spawn on map" },
+              { key: "horseAllowed",       emoji: "🐎", label: "Horse Allowed",          desc: "Horse mounts are available" },
               { key: "characterSkills",    emoji: "⚡", label: "Character Skills",      desc: "Active & passive skills on" },
               { key: "petsAllowed",        emoji: "🐾", label: "Pets Allowed",          desc: "Pet companions enabled" },
               { key: "glooWallAllowed",    emoji: "🧱", label: "Gloo Wall Allowed",     desc: "Gloo wall throwable enabled" },
@@ -1790,7 +1791,7 @@ export default function AdminKnockoutNewPage() {
           </div>
 
           {/* Active custom gameplay rules */}
-          {Object.entries(form.matchSettings.gameplayRules).filter(([k, v]) => v && !["headshotsOnly","bodyShotsAllowed","revivalsAllowed","unlimitedAmmo","airdropsEnabled","vehiclesEnabled","characterSkills","petsAllowed","glooWallAllowed","grenadesAllowed","snipersAllowed","meleeOnly"].includes(k)).map(([k]) => (
+          {Object.entries(form.matchSettings.gameplayRules).filter(([k, v]) => v && !["headshotsOnly","bodyShotsAllowed","revivalsAllowed","unlimitedAmmo","airdropsEnabled","vehiclesEnabled","horseAllowed","characterSkills","petsAllowed","glooWallAllowed","grenadesAllowed","snipersAllowed","meleeOnly"].includes(k)).map(([k]) => (
             <div key={k} className="flex items-center gap-2 px-3 py-2 rounded-xl"
               style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.25)" }}>
               <span className="text-[11px] font-bold text-cyan-300 flex-1">✅ {k}</span>
