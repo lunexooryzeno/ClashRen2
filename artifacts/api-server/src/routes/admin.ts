@@ -28,6 +28,10 @@ import { eq, sql, lt, and, desc, asc, ne, gte, inArray } from "drizzle-orm";
 import { requireAdmin, requireFinanceAdmin, getSuperSecret } from "../middlewares/auth.js";
 import { getSupportSettings, saveSupportSettings } from "../lib/supportSettings.js";
 import { getSystemSettings, saveSystemSettings } from "../lib/systemSettings.js";
+import { deleteMediaUpload } from "../lib/mediaDb.js";
+import { existsSync, unlinkSync } from "fs";
+import { join, basename } from "path";
+import { UPLOADS_DIR } from "../lib/dataDir.js";
 import { sendPushToUser, sendPushToAll } from "../lib/push.js";
 import { pushToUser, pushBroadcast, subscribeAdminChat, unsubscribeAdminChat } from "../lib/sse-manager.js";
 import { markAdminOnline, markAdminOffline } from "../lib/chat-presence.js";
@@ -35,6 +39,44 @@ import jwt from "jsonwebtoken";
 
 function pushAfter(userId: number, type: string, title: string, body: string, url?: string) {
   sendPushToUser(userId, { type, title, body, url: url ?? "/#/notifications" }).catch(() => {});
+}
+
+/**
+ * Delete an uploaded image from wherever it is stored.
+ * - DB-backed: /api/uploads/{uuid}  → removes the row from media_uploads
+ * - Disk-based: /api/admin/tournaments/uploads/{filename}
+ *              /api/admin/banners/uploads/{filename}
+ *              /api/users/uploads/avatars/{filename}
+ *              → deletes the file from artifacts/data/uploads/
+ * Errors are suppressed so image cleanup never blocks the main operation.
+ */
+async function cleanupImageUrl(imageUrl: string | null | undefined): Promise<void> {
+  if (!imageUrl) return;
+  try {
+    // DB-backed upload: /api/uploads/{uuid}
+    const dbMatch = imageUrl.match(/^\/api\/uploads\/([0-9a-f-]{32,36})$/i);
+    if (dbMatch) {
+      await deleteMediaUpload(dbMatch[1]);
+      return;
+    }
+    // Disk-based upload: resolve filename from the URL path
+    const diskPatterns: Array<{ pattern: RegExp; subdir: string }> = [
+      { pattern: /^\/api\/admin\/tournaments\/uploads\/(.+)$/, subdir: "tournaments" },
+      { pattern: /^\/api\/admin\/banners\/uploads\/(.+)$/,    subdir: "banners" },
+      { pattern: /^\/api\/users\/uploads\/avatars\/(.+)$/,    subdir: "avatars" },
+      { pattern: /^\/api\/slots\/uploads\/disputes\/(.+)$/,   subdir: "disputes" },
+    ];
+    for (const { pattern, subdir } of diskPatterns) {
+      const m = imageUrl.match(pattern);
+      if (m) {
+        const filePath = join(UPLOADS_DIR, subdir, basename(m[1]));
+        if (existsSync(filePath)) unlinkSync(filePath);
+        return;
+      }
+    }
+  } catch {
+    // Never let cleanup errors bubble up — the main delete must always succeed.
+  }
 }
 
 const router: IRouter = Router();
@@ -373,6 +415,9 @@ router.delete("/admin/tournaments/:id", requireAdmin, async (req, res) => {
       await db.delete(walletTransactionsTable).where(eq(walletTransactionsTable.tournamentId, id));
       console.log(`[delete ${id}] wallet transactions wiped`);
     }
+
+    // Clean up the associated image from storage (DB or disk) before removing the record.
+    await cleanupImageUrl(tournament.imageUrl);
 
     await db.delete(tournamentsTable).where(eq(tournamentsTable.id, id));
     console.log(`[delete ${id}] tournament deleted (mode=${mode})`);

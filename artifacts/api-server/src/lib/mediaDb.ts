@@ -37,6 +37,14 @@ export async function saveMediaUpload(
 }
 
 /**
+ * Delete an uploaded image by ID.
+ * No-ops silently when the ID does not exist.
+ */
+export async function deleteMediaUpload(id: string): Promise<void> {
+  await pool.query("DELETE FROM media_uploads WHERE id = $1", [id]);
+}
+
+/**
  * Retrieve an uploaded image.
  * Returns null when the ID is not found.
  */
