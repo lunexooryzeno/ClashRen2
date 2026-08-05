@@ -1,0 +1,740 @@
+# ClashRen Instant Matchmaking, Automated Room Creation, Screenshot Verification, and Secure Prize Distribution Architecture
+
+Build a complete esports tournament platform for **Free Fire** focused on ** instant matchmaking**, automated room creation through a dedicated host phone, screenshot-based winner verification through a secondary verification phone, a dispute system, wallet management, and a payout workflow that guarantees **a prize can only be distributed once under any circumstance**.
+
+Focus on product architecture, workflows, state management, user experience, automation flow, verification flow, and payout safety.
+
+---
+
+# Core concept
+
+The platform consists of five main components:
+
+* **ClashRen Web App** (used by players)
+* **Backend Server** (controls matchmaking, match states, wallet states, disputes, workers, and payouts)
+* **Host Phone** (Android device running MacroDroid and Free Fire that creates rooms automatically)
+* **Verification Phone** (separate Android device running MacroDroid that performs OCR and screenshot verification)
+* **OCR and Image Verification Pipeline** running on the verification phone
+
+The host phone is responsible only for **room creation**.
+
+The verification phone is responsible only for **winner verification**.
+
+Players do **not** need MacroDroid or a companion app.
+
+The backend server is the **single authority** that controls matchmaking, room distribution, verification decisions, disputes, wallet updates, and prize distribution.
+
+---
+
+# Instant matchmaking flow
+
+## Queue system
+
+Players choose:
+
+* Clash Squad 1v1
+* Entry fee
+* Region (if applicable)
+
+When a player taps **Play Now**:
+
+1. Verify that the player has sufficient coins.
+2. **Deduct the entry fee immediately** from the player wallet.
+3. Place the player into the matchmaking queue.
+4. Continuously search for another compatible player.
+5. The moment two players are available, create a match instantly.
+
+The queue must remain active even while the host phone is busy creating another room.
+1 match = 1 queue that mean in this example there are 2 players then the queue will be #1
+
+Do not display queue numbers.
+
+Instead display:
+
+* Finding opponent
+* Opponent found
+* Waiting for room creation
+* Estimated wait time
+* One match ahead of you (if applicable)
+
+---
+
+# Match lifecycle
+
+Every match must move through strict server-controlled states.
+
+QUEUEING
+
+MATCHED
+
+WAITING_FOR_ROOM
+
+CREATING_ROOM
+
+ROOM_READY
+
+JOIN_WINDOW
+
+IN_GAME
+
+RESULT_PENDING
+
+VERIFYING_SCREENSHOT
+
+PROVISIONAL_WIN
+
+DISPUTE_WINDOW
+
+FINALIZED
+
+CANCELLED
+
+No client should be able to skip or change states directly.
+
+---
+
+# Opponent details
+
+After matchmaking is completed, display the opponent information to both players before the room credentials are shown.
+
+Display:
+
+* Opponent nickname
+* Free Fire UID
+* Profile avatar
+* Region
+* Match ID
+* Entry fee
+* Game mode
+
+This information is shown so players can verify that the correct opponent has been matched with them.
+
+No manual confirmation is required.
+
+If a player notices that the displayed opponent is incorrect, they may report the issue through the support or dispute system after the match.
+
+---
+
+# Host phone webhook architecture
+
+The host phone is treated as a **Room Creation Worker**.
+
+The backend server does not create rooms directly.
+
+Instead, it sends a webhook request to the host phone one by one by the queue system.
+
+Example:
+
+`https://trigger.macrodroid.com/98315e1f-abce-4c9f-ab7d-87004928eb82/clashren?game_mode=89UBO&access_token=RANDOM_SECURE_HASH`
+
+Where:
+
+* `game_mode` is the room creation code
+* `access_token` is a cryptographically random token generated for this specific room creation request
+
+Example mapping:
+
+* CS 1v1 Normal → **89UBO**
+
+The game mode code determines exactly which MacroDroid room creation routine is executed.
+
+---
+
+# Access token workflow
+
+For every room creation request:
+
+1. Server generates a unique random access token.
+2. Token is associated with:
+
+   * Match ID
+   * Worker phone ID
+   * Request timestamp
+   * Expiration time
+3. Server sends webhook to the host phone.
+4. Host phone performs room creation.
+5. Host phone sends all responses back to the server using the **same access token**.
+6. Server validates that:
+
+   * Token exists
+   * Token is not expired
+   * Token belongs to that worker phone
+   * Token has not already been completed
+
+The token can be used only once per match.
+
+This prevents duplicate room creation responses and replay attacks.
+
+---
+
+# Worker phone response protocol
+
+The host phone continuously reports progress back to the server.
+
+Each response includes:
+
+* access_token
+* phone_status
+* msg_code
+* response_code
+* timestamp
+* optional room data
+
+Example statuses:
+
+| phone_status        | msg_code            |
+| ------------------- | ------------------- |
+| Ready               | ready               |
+| Launching Free Fire | launching_game      |
+| Switching Guest ID  | switching_account   |
+| Opening Custom Room | opening_room_menu   |
+| Configuring Match   | configuring_room    |
+| Creating Room       | creating_room       |
+| Room Created        | room_created        |
+| Sending Credentials | sending_credentials |
+| Error               | error               |
+
+Example successful response:
+
+* access_token
+* phone_status = Room Created
+* msg_code = room_created
+* response_code = 200
+* room_id
+* room_password
+* timestamp
+
+The server receives these responses and updates the match state in real time.
+
+---
+
+# Server-side worker management
+
+The server is responsible for:
+
+* tracking worker availability
+* assigning jobs
+* retrying failed jobs
+* timing out unresponsive workers
+* preventing duplicate room creation
+* validating access tokens
+* storing worker status history
+
+The server must treat every webhook response as potentially duplicated and process it safely.
+
+---
+
+# Admin worker management
+
+All worker phone configuration must be managed through the **Admin Panel**.
+
+Admin can:
+
+* Add worker phones
+* Remove worker phones
+* Enable or disable a worker
+* Edit webhook URLs
+* Assign game mode codes
+* Rotate webhook secrets
+* View worker status
+* View last heartbeat
+* View current job
+* Force stop a job
+* Test webhook connectivity
+
+Each worker stores:
+
+* Worker name
+* Webhook URL
+* Supported game modes
+* Current status
+* Priority
+* Last activity time
+
+Webhook URLs and secrets must never be visible to normal users.
+
+Only administrators can manage worker credentials.
+
+---
+
+# Room creation worker flow
+
+There is currently **one host phone**.
+
+The server sends room creation jobs in **first-in, first-out order**.
+
+The host phone performs:
+
+* Launch Free Fire
+* Switch guest account
+* Create custom room
+* Configure Lone Wolf settings
+* Generate room
+* Read room ID
+* Read room password
+* Send room details back to the server
+
+The host phone continuously reports status:
+
+* Idle
+* Launching game
+* Switching account
+* Creating room
+* Room created
+* Error
+
+If room creation fails:
+
+* Retry automatically
+* If still unsuccessful, cancel the match
+* Refund both players fully
+* Notify both players
+
+---
+
+# Room credential delivery
+
+Room credentials are sent automatically after:
+
+* room creation succeeded
+* access token verification succeeded
+* the server accepted the worker response
+
+The server sends room credentials directly to both matched players.
+
+The host phone never communicates room credentials directly to players.
+
+This keeps the server as the single authority controlling room distribution.
+
+---
+
+# Room credential security
+
+When room credentials are revealed, display a mandatory warning:
+
+**Do not share the room ID or password with any third party.**
+
+Sharing room credentials is considered match manipulation.
+
+If another unauthorized player joins because a participant shared the credentials:
+
+* The responsible player’s account may be suspended
+* The match may be cancelled
+* The player may lose the entry fee
+* Repeated violations may result in a permanent ban
+
+This warning must be shown every time room credentials are displayed.
+
+---
+
+# Join window
+
+When room details arrive:
+
+* Display room ID and password
+* Start a **30-second join timer**
+* Add a **15-second grace period**
+
+Each player presses **I Joined**.
+
+Rules:
+
+## Both joined
+
+* Match starts
+
+## Only one joined
+
+* Joined player receives full refund
+* Absent player loses 50% of the entry fee
+
+## Neither joined
+
+* Both lose 50% of the entry fee
+
+---
+
+# Winner submission architecture
+
+Only the **winner** uploads a screenshot.
+
+Requirements:
+
+* Upload within **80 seconds**
+* Screenshot must contain the Free Fire victory screen
+* Screenshot must show the player nickname
+
+## Temporary upload pipeline
+
+The uploaded screenshot must **not be verified directly on the server**.
+
+Workflow:
+
+1. Winner uploads screenshot through ClashRen.
+2. Server stores the screenshot in a **temporary storage location**.
+3. Server generates a temporary file path or temporary file identifier.
+4. Server sends a verification request to the **verification phone** containing:
+
+   * Match ID
+   * Player ID
+   * Player nickname
+   * Temporary screenshot path
+   * Upload timestamp
+5. Verification phone downloads the screenshot.
+6. Verification phone performs OCR and image analysis locally.
+7. Verification phone sends verification results back to the server.
+8. Server immediately deletes the temporary screenshot unless a dispute is later opened.
+
+The screenshot should remain temporary by default.
+
+---
+
+# Verification phone responsibilities
+
+The verification phone is a dedicated OCR worker.
+
+It must detect:
+
+* BOOYAH
+* VICTORY
+* Winner screen layout
+* Player nickname
+* Screenshot quality
+* OCR confidence score
+* Template match confidence
+* Resolution consistency
+* Basic tampering indicators
+
+The verification phone returns:
+
+* VALID or INVALID
+* Detected nickname
+* Detected victory text
+* OCR confidence
+* Tampering suspicion score
+* Verification timestamp
+* Optional diagnostics
+
+The server makes all decisions based only on this verification response.
+
+---
+
+# Verification decision
+
+If verification is VALID:
+
+* Mark VERIFYING_SCREENSHOT complete
+* Mark winner as provisional winner
+* Continue to provisional payout
+
+If verification is INVALID:
+
+* Reject submission
+* Notify player
+* Allow another upload only within the remaining submission window
+
+---
+
+# Provisional payout system
+
+When verification succeeds:
+
+* Credit the full prize immediately
+* Mark the prize as **Pending**
+* Lock the credited amount
+* Prevent withdrawal
+* Prevent transfer
+* Prevent spending of the locked prize
+
+The winner sees:
+
+“Prize credited (Pending Verification)”
+
+The match enters **DISPUTE_WINDOW**.
+
+---
+
+# Dispute architecture
+
+The losing player receives:
+
+“Your opponent claimed victory.”
+
+“You have 10 minutes to dispute this result.”
+
+The loser may:
+
+* Accept
+* Ignore
+* Dispute
+
+If disputed, the loser may submit:
+
+* Screenshot
+* Video
+* Additional explanation
+
+---
+
+# Dispute workflow
+
+## No dispute within 10 minutes
+
+* Unlock prize
+* Finalize payout
+* Mark match FINALIZED
+
+## Dispute submitted
+
+* Freeze pending prize
+* Re-analyze winner evidence
+* Analyze challenger evidence
+* Compare OCR
+* Compare timestamps
+* Compare nicknames
+* Compare match context
+
+## If original winner was fake
+
+* Reverse provisional payout
+* Credit prize to actual winner
+* Finalize match
+* Suspend the fake claimant for **48 hours**
+
+## If dispute was false
+
+* Deduct **5 coins** from challenger
+* Transfer 5 coins to falsely accused player
+* Increase false dispute count
+* Reduce challenger trust score
+
+If the challenger has **0 coins**:
+
+* Suspend challenger for **12 hours**
+* Notify the opponent that a false dispute penalty was applied
+
+---
+
+# Trust and penalty system
+
+Every player has:
+
+* Trust score
+* False dispute count
+* Report count
+
+Rules:
+
+## False dispute
+
+* -5 coins
+* Trust decreases
+
+## Repeated false disputes
+
+* Temporary suspension
+* Matchmaking restriction
+* Permanent ban review
+
+If wallet becomes negative:
+
+* Player cannot join matches
+* Player cannot withdraw
+* Player must restore balance before playing again
+
+---
+
+# Wallet architecture
+
+Wallet states must support:
+
+* Deducted Entry Fee
+* Refunded Entry Fee
+* Pending Prize
+* Locked Prize
+* Finalized Prize
+* Penalty
+* Reversed Prize
+
+Every wallet movement must be traceable.
+
+---
+
+# Prize distribution safety (critical requirement)
+
+The system must guarantee that **a prize can never be distributed twice**.
+
+This is mandatory.
+
+## Single payout authority
+
+Only the backend server can authorize wallet credits.
+
+The host phone and verification phone can never credit wallets directly.
+
+## Prize states
+
+Every prize must exist in exactly one state:
+
+NOT_CREATED
+
+PENDING
+
+LOCKED
+
+FINALIZED
+
+REVERSED
+
+Once FINALIZED, the prize can never return to any previous state.
+
+## Idempotent payout
+
+Each match must have one unique payout identifier.
+
+If payout is triggered multiple times because of:
+
+* retries
+* duplicate requests
+* browser refresh
+* network reconnect
+* server restart
+* background jobs
+* verification retries
+* dispute retries
+* admin retries
+
+the server must recognize that the payout already exists and refuse any duplicate distribution.
+
+## Duplicate protection
+
+The server must reject:
+
+* repeated payout requests
+* repeated dispute resolutions
+* repeated screenshot approvals
+* repeated admin actions
+* repeated background jobs
+
+## Finalization lock
+
+After finalization:
+
+* dispute window permanently closes
+* prize unlock completes
+* withdrawal becomes available
+* all payout actions become permanently read-only
+
+A finalized prize can never be credited again.
+
+This guarantee must survive crashes, reconnects, duplicate events, and repeated verification responses.
+
+---
+
+# Match cancellation
+
+Cancel and refund when:
+
+* room creation repeatedly fails
+* host phone disconnects
+* server cannot communicate with host phone
+* both players disconnect before room creation
+* critical system error occurs before match start
+
+Never leave matches stuck indefinitely.
+
+---
+
+# Notifications
+
+Players receive real-time notifications for:
+
+* opponent found
+* room being created
+* room ready
+* room credentials available
+* join reminder
+* opponent joined
+* match started
+* screenshot uploaded
+* screenshot verification started
+* screenshot verified
+* provisional prize credited
+* dispute filed
+* dispute resolved
+* prize finalized
+* refund issued
+* penalty applied
+* account suspension
+
+---
+
+# User experience
+
+The flow should feel instant.
+
+Example:
+
+Play Now
+
+Opponent found
+
+Viewing opponent details
+
+Creating room
+
+Room ready
+
+Join now
+
+Match in progress
+
+Uploading screenshot
+
+Verifying screenshot
+
+Prize credited (Pending)
+
+Dispute window: 10:00
+
+Prize finalized
+
+This should feel similar to a real matchmaking system rather than a manual tournament workflow.
+
+---
+
+# Scalability
+
+The architecture must support adding additional phones later.
+
+Future expansion should allow:
+
+* multiple host phones
+* multiple verification phones
+* load balancing
+* parallel room creation
+* parallel screenshot verification
+
+without changing the player experience.
+
+Players should continue to see the same instant matchmaking interface while the backend automatically distributes room creation and verification jobs across available worker phones.
+
+---
+
+# Security guarantees
+
+The architecture must ensure:
+
+* webhook URLs are admin-managed
+* access tokens are single-use
+* worker responses are authenticated
+* duplicate responses are ignored
+* room credentials are distributed only by the server
+* players can view opponent details before joining
+* sharing room credentials can lead to suspension
+* worker phones cannot directly modify wallets or payouts
+* screenshots are stored only temporarily
+* prize distribution can occur only once
+* every critical action is controlled by the backend server
+
+This architecture provides instant matchmaking, automated room creation, screenshot verification through a secondary worker phone, dispute-based fraud protection, secure wallet management, and a payout system that guarantees **one-time prize distribution** while remaining scalable for future expansion.
