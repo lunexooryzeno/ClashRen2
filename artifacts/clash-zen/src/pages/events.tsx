@@ -147,7 +147,11 @@ export default function Events() {
         <div className="flex flex-col gap-2.5 mt-2">
           <SectionLabel delay={40} visible={visible}>Instant Battle</SectionLabel>
           <div
-            className="relative overflow-hidden select-none"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/quickmatch")}
+            onKeyDown={e => e.key === "Enter" && navigate("/quickmatch")}
+            className="relative overflow-hidden cursor-pointer active:scale-[0.975] select-none"
             style={{ borderRadius: "14px" }}
           >
             <img
@@ -161,22 +165,22 @@ export default function Events() {
                 display: "block",
                 objectFit: "cover",
                 objectPosition: "center 20%",
-                filter: "brightness(0.45)",
+                filter: "brightness(0.55)",
               }}
             />
-            {/* Coming Soon overlay */}
+            {/* Live overlay */}
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
               <span
                 className="text-[10px] font-black uppercase tracking-[0.22em] px-3 py-1 rounded-full"
                 style={{
-                  background: "rgba(139,92,246,0.25)",
-                  border: "1px solid rgba(139,92,246,0.5)",
-                  color: "#c4b5fd",
+                  background: "rgba(239,68,68,0.25)",
+                  border: "1px solid rgba(239,68,68,0.5)",
+                  color: "#fca5a5",
                 }}
               >
-                Coming Soon
+                ⚡ Live Now
               </span>
-              <p className="text-[12px] font-semibold text-white/60">Instant Battle is on the way</p>
+              <p className="text-[12px] font-semibold text-white/80">Jump in &amp; battle instantly</p>
             </div>
           </div>
         </div>
