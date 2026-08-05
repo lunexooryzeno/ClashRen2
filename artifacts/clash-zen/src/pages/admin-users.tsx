@@ -1753,8 +1753,7 @@ export default function AdminUsersPage() {
                   <div className="relative shrink-0">
                     <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center">
                       {u.profilePicture && (
-                        <CachedImg src={u.profilePicture.startsWith("/api/") || u.profilePicture.startsWith("http") ? u.profilePicture : `/api/storage${u.profilePicture}`} alt="" className="w-full h-full object-cover"
-                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        <CachedImg src={u.profilePicture.startsWith("/api/") || u.profilePicture.startsWith("http") ? u.profilePicture : `/api/storage${u.profilePicture}`} fallbackSrc="/avatars/default.png" alt="" className="w-full h-full object-cover" />
                       )}
                       {!u.profilePicture && (
                         <span className="text-lg font-bold text-white/40">{(u.inGameName?.[0] ?? u.phone[0]).toUpperCase()}</span>

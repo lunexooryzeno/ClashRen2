@@ -158,6 +158,7 @@ function MatchCard({ t, index, onClick }: { t: any; index: number; onClick: () =
       <div className="relative w-full overflow-hidden" style={{ height:136 }}>
         <CachedImg
           src={imageUrl ?? "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80"}
+          fallbackSrc="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80"
           alt={t.title}
           className="w-full h-full object-cover"
         />

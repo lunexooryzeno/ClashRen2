@@ -329,7 +329,7 @@ export default function Profile() {
             {/* Avatar — image only, no camera overlay */}
             <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-primary/30 bg-zinc-900 mb-4">
               {avatarUrl ? (
-                <CachedImg src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                <CachedImg src={avatarUrl} fallbackSrc="/avatars/default.png" alt="avatar" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-zinc-800">
                   <User className="w-12 h-12 text-zinc-500" strokeWidth={1.5} />

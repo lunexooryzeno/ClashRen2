@@ -418,7 +418,7 @@ export default function MyMatchDetailPage() {
       {/* Cover image */}
       {coverUrl && (
         <div className="relative w-full h-44 overflow-hidden">
-          <CachedImg src={coverUrl} alt="" className="w-full h-full object-cover" />
+          <CachedImg src={coverUrl} fallbackSrc="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80" alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom,rgba(10,10,11,0.2) 0%,rgba(10,10,11,1) 100%)" }} />
         </div>
       )}
@@ -866,7 +866,7 @@ export default function MyMatchDetailPage() {
                   }}
                 >
                   {src ? (
-                    <CachedImg src={src} alt="" className="w-full h-full object-cover" />
+                    <CachedImg src={src} fallbackSrc="/avatars/default.png" alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center text-[28px] font-black"
@@ -2017,7 +2017,8 @@ export default function MyMatchDetailPage() {
                 style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.25)" }}>
                 {slotMatch.opponent.profilePicture ? (
                   <CachedImg
-                    src={resolveImageUrl(slotMatch.opponent.profilePicture) ?? ""}
+                    src={resolveImageUrl(slotMatch.opponent.profilePicture) ?? "/avatars/default.png"}
+                    fallbackSrc="/avatars/default.png"
                     alt=""
                     className="w-full h-full object-cover"
                   />

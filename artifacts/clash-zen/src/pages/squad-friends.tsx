@@ -110,7 +110,7 @@ export default function SquadFriendsPage() {
                   <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 overflow-hidden"
                     style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
                     {p.profilePicture
-                      ? <CachedImg src={p.profilePicture.startsWith("/api/") || p.profilePicture.startsWith("http") ? p.profilePicture : `/api/storage${p.profilePicture}`} alt="" className="w-full h-full object-cover" />
+                      ? <CachedImg src={p.profilePicture.startsWith("/api/") || p.profilePicture.startsWith("http") ? p.profilePicture : `/api/storage${p.profilePicture}`} fallbackSrc="/avatars/default.png" alt="" className="w-full h-full object-cover" />
                       : <span className="text-xl">🎮</span>
                     }
                   </div>

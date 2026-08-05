@@ -487,6 +487,7 @@ export default function EventDetails() {
       <div className="relative h-[340px] w-full shrink-0">
         <CachedImg
           src={resolveImageUrl(t.imageUrl) || "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80"}
+          fallbackSrc="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80"
           alt={tm.title}
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -895,6 +896,7 @@ export default function EventDetails() {
                         <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-primary/30 shadow-[0_0_20px_rgba(var(--primary),0.2)]">
                           <CachedImg 
                              src={resolveImageUrl(myMatch.opponent.profilePicture) || "/avatars/default.png"} 
+                             fallbackSrc="/avatars/default.png"
                              alt={myMatch.opponent.inGameName}
                              className="w-full h-full object-cover"
                           />

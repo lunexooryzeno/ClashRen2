@@ -747,8 +747,7 @@ export default function AdminUserDetailPage() {
             <div className="w-9 h-9 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center"
               style={{ border: "1.5px solid rgba(255,255,255,0.08)" }}>
               {user?.profilePicture
-                ? <CachedImg src={user.profilePicture.startsWith("/api/") || user.profilePicture.startsWith("http") ? user.profilePicture : `/api/storage${user.profilePicture}`} alt="" className="w-full h-full object-cover"
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                ? <CachedImg src={user.profilePicture.startsWith("/api/") || user.profilePicture.startsWith("http") ? user.profilePicture : `/api/storage${user.profilePicture}`} fallbackSrc="/avatars/default.png" alt="" className="w-full h-full object-cover" />
                 : <span className="text-sm font-bold text-white/40">
                     {(user?.inGameName?.[0] ?? user?.phone?.[0] ?? "U").toUpperCase()}
                   </span>
@@ -900,8 +899,7 @@ export default function AdminUserDetailPage() {
               <div className="relative shrink-0">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center">
                   {user.profilePicture
-                    ? <CachedImg src={user.profilePicture.startsWith("/api/") || user.profilePicture.startsWith("http") ? user.profilePicture : `/api/storage${user.profilePicture}`} alt="" className="w-full h-full object-cover"
-                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; (e.currentTarget.nextElementSibling as HTMLElement | null)?.style.setProperty("display", "flex"); }} />
+                    ? <CachedImg src={user.profilePicture.startsWith("/api/") || user.profilePicture.startsWith("http") ? user.profilePicture : `/api/storage${user.profilePicture}`} fallbackSrc="/avatars/default.png" alt="" className="w-full h-full object-cover" />
                     : null}
                   <span className={cn("text-2xl font-bold text-white/40", user.profilePicture ? "hidden" : "flex")}>
                     {(user.inGameName?.[0] ?? user.phone[0]).toUpperCase()}

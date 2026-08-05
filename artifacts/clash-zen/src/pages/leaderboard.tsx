@@ -157,7 +157,7 @@ function Avatar({ name, size, ring, photoUrl }: { name: string; size: number; ri
       }}
     >
       {photoUrl ? (
-        <CachedImg src={photoUrl.startsWith("/api/") || photoUrl.startsWith("http") ? photoUrl : `/api/storage${photoUrl}`} alt={name} width={size} height={size} style={{ width: size, height: size, objectFit: "cover", display: "block" }} />
+        <CachedImg src={photoUrl.startsWith("/api/") || photoUrl.startsWith("http") ? photoUrl : `/api/storage${photoUrl}`} fallbackSrc="/avatars/default.png" alt={name} width={size} height={size} style={{ width: size, height: size, objectFit: "cover", display: "block" }} />
       ) : (
         <div
           className="w-full h-full flex items-center justify-center"
