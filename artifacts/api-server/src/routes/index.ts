@@ -24,6 +24,8 @@ import tournamentUploadRouter from "./tournament-upload.js";
 import slotMatchesRouter from "./slot-matches.js";
 import paymentSessionsRouter from "./payment-sessions.js";
 import quickmatchRouter from "./quickmatch.js";
+import quickmatchWorkersRouter from "./quickmatch-workers.js";
+import adminWorkersRouter from "./admin-workers.js";
 import phoneHostRouter from "./phone-host.js";
 import mediaUploadsRouter from "./media-uploads.js";
 
@@ -54,6 +56,8 @@ router.use(tournamentUploadRouter);
 router.use(slotMatchesRouter);
 router.use(paymentSessionsRouter);
 router.use(quickmatchRouter);
+router.use(quickmatchWorkersRouter);
+router.use(adminWorkersRouter);
 router.use(phoneHostRouter);
 router.use(mediaUploadsRouter);
 

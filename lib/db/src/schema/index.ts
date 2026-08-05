@@ -26,3 +26,4 @@ export * from "./freefire-api-keys";
 export * from "./payment-sessions";
 export * from "./quickmatch-verifications";
 export * from "./media-uploads";
+export * from "./quickmatch-workers";

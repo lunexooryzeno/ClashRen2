@@ -343,6 +343,49 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
+    // Join window — server notifies when credentials are ready and timer starts
+    sse.addEventListener("quickmatch_join_window", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as {
+          matchId: string;
+          state: string;
+          windowMs: number;
+          graceMs: number;
+          totalMs: number;
+          roomId?: string;
+          password?: string;
+        };
+        // Only handle if we're in the "found" phase (room is ready) or preparing
+        setPhase(prev => {
+          if (prev === "found" || prev === "preparing") {
+            // Start the join window countdown from now
+            startJoinWindow(null);
+            return "found"; // stay in found phase to show the room UI
+          }
+          return prev;
+        });
+        // If room credentials arrived via join_window event, apply them
+        if (data.roomId && data.password) {
+          setMatchInfo(prev => prev
+            ? { ...prev, roomId: data.roomId!, password: data.password! }
+            : null
+          );
+        }
+      } catch { /* ignore */ }
+    });
+
+    // A player confirmed they joined — update UI (e.g. show "opponent confirmed" indicator)
+    sse.addEventListener("quickmatch_join_confirmed", (e: MessageEvent) => {
+      try {
+        // Data: { matchId, confirmedBy (userId string), allConfirmed: boolean }
+        // We use this to reset any "joining…" spinner state and confirm both parties joined
+        const data = JSON.parse(e.data) as { matchId: string; confirmedBy: string; allConfirmed: boolean };
+        if (data.allConfirmed) {
+          setJoining(false);
+        }
+      } catch { /* ignore */ }
+    });
+
     // ── 8s fallback poll (SSE handles the fast path) ──────────────────────────
     const poll = async () => {
       try {

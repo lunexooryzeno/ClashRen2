@@ -127,6 +127,19 @@ export default function AdminPanel() {
             <Flag className="w-4 h-4 text-red-400/60 shrink-0" />
           </div>
         </Link>
+        {/* Quick-access: Worker Phones */}
+        <Link href="/286c81443d1fb388d1b9a8e3b280824c/worker-phones">
+          <div className="glass-card rounded-2xl p-4 border border-cyan-500/25 bg-cyan-500/5 hover:bg-cyan-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center shrink-0">
+              <Phone className="w-5 h-5 text-cyan-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-cyan-300 font-heading tracking-wide">Worker Phones</p>
+              <p className="text-[11px] text-zinc-500">Register & manage QuickMatch host phones · webhook dispatch</p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-cyan-400/60 shrink-0 -rotate-90" />
+          </div>
+        </Link>
         <AdminStats />
         <AdminDataPanel />
         <AdminPushPanel />

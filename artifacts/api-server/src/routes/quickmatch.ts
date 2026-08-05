@@ -19,9 +19,13 @@ import {
   getRoomStatus,
   markWebhookFired,
   markActionTaken,
+  transitionState,
+  recordJoinConfirmed,
   type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
 import { creditPlayer, checkAndSettleIfEnded, type CheckEndResult } from "../lib/quickmatch-settlement.js";
+import { cancelMatch } from "../lib/quickmatch-cancel.js";
+import { dispatchMatchToWorker } from "./quickmatch-workers.js";
 import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
 import { notify } from "../lib/push.js";
 import { requireAuth } from "../middlewares/auth.js";
@@ -290,13 +294,15 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
   if (MODE_MACRO_SUPPORTED.has(valid.modeId) && !hasPendingRoomRequest()) {
     const playerIds = tryMatch(valid.gameType, valid.modeId, entryFee);
     if (playerIds) {
-      const players    = await fetchPlayers(playerIds);
-      const match      = createMatch(players, valid.gameType, valid.modeId, entryFee, prizeAmount);
-      const uid1       = players[0]?.uid ?? null;
-      const uid2       = players[1]?.uid ?? null;
+      const players = await fetchPlayers(playerIds);
+      const match   = createMatch(players, valid.gameType, valid.modeId, entryFee, prizeAmount);
+      // Transition to WAITING_FOR_ROOM then dispatch to worker phone
+      try { transitionState(match.id, "MATCHED", "WAITING_FOR_ROOM"); } catch {}
       // One-fire guard: only fire if not already fired for this match
       if (!match.webhookFired) {
-        fireMacroDroidWithUids(match.id, uid1, uid2).catch(() => {});
+        dispatchMatchToWorker(match).catch((err) => {
+          console.error("[quickmatch] Worker dispatch failed:", err);
+        });
       }
       // SSE: notify both players immediately — no poll needed
       pushMatchToPlayers(match, { status: "waiting_room", roomStatus: "opponent_found" });
@@ -439,8 +445,12 @@ router.post("/quickmatch/match/action", requireAuth, (req, res) => {
   }
   markActionTaken(match.id, userId);
 
-  // Send a push notification confirming the player has joined
+  // Record join confirmation for join-window penalty logic
   if (action === "joined") {
+    // Bridge legacy action endpoint into the new join-window confirmation system
+    // so penalty/refund logic works regardless of which endpoint the client calls.
+    recordJoinConfirmed(match.id, userId);
+
     notify(userIdNum, {
       type:  "quickmatch_joined",
       title: "You're In! 🎮",

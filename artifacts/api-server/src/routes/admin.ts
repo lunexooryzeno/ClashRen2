@@ -23,6 +23,7 @@ import {
   slotMatchEventsTable,
   slotMatchPlayerStatusTable,
   topupRequestsTable,
+  quickmatchWorkersTable,
 } from "@workspace/db";
 import { eq, sql, lt, and, desc, asc, ne, gte, inArray } from "drizzle-orm";
 import { requireAdmin, requireFinanceAdmin, getSuperSecret } from "../middlewares/auth.js";
