@@ -1,3 +1,4 @@
 - [Single-bundle deploy](single-bundle-deploy.md) — how clash-zen ships as one Node process (API + SPA on one port) for Hostinger; DATA_DIR + build.mjs externals contract.
 - [Banner upload serving](banner-upload-serving.md) — resolve uploaded assets independently of the bundled server's working directory.
 - [Composed match assignments](composed-match-assignments.md) — reuse participant assignment fields for player-visible team and slot numbers without a schema migration.
+- [Media upload storage](media-upload-storage.md) — all image uploads stored in `media_uploads` PostgreSQL table (not disk); `GET /api/uploads/:id` serves them.

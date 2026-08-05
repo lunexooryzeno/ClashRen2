@@ -15,6 +15,7 @@ import {
 import { eq, sql, count, and, lt } from "drizzle-orm";
 import { processAutoReleases } from "./routes/slot-matches.js";
 import { pollBharatPePayments } from "./lib/bharatpe-poller.js";
+import { ensureMediaUploadsTable } from "./lib/mediaDb.js";
 
 const rawPort = process.env["PORT"] ?? "3000";
 
@@ -79,6 +80,12 @@ async function processScheduledRewards() {
     logger.error({ err: e }, "Error in scheduled reward processor");
   }
 }
+
+// Ensure the media_uploads table exists before accepting requests.
+// This is idempotent (CREATE TABLE IF NOT EXISTS) so it's safe on every start.
+ensureMediaUploadsTable()
+  .then(() => logger.info("media_uploads table ready"))
+  .catch((err) => logger.error({ err }, "Failed to ensure media_uploads table"));
 
 app.listen(port, (err) => {
   if (err) {

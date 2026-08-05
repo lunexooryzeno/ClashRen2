@@ -25,6 +25,7 @@ import slotMatchesRouter from "./slot-matches.js";
 import paymentSessionsRouter from "./payment-sessions.js";
 import quickmatchRouter from "./quickmatch.js";
 import phoneHostRouter from "./phone-host.js";
+import mediaUploadsRouter from "./media-uploads.js";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(slotMatchesRouter);
 router.use(paymentSessionsRouter);
 router.use(quickmatchRouter);
 router.use(phoneHostRouter);
+router.use(mediaUploadsRouter);
 
 export default router;

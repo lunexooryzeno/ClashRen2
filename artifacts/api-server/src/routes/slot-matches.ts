@@ -1,8 +1,5 @@
 import { Router, type IRouter } from "express";
-import { createWriteStream, mkdirSync } from "fs";
-import { join } from "path";
 import { randomUUID } from "crypto";
-import { UPLOADS_DIR as UPLOADS_BASE } from "../lib/dataDir.js";
 import { db } from "@workspace/db";
 import {
   slotMatchesTable,
@@ -1882,9 +1879,6 @@ router.get("/admin/slot-matches/:mid/verifications", requireAdmin, async (req, r
 });
 
 // ── Player: Upload dispute screenshot ────────────────────────────────────────
-const DISPUTE_UPLOADS_DIR = join(UPLOADS_BASE, "disputes");
-mkdirSync(DISPUTE_UPLOADS_DIR, { recursive: true });
-
 const DISPUTE_ALLOWED_MIME: Record<string, string> = {
   "image/jpeg": ".jpg", "image/jpg": ".jpg",
   "image/png": ".png", "image/webp": ".webp",
@@ -1906,17 +1900,17 @@ router.post("/slots/:id/dispute/screenshot", requireAuth, (req, res) => {
     }
     chunks.push(chunk);
   });
-  req.on("end", () => {
+  req.on("end", async () => {
     if (aborted) return;
     if (!chunks.length) { res.status(400).json({ error: "No file data received" }); return; }
-    const ext = DISPUTE_ALLOWED_MIME[ct] ?? ".jpg";
-    const filename = `${randomUUID()}${ext}`;
-    const filePath = join(DISPUTE_UPLOADS_DIR, filename);
-    const buf = Buffer.concat(chunks);
-    const ws = createWriteStream(filePath);
-    ws.write(buf); ws.end();
-    ws.on("finish", () => res.json({ url: `/api/slots/uploads/disputes/${filename}` }));
-    ws.on("error", () => res.status(500).json({ error: "Failed to save screenshot" }));
+    try {
+      const buf = Buffer.concat(chunks);
+      const { saveMediaUpload } = await import("../lib/mediaDb.js");
+      const id = await saveMediaUpload(ct, buf);
+      res.json({ url: `/api/uploads/${id}` });
+    } catch {
+      res.status(500).json({ error: "Failed to save screenshot" });
+    }
   });
   req.on("error", () => { if (!aborted) res.status(500).json({ error: "Upload stream error" }); });
 });
