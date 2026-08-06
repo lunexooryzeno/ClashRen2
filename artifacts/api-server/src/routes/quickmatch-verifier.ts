@@ -236,17 +236,25 @@ async function rejectSubmission(
       .catch(() => {});
   }
 
-  // Notify players that re-upload is available
+  // Calculate remaining time from the authoritative resultPendingAt timestamp
+  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000 + 10_000; // +10s grace
+  const remainingMs = match.resultPendingAt
+    ? Math.max(0, SCREENSHOT_DEADLINE_MS - (Date.now() - match.resultPendingAt))
+    : 0;
+
+  // Notify players that re-upload is available (with server-authoritative remaining time)
   for (const player of match.players) {
     pushToUser(Number(player.userId), "quickmatch_screenshot_rejected", {
       matchId: match.id,
       reason,
-      canRetry: true,
+      canRetry: remainingMs > 0,
+      remainingMs,
+      remainingSeconds: Math.floor(remainingMs / 1000),
       windowSeconds: SCREENSHOT_WINDOW_SECONDS,
     });
   }
 
-  console.log(`[verifier] Match ${match.id} screenshot rejected: ${reason}`);
+  console.log(`[verifier] Match ${match.id} screenshot rejected: ${reason} (remainingMs=${remainingMs})`);
 }
 
 // ─── POST /api/quickmatch/verifier/callback ────────────────────────────────────
@@ -452,19 +460,27 @@ async function handleInvalidOcr(
       .catch(() => {});
   }
 
-  // Notify players they can retry
+  // Calculate remaining time from the authoritative resultPendingAt timestamp
+  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000 + 10_000; // +10s grace
+  const remainingMs = match.resultPendingAt
+    ? Math.max(0, SCREENSHOT_DEADLINE_MS - (Date.now() - match.resultPendingAt))
+    : 0;
+
+  // Notify players they can retry (with server-authoritative remaining time)
   for (const player of match.players) {
     pushToUser(Number(player.userId), "quickmatch_screenshot_rejected", {
       matchId,
       reason: "OCR verification failed",
       ocrConfidence: ocrResult.ocrConfidence,
       tamperingScore: ocrResult.tamperingScore,
-      canRetry: true,
+      canRetry: remainingMs > 0,
+      remainingMs,
+      remainingSeconds: Math.floor(remainingMs / 1000),
       windowSeconds: SCREENSHOT_WINDOW_SECONDS,
     });
   }
 
-  console.log(`[verifier] Match ${matchId}: OCR invalid — reverted to RESULT_PENDING`);
+  console.log(`[verifier] Match ${matchId}: OCR invalid — reverted to RESULT_PENDING (remainingMs=${remainingMs})`);
 }
 
 export default router;

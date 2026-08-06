@@ -360,14 +360,34 @@ export default function QuickMatchQueue() {
     return () => clearInterval(id);
   }, [phase, matchCreatedAt]);
 
-  // Screenshot countdown
+  // Server-authoritative deadline timestamp (ms since epoch) for the screenshot window.
+  // Set from quickmatch_result_pending SSE payload so the client clock agrees with the server.
+  const [resultPendingAt, setResultPendingAt] = useState<number | null>(null);
+
+  // Screenshot countdown — initialized from server-authoritative timestamp when available
   useEffect(() => {
     if (phase === "result_pending") {
-      startScreenshotTimer();
+      if (resultPendingAt !== null) {
+        // Compute remaining time from server timestamp (80s window + 10s grace = 90s)
+        const elapsed = Math.floor((Date.now() - resultPendingAt) / 1000);
+        const remaining = Math.max(0, SCREENSHOT_WINDOW_SECONDS - elapsed);
+        setScreenshotSecs(remaining);
+        stopScreenshotTimer();
+        if (remaining > 0) {
+          screenshotTimerRef.current = setInterval(() => {
+            setScreenshotSecs(s => {
+              if (s <= 1) { stopScreenshotTimer(); return 0; }
+              return s - 1;
+            });
+          }, 1000);
+        }
+      } else {
+        startScreenshotTimer();
+      }
     } else {
       stopScreenshotTimer();
     }
-  }, [phase, startScreenshotTimer, stopScreenshotTimer]);
+  }, [phase, resultPendingAt, startScreenshotTimer, stopScreenshotTimer]);
 
   // Navigation blocker — active while searching / preparing / found
   const isBlocking = phase === "searching" || phase === "preparing" || phase === "found";
@@ -555,7 +575,13 @@ export default function QuickMatchQueue() {
     // RESULT_PENDING — match ended (stats changed), winner should upload screenshot
     sse.addEventListener("quickmatch_result_pending", (e: MessageEvent) => {
       try {
-        const data = JSON.parse(e.data) as { matchId: string; state: string; windowSeconds?: number };
+        const data = JSON.parse(e.data) as {
+          matchId: string; state: string;
+          windowSeconds?: number;
+          resultPendingAt?: number; // authoritative server timestamp (ms epoch)
+        };
+        // Store server-authoritative timestamp so the countdown is accurate
+        if (data.resultPendingAt) setResultPendingAt(data.resultPendingAt);
         setPhase("result_pending");
         stopPolling();
       } catch { /* ignore */ }
@@ -570,14 +596,38 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // Screenshot rejected — allow re-upload
+    // Screenshot rejected — allow re-upload using server-authoritative remaining time
     sse.addEventListener("quickmatch_screenshot_rejected", (e: MessageEvent) => {
       try {
-        setPhase("result_pending");
+        const data = JSON.parse(e.data) as {
+          remainingMs?: number;
+          remainingSeconds?: number;
+          canRetry?: boolean;
+        };
         setUploading(false);
         setSelectedFile(null);
-        setUploadError("Screenshot not recognized. Please upload a clear result screenshot.");
-        startScreenshotTimer();
+        setUploadError(
+          data.canRetry === false
+            ? "Upload window has expired — no further submissions allowed."
+            : "Screenshot not recognized. Please upload a clear result screenshot."
+        );
+        // Use server-authoritative remaining time — do NOT reset to the full 80s
+        const remaining = data.remainingSeconds ?? Math.floor((data.remainingMs ?? 0) / 1000);
+        stopScreenshotTimer();
+        if (remaining > 0) {
+          setScreenshotSecs(remaining);
+          setPhase("result_pending");
+          screenshotTimerRef.current = setInterval(() => {
+            setScreenshotSecs(s => {
+              if (s <= 1) { stopScreenshotTimer(); return 0; }
+              return s - 1;
+            });
+          }, 1000);
+        } else {
+          // Window expired — show expired state but remain in result_pending
+          setScreenshotSecs(0);
+          setPhase("result_pending");
+        }
       } catch { /* ignore */ }
     });
 

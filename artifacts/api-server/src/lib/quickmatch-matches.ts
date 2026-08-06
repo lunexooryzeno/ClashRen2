@@ -182,6 +182,12 @@ export function forceSetState(matchId: string, to: MatchState): QuickMatch | nul
   if (!match) return null;
   match.currentState = to;
   match.status = toLegacyStatus(to);
+  // Record when RESULT_PENDING begins for server-side deadline enforcement.
+  // Only set on FIRST entry — do NOT reset when the match re-enters RESULT_PENDING
+  // after OCR rejection, so the total deadline is measured from the original entry.
+  if (to === "RESULT_PENDING" && !match.resultPendingAt) {
+    match.resultPendingAt = Date.now();
+  }
   return match;
 }
 

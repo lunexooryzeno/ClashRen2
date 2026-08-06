@@ -622,15 +622,19 @@ router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
       // rather than being fully settled. The client should show the upload UI, not navigate away.
       const freshMatch = getMatchById(match.id);
       if (freshMatch && freshMatch.currentState === "RESULT_PENDING") {
-        // Notify both players via SSE to switch to the result_pending UI
+        // Notify both players via SSE to switch to the result_pending UI.
+        // Include the authoritative resultPendingAt so the client can compute
+        // its countdown from the server's clock rather than local start.
+        const resultPendingAt = freshMatch.resultPendingAt ?? Date.now();
         for (const player of freshMatch.players) {
           pushToUser(Number(player.userId), "quickmatch_result_pending", {
             matchId: freshMatch.id,
             state: "RESULT_PENDING",
             windowSeconds: 80,
+            resultPendingAt,
           });
         }
-        res.json({ ended: true, resultPending: true, matchId: match.id });
+        res.json({ ended: true, resultPending: true, matchId: match.id, resultPendingAt });
         return;
       }
     }
