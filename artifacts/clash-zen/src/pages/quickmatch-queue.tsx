@@ -212,6 +212,9 @@ export default function QuickMatchQueue() {
   const [disputeExplanation, setDisputeExplanation] = useState("");
   const [disputeEvidence, setDisputeEvidence] = useState<File[]>([]);
   const [disputeEvidenceError, setDisputeEvidenceError] = useState<string | null>(null);
+  // True when this player is the authorized screenshot submitter (triggered check-end → RESULT_PENDING).
+  // False means this player is the opponent who sees "Waiting for opponent to submit result".
+  const [isResultClaimant, setIsResultClaimant] = useState(false);
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
   const disputeFileRef                        = useRef<HTMLInputElement>(null);
 
@@ -462,6 +465,7 @@ export default function QuickMatchQueue() {
       resultPendingAt?: number | null;
       provisionalWinnerId?: string | null;
       disputeWindowStartedAt?: number | null;
+      claimantUserId?: string | null;
     }, fromSse = false) => {
       if (match.entryFee)    setEntryFee(match.entryFee);
       if (match.prizeAmount) setPrizeAmount(match.prizeAmount);
@@ -481,11 +485,16 @@ export default function QuickMatchQueue() {
         const myUserId = match.me?.userId;
         const isWinner = !!(myUserId && match.provisionalWinnerId === String(myUserId));
         switch (match.currentState) {
-          case "RESULT_PENDING":
+          case "RESULT_PENDING": {
             // Restore server-authoritative deadline so the screenshot timer is accurate
             if (match.resultPendingAt) setResultPendingAt(match.resultPendingAt);
+            // Determine if this player is authorized to upload
+            const myUid = match.me?.userId;
+            const isClaim = !!(myUid && match.claimantUserId === String(myUid));
+            setIsResultClaimant(isClaim);
             setPhase("result_pending");
             return;
+          }
           case "VERIFYING_SCREENSHOT":
             setPhase("verifying");
             return;
@@ -612,16 +621,20 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // RESULT_PENDING — match ended (stats changed), winner should upload screenshot
+    // RESULT_PENDING — match ended (stats changed).
+    // role="claimant" → this player is authorized to upload the screenshot.
+    // role="opponent" → this player waits while the opponent submits.
     sse.addEventListener("quickmatch_result_pending", (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data) as {
           matchId: string; state: string;
           windowSeconds?: number;
-          resultPendingAt?: number; // authoritative server timestamp (ms epoch)
+          resultPendingAt?: number;
+          role?: "claimant" | "opponent";
         };
-        // Store server-authoritative timestamp so the countdown is accurate
         if (data.resultPendingAt) setResultPendingAt(data.resultPendingAt);
+        const isClaim = data.role !== "opponent";
+        setIsResultClaimant(isClaim);
         setPhase("result_pending");
         stopPolling();
       } catch { /* ignore */ }
@@ -917,10 +930,12 @@ export default function QuickMatchQueue() {
           if (data.ended) {
             clearPollTimer();
             if (data.resultPending) {
-              // Match entered RESULT_PENDING — show screenshot upload UI.
-              // Apply the authoritative server timestamp so the countdown is accurate
-              // even when the SSE event hasn't arrived yet (network lag, etc.).
+              // Match entered RESULT_PENDING.
+              // isClaimant: server confirmed this player may upload the screenshot.
+              // The opponent (isClaimant=false) sees "Waiting for opponent to submit".
               if (data.resultPendingAt) setResultPendingAt(data.resultPendingAt);
+              const isClaim = data.isClaimant !== false; // default true for legacy responses
+              setIsResultClaimant(isClaim);
               setPhase("result_pending");
             } else {
               // Legacy settlement complete — navigate to result page
@@ -1842,7 +1857,22 @@ export default function QuickMatchQueue() {
       )}
 
       {/* ─────────────────── RESULT PENDING (screenshot upload) ─────────────────── */}
-      {phase === "result_pending" && (
+      {phase === "result_pending" && !isResultClaimant && (
+        /* ─────────── Opponent: waiting for claimant to submit ─────────── */
+        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 gap-6" style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{
+            background: "rgba(255,255,255,0.04)", border: "1.5px solid rgba(255,255,255,0.1)",
+          }}>
+            <div className="w-8 h-8 rounded-full border-[3px] border-zinc-600 border-t-zinc-300 animate-spin" />
+          </div>
+          <div className="text-center">
+            <p className="text-[17px] font-extrabold text-white mb-1">Waiting for opponent</p>
+            <p className="text-[12px] font-semibold text-zinc-500">Your opponent is submitting the match result</p>
+          </div>
+        </div>
+      )}
+
+      {phase === "result_pending" && isResultClaimant && (
         <div className="flex-1 flex flex-col items-center px-4 pb-8" style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}>
 
           <div className="mt-4 mb-4 flex flex-col items-center gap-2">

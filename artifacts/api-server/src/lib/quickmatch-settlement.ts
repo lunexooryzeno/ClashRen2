@@ -37,7 +37,7 @@ export interface CheckEndResult {
   reason?: "credentials_not_ready" | "no_pre_snapshots" | "stats_unchanged";
 }
 
-export async function checkAndSettleIfEnded(match: QuickMatch): Promise<CheckEndResult> {
+export async function checkAndSettleIfEnded(match: QuickMatch, claimantUserId?: string): Promise<CheckEndResult> {
   // If settlement is already complete or in-flight, await the promise so we
   // only return ended:true once DB rows are guaranteed to be written.
   if (match.noShowHandled) {
@@ -101,7 +101,13 @@ export async function checkAndSettleIfEnded(match: QuickMatch): Promise<CheckEnd
 
   // Transition match to RESULT_PENDING so the winner can upload a screenshot.
   // The screenshot verification flow (quickmatch-verifier.ts) takes over from here.
-  forceSetState(match.id, "RESULT_PENDING");
+  const updatedMatch = forceSetState(match.id, "RESULT_PENDING");
+
+  // Record the authorized screenshot submitter — the player who first triggered
+  // check-end and proved the match ended. Only this player may call submit-screenshot.
+  if (updatedMatch && claimantUserId) {
+    updatedMatch.claimantUserId = claimantUserId;
+  }
 
   return { ended: true };
 }

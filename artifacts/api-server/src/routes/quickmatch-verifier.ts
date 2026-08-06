@@ -84,6 +84,17 @@ router.post("/quickmatch/submit-screenshot", requireAuth, async (req, res) => {
     return;
   }
 
+  // Authorization: only the player who triggered check-end (the authorized claimant)
+  // may upload a result screenshot. Enforcing this prevents the opponent from submitting
+  // a competing or fabricated result that could redirect prize funds.
+  if (activeMatch.claimantUserId && activeMatch.claimantUserId !== userId) {
+    res.status(403).json({
+      error: "You are not authorized to submit the result for this match",
+      code: "not_claimant",
+    });
+    return;
+  }
+
   // Server-side deadline enforcement: exactly 80s, matching the client SCREENSHOT_WINDOW_SECONDS.
   // No grace period — keeping the deadline identical on both sides prevents the client showing
   // an expired UI while the server still accepts the upload.

@@ -98,6 +98,13 @@ export interface QuickMatch {
    * refresh/reconnect without relying on local state.
    */
   disputeWindowStartedAt?: number | null;
+  /**
+   * userId of the player authorized to submit the result screenshot.
+   * Set when the match enters RESULT_PENDING — only the player who first
+   * called check-end and triggered the RESULT_PENDING transition is
+   * authorized to upload. Enforced in POST /api/quickmatch/submit-screenshot.
+   */
+  claimantUserId?: string | null;
 }
 
 const MAX_HISTORY = 50;

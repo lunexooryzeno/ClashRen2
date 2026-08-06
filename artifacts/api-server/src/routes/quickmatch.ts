@@ -478,6 +478,8 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
   const postMatchFields = {
     currentState: match.currentState,
     resultPendingAt: match.resultPendingAt ?? null,
+    // Authorized screenshot submitter — used for role-specific UI on reconnect
+    claimantUserId: match.claimantUserId ?? null,
     // Used by client to determine winner/loser role in PROVISIONAL_WIN / DISPUTE_WINDOW
     provisionalWinnerId: match.provisionalWinnerId ?? null,
     // Epoch ms when the 10-minute loser dispute-filing window opened.
@@ -604,26 +606,39 @@ router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
   // DB rows exist by the time the client navigates to the result page.
   // (Do NOT short-circuit on noShowHandled here; that bypasses the await.)
   try {
-    const result: CheckEndResult = await checkAndSettleIfEnded(match);
+    // Pass the calling userId as the authorized screenshot claimant.
+    // If stats changed on this call, this player is recorded as the only one allowed to upload.
+    const result: CheckEndResult = await checkAndSettleIfEnded(match, userId);
 
     if (result.ended) {
       // Check if the match transitioned to RESULT_PENDING (screenshot-verification path)
       // rather than being fully settled. The client should show the upload UI, not navigate away.
       const freshMatch = getMatchById(match.id);
       if (freshMatch && freshMatch.currentState === "RESULT_PENDING") {
-        // Notify both players via SSE to switch to the result_pending UI.
-        // Include the authoritative resultPendingAt so the client can compute
-        // its countdown from the server's clock rather than local start.
         const resultPendingAt = freshMatch.resultPendingAt ?? Date.now();
+        const claimantUserId = freshMatch.claimantUserId ?? null;
+
+        // Send role-specific SSE so the claimant sees the upload UI and the
+        // opponent sees "Waiting for opponent to submit result".
         for (const player of freshMatch.players) {
+          const isClaimant = claimantUserId === player.userId;
           pushToUser(Number(player.userId), "quickmatch_result_pending", {
             matchId: freshMatch.id,
             state: "RESULT_PENDING",
             windowSeconds: 80,
             resultPendingAt,
+            role: isClaimant ? "claimant" : "opponent",
           });
         }
-        res.json({ ended: true, resultPending: true, matchId: match.id, resultPendingAt });
+
+        const isClaimant = claimantUserId === userId;
+        res.json({
+          ended: true,
+          resultPending: true,
+          matchId: match.id,
+          resultPendingAt,
+          isClaimant,
+        });
         return;
       }
     }
