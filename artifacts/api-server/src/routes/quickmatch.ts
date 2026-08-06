@@ -24,6 +24,7 @@ import {
   type PlayerProfile,
 } from "../lib/quickmatch-matches.js";
 import { creditPlayer, checkAndSettleIfEnded, type CheckEndResult } from "../lib/quickmatch-settlement.js";
+import { seedPrize } from "../lib/prize-state.js";
 import { cancelMatch } from "../lib/quickmatch-cancel.js";
 import { dispatchMatchToWorker } from "./quickmatch-workers.js";
 import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
@@ -296,6 +297,12 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
     if (playerIds) {
       const players = await fetchPlayers(playerIds);
       const match   = createMatch(players, valid.gameType, valid.modeId, entryFee, prizeAmount);
+      // Seed prize row immediately so the state machine is ready
+      if (prizeAmount > 0) {
+        seedPrize(match.id, prizeAmount).catch((err) =>
+          console.error("[quickmatch] Failed to seed prize:", err),
+        );
+      }
       // Transition to WAITING_FOR_ROOM then dispatch to worker phone
       try { transitionState(match.id, "MATCHED", "WAITING_FOR_ROOM"); } catch {}
       // One-fire guard: only fire if not already fired for this match

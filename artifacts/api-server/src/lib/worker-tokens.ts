@@ -131,12 +131,12 @@ export async function logWorkerResponse(opts: {
 }
 
 /**
- * Select the highest-priority available worker that supports the given game mode.
+ * Select the highest-priority available room_creator worker that supports the given game mode.
  * Returns null if no worker is available.
  */
 export async function selectWorker(modeId: string): Promise<{ id: number; webhookUrl: string; webhookSecret: string } | null> {
   const workers = await db.query.quickmatchWorkersTable.findMany({
-    where: (w, { eq }) => eq(w.status, "active"),
+    where: (w, { and, eq }) => and(eq(w.status, "active"), eq(w.workerType, "room_creator")),
     orderBy: (w, { desc }) => [desc(w.priority)],
   });
 

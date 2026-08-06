@@ -15,6 +15,13 @@
       "when": 1784370600000,
       "tag": "0001_quickmatch_verifications",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785954471002,
+      "tag": "0002_abandoned_genesis",
+      "breakpoints": true
     }
   ]
 }

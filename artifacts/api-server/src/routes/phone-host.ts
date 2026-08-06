@@ -224,6 +224,19 @@ router.post("/phone-host/credentials", (req, res) => {
       console.error("[phone-host] Pre-snapshot error:", err),
     );
     setTimeout(() => {
+      // Skip legacy settlement if the match has entered the screenshot pipeline.
+      // checkAndSettleIfEnded already transitions to RESULT_PENDING when stats change,
+      // and settleQuickMatch itself guards against those states — this is an extra
+      // safety net for the timer path.
+      const current = attachedMatch.currentState;
+      const screenshotStates = [
+        "RESULT_PENDING", "VERIFYING_SCREENSHOT", "PROVISIONAL_WIN",
+        "DISPUTE_WINDOW", "FINALIZED", "CANCELLED",
+      ];
+      if (screenshotStates.includes(current)) {
+        console.log(`[phone-host] Skipping 15-min fallback settlement for match ${attachedMatch.id} — state: ${current}`);
+        return;
+      }
       settleQuickMatch(attachedMatch).catch((err) =>
         console.error("[phone-host] Settlement error:", err),
       );

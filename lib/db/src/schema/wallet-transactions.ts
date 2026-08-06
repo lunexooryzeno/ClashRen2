@@ -7,9 +7,13 @@ export const walletTransactionsTable = pgTable("wallet_transactions", {
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // "topup" | "entry" | "prize"
+  type: text("type").notNull(), // "topup" | "entry" | "prize" | "withdraw_refund"
   amount: integer("amount").notNull(), // positive = credit, negative = debit
   label: text("label").notNull(),
+  /** "settled" = applied to balance; "pending" = locked prize awaiting finalization */
+  status: text("status").notNull().default("settled"),
+  /** Unique payout reference — used to enforce idempotent prize credits */
+  payoutId: text("payout_id"),
   tournamentId: integer("tournament_id").references(() => tournamentsTable.id, {
     onDelete: "set null",
   }),

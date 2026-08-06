@@ -10,6 +10,8 @@ export const quickmatchWorkersTable = pgTable("quickmatch_workers", {
   priority: integer("priority").notNull().default(0),
   lastHeartbeatAt: timestamp("last_heartbeat_at"),
   currentJobMatchId: text("current_job_match_id"),
+  /** "room_creator" phones create rooms; "verifier" phones run screenshot OCR */
+  workerType: text("worker_type").notNull().default("room_creator"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

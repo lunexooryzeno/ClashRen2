@@ -27,6 +27,7 @@ function formatWorker(w: typeof quickmatchWorkersTable.$inferSelect, includeSecr
     supportedGameModes: w.supportedGameModes,
     status: w.status,
     priority: w.priority,
+    workerType: w.workerType,
     lastHeartbeatAt: w.lastHeartbeatAt?.toISOString() ?? null,
     currentJobMatchId: w.currentJobMatchId ?? null,
     createdAt: w.createdAt.toISOString(),
@@ -44,18 +45,22 @@ router.get("/admin/workers", requireAdmin, async (_req, res) => {
 
 // POST /api/admin/workers — create a worker
 router.post("/admin/workers", requireAdmin, async (req, res) => {
-  const { name, webhookUrl, webhookSecret, supportedGameModes, priority } = req.body as {
+  const { name, webhookUrl, webhookSecret, supportedGameModes, priority, workerType } = req.body as {
     name?: string;
     webhookUrl?: string;
     webhookSecret?: string;
     supportedGameModes?: string;
     priority?: number;
+    workerType?: string;
   };
 
   if (!name || !webhookUrl || !webhookSecret) {
     res.status(400).json({ error: "name, webhookUrl, and webhookSecret are required" });
     return;
   }
+
+  const validWorkerTypes = ["room_creator", "verifier"];
+  const resolvedWorkerType = workerType && validWorkerTypes.includes(workerType) ? workerType : "room_creator";
 
   const [worker] = await db
     .insert(quickmatchWorkersTable)
@@ -65,6 +70,7 @@ router.post("/admin/workers", requireAdmin, async (req, res) => {
       webhookSecret: webhookSecret.trim(),
       supportedGameModes: supportedGameModes?.trim() ?? "duel,healing,knife",
       priority: priority ?? 0,
+      workerType: resolvedWorkerType,
     })
     .returning();
 
@@ -77,13 +83,14 @@ router.patch("/admin/workers/:id", requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
-  const { name, webhookUrl, webhookSecret, supportedGameModes, status, priority } = req.body as {
+  const { name, webhookUrl, webhookSecret, supportedGameModes, status, priority, workerType } = req.body as {
     name?: string;
     webhookUrl?: string;
     webhookSecret?: string;
     supportedGameModes?: string;
     status?: string;
     priority?: number;
+    workerType?: string;
   };
 
   const patch: Partial<typeof quickmatchWorkersTable.$inferInsert> = {};
@@ -93,6 +100,10 @@ router.patch("/admin/workers/:id", requireAdmin, async (req, res) => {
   if (supportedGameModes !== undefined) patch.supportedGameModes = supportedGameModes.trim();
   if (status !== undefined) patch.status = status;
   if (priority !== undefined) patch.priority = priority;
+  if (workerType !== undefined) {
+    const validWorkerTypes = ["room_creator", "verifier"];
+    patch.workerType = validWorkerTypes.includes(workerType) ? workerType : "room_creator";
+  }
 
   if (Object.keys(patch).length === 0) {
     res.status(400).json({ error: "No fields to update" });

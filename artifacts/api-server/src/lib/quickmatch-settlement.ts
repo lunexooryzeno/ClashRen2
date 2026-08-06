@@ -15,6 +15,7 @@ import {
   markPreSnapshotAttempted,
   markNoShowHandled,
   setSettlementPromise,
+  forceSetState,
   dismissMatch,
   type QuickMatch,
 } from "./quickmatch-matches.js";
@@ -87,21 +88,21 @@ export async function checkAndSettleIfEnded(match: QuickMatch): Promise<CheckEnd
     return { ended: false, reason: "stats_unchanged" };
   }
 
-  // A concurrent check-end may have started settlement during the async snapshot
-  // fetching above. Re-check noShowHandled and await its promise if so.
+  // A concurrent check-end may have already transitioned the match.
   if (match.noShowHandled) {
     if (match.settlementPromise) await match.settlementPromise;
     return { ended: true };
   }
 
-  console.log(`[check-end] Match ${match.id}: stats changed — triggering immediate settlement`);
+  console.log(`[check-end] Match ${match.id}: stats changed — transitioning to RESULT_PENDING for screenshot verification`);
 
-  // Store the promise BEFORE awaiting so concurrent callers see it immediately.
-  // settleQuickMatch() sets noShowHandled synchronously at its start, making
-  // any subsequent concurrent call fall into the noShowHandled branch above.
-  const promise = settleQuickMatch(match);
-  setSettlementPromise(match.id, promise);
-  await promise;
+  // Mark noShowHandled to prevent concurrent calls from re-entering this path.
+  markNoShowHandled(match.id);
+
+  // Transition match to RESULT_PENDING so the winner can upload a screenshot.
+  // The screenshot verification flow (quickmatch-verifier.ts) takes over from here.
+  forceSetState(match.id, "RESULT_PENDING");
+
   return { ended: true };
 }
 // Read join window from system settings so admins can tune it live
@@ -200,6 +201,22 @@ export async function fetchAndStorePreSnapshots(match: QuickMatch): Promise<void
 
 export async function settleQuickMatch(match: QuickMatch): Promise<void> {
   if (match.noShowHandled) return;
+
+  // If the match has entered the screenshot-verification pipeline, do not
+  // apply the legacy stat-comparison settlement — the prize state machine
+  // handles it from RESULT_PENDING onward.
+  const screenshotStates: Array<typeof match.currentState> = [
+    "RESULT_PENDING", "VERIFYING_SCREENSHOT", "PROVISIONAL_WIN",
+    "DISPUTE_WINDOW", "FINALIZED",
+  ];
+  if (screenshotStates.includes(match.currentState)) {
+    console.log(
+      `[settlement] Skipping legacy settlement for match ${match.id} — ` +
+      `already in screenshot-verification state: ${match.currentState}`,
+    );
+    return;
+  }
+
   markNoShowHandled(match.id);
 
   console.log(
