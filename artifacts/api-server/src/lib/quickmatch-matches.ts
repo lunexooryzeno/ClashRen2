@@ -85,6 +85,13 @@ export interface QuickMatch {
    * Used to enforce the server-side 80-second screenshot upload deadline.
    */
   resultPendingAt?: number;
+  /**
+   * userId of the player confirmed as winner by OCR.
+   * Set when the match enters PROVISIONAL_WIN; persisted in memory so that
+   * GET /quickmatch/match can expose role (winner vs. loser) for client
+   * reconnect hydration without a DB query.
+   */
+  provisionalWinnerId?: string | null;
 }
 
 const MAX_HISTORY = 50;

@@ -470,6 +470,14 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
   const opponent = opponentRaw ? { ...opponentRaw, uid: null } : null;
   const me       = meRaw       ? { ...meRaw,       uid: null } : null;
 
+  // Common post-match fields needed for client reconnect hydration
+  const postMatchFields = {
+    currentState: match.currentState,
+    resultPendingAt: match.resultPendingAt ?? null,
+    // Used by client to determine winner/loser role in PROVISIONAL_WIN / DISPUTE_WINDOW
+    provisionalWinnerId: match.provisionalWinnerId ?? null,
+  };
+
   if (roomStatus === "ready" && match.credentials) {
     res.json({
       status: "ready",
@@ -484,7 +492,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
       credentialsReadyAt: match.credentialsReadyAt ?? null,
       entryFee: match.entryFee,
       prizeAmount: match.prizeAmount,
-      currentState: match.currentState,
+      ...postMatchFields,
       me,
       opponent,
     });
@@ -500,7 +508,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
     roomStatus,
     entryFee: match.entryFee,
     prizeAmount: match.prizeAmount,
-    currentState: match.currentState,
+    ...postMatchFields,
     me,
     opponent,
   });

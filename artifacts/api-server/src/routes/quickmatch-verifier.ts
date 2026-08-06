@@ -387,12 +387,15 @@ async function handleValidOcr(
   }
 
   // 4. Transition match state: VERIFYING_SCREENSHOT → PROVISIONAL_WIN → DISPUTE_WINDOW
+  //    Also stamp provisionalWinnerId so GET /quickmatch/match can expose role on reconnect.
+  let updatedMatch: QuickMatch | undefined;
   try {
-    transitionState(matchId, "VERIFYING_SCREENSHOT", "PROVISIONAL_WIN");
+    updatedMatch = transitionState(matchId, "VERIFYING_SCREENSHOT", "PROVISIONAL_WIN");
   } catch (err) {
     console.error(`[verifier] VERIFYING_SCREENSHOT→PROVISIONAL_WIN failed:`, err);
     return;
   }
+  updatedMatch.provisionalWinnerId = String(winnerUserId);
   try {
     transitionState(matchId, "PROVISIONAL_WIN", "DISPUTE_WINDOW");
   } catch (err) {

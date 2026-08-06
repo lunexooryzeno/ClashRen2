@@ -457,23 +457,57 @@ export default function QuickMatchQueue() {
       prizeAmount?: number;
       me?: PlayerInfo;
       opponent?: PlayerInfo;
+      // Post-match reconnect fields exposed by GET /quickmatch/match
+      currentState?: string;
+      resultPendingAt?: number | null;
+      provisionalWinnerId?: string | null;
     }, fromSse = false) => {
       if (match.entryFee)    setEntryFee(match.entryFee);
       if (match.prizeAmount) setPrizeAmount(match.prizeAmount);
+      if (match.me)          setMePlayer(match.me);
+      if (match.opponent)    setOpponent(match.opponent);
+      if (match.matchId)     setMatchId(match.matchId);
+      if (match.createdAt)   setMatchCreatedAt(match.createdAt);
 
+      // ── Post-match states: hydrate before legacy status check so a refresh/reconnect
+      // during an active post-match phase restores the correct UI. ─────────────────
+      const POST_MATCH_STATES = new Set([
+        "RESULT_PENDING", "VERIFYING_SCREENSHOT", "PROVISIONAL_WIN",
+        "DISPUTE_WINDOW", "FINALIZED", "CANCELLED",
+      ]);
+      if (match.currentState && POST_MATCH_STATES.has(match.currentState)) {
+        stopPolling();
+        const myUserId = match.me?.userId;
+        const isWinner = !!(myUserId && match.provisionalWinnerId === String(myUserId));
+        switch (match.currentState) {
+          case "RESULT_PENDING":
+            // Restore server-authoritative deadline so the screenshot timer is accurate
+            if (match.resultPendingAt) setResultPendingAt(match.resultPendingAt);
+            setPhase("result_pending");
+            return;
+          case "VERIFYING_SCREENSHOT":
+            setPhase("verifying");
+            return;
+          case "PROVISIONAL_WIN":
+          case "DISPUTE_WINDOW":
+            setPhase(isWinner ? "provisional_win" : "provisional_loss");
+            return;
+          case "FINALIZED":
+            setPhase(isWinner ? "finalized_win" : "finalized_loss");
+            return;
+          case "CANCELLED":
+            setPhase("cancelled");
+            return;
+        }
+      }
+
+      // ── Pre-match / in-game states ────────────────────────────────────────────
       if (match.status === "waiting_room") {
-        if (match.me)        setMePlayer(match.me);
-        if (match.opponent)  setOpponent(match.opponent);
-        if (match.matchId)   setMatchId(match.matchId);
-        if (match.createdAt) setMatchCreatedAt(match.createdAt);
         // roomStatus is driven locally by the timer effect — skip overwrite from poll
         if (fromSse && match.roomStatus) setRoomStatus(match.roomStatus);
         setPhase("preparing");
       } else if (match.status === "ready" && match.roomId && match.password) {
         stopPolling();
-        if (match.me)       setMePlayer(match.me);
-        if (match.opponent) setOpponent(match.opponent);
-        if (match.matchId)  setMatchId(match.matchId);
         setRoomStatus("ready");
         setPhase("found");
         setMatchInfo({
@@ -858,11 +892,15 @@ export default function QuickMatchQueue() {
             reason?: string;
             matchId?: string;
             resultPending?: boolean;
+            resultPendingAt?: number;
           };
           if (data.ended) {
             clearPollTimer();
             if (data.resultPending) {
-              // Match entered RESULT_PENDING — show screenshot upload UI
+              // Match entered RESULT_PENDING — show screenshot upload UI.
+              // Apply the authoritative server timestamp so the countdown is accurate
+              // even when the SSE event hasn't arrived yet (network lag, etc.).
+              if (data.resultPendingAt) setResultPendingAt(data.resultPendingAt);
               setPhase("result_pending");
             } else {
               // Legacy settlement complete — navigate to result page

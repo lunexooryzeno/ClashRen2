@@ -31,9 +31,12 @@ import {
 
 const router: IRouter = Router();
 
-const ALLOWED_EVIDENCE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"]);
+// Only images are accepted — no video. Base64-embedded video (mp4 up to 20 MB) would exceed
+// Express JSON body limits. The 2 MB decoded cap (≈2.67 MB base64) × 3 files keeps the
+// total JSON body well under the server's default 50 MB limit.
+const ALLOWED_EVIDENCE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_EVIDENCE_FILES = 3;
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB per file
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB per file (decoded)
 
 // ─── POST /api/quickmatch/dispute ─────────────────────────────────────────────
 // Loser files a dispute within the 10-minute DISPUTE_WINDOW.
@@ -102,21 +105,40 @@ router.post("/quickmatch/dispute", requireAuth, async (req, res) => {
     }
   }
 
-  // Validate and store evidence files
-  const evidenceFiles = Array.isArray(evidence) ? evidence.slice(0, MAX_EVIDENCE_FILES) : [];
+  // Validate and store evidence files — reject the entire request on any policy violation
+  const evidenceFiles = Array.isArray(evidence) ? evidence : [];
+  if (evidenceFiles.length > MAX_EVIDENCE_FILES) {
+    res.status(400).json({ error: `Maximum ${MAX_EVIDENCE_FILES} evidence files allowed` });
+    return;
+  }
+
   const evidenceMediaIds: string[] = [];
 
   for (const file of evidenceFiles) {
-    if (!file.mimeType || !file.data) continue;
-    if (!ALLOWED_EVIDENCE_TYPES.has(file.mimeType)) continue;
+    if (!file.mimeType || !file.data) {
+      res.status(400).json({ error: "Each evidence item must have mimeType and data (base64)" });
+      return;
+    }
+    if (!ALLOWED_EVIDENCE_TYPES.has(file.mimeType)) {
+      res.status(400).json({
+        error: `Evidence type "${file.mimeType}" is not allowed. Use image/jpeg, image/png, or image/webp.`,
+      });
+      return;
+    }
 
     let buffer: Buffer;
     try {
       buffer = Buffer.from(file.data, "base64");
     } catch {
-      continue;
+      res.status(400).json({ error: "Evidence data is not valid base64" });
+      return;
     }
-    if (buffer.length > MAX_FILE_SIZE) continue;
+    if (buffer.length > MAX_FILE_SIZE) {
+      res.status(413).json({
+        error: `Evidence file exceeds the 2 MB maximum (decoded size: ${(buffer.length / 1024 / 1024).toFixed(1)} MB)`,
+      });
+      return;
+    }
 
     const mediaId = crypto.randomUUID();
     await db.insert(mediaUploadsTable).values({
