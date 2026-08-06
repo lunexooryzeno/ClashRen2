@@ -461,6 +461,7 @@ export default function QuickMatchQueue() {
       currentState?: string;
       resultPendingAt?: number | null;
       provisionalWinnerId?: string | null;
+      disputeWindowStartedAt?: number | null;
     }, fromSse = false) => {
       if (match.entryFee)    setEntryFee(match.entryFee);
       if (match.prizeAmount) setPrizeAmount(match.prizeAmount);
@@ -490,6 +491,11 @@ export default function QuickMatchQueue() {
             return;
           case "PROVISIONAL_WIN":
           case "DISPUTE_WINDOW":
+            // Restart the loser's dispute countdown from the server-authoritative start time.
+            // Both winner and loser components use disputeSecs for their respective countdowns.
+            if (match.disputeWindowStartedAt) {
+              startDisputeTimer(new Date(match.disputeWindowStartedAt).toISOString());
+            }
             setPhase(isWinner ? "provisional_win" : "provisional_loss");
             return;
           case "FINALIZED":

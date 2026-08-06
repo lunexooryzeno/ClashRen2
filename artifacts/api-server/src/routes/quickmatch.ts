@@ -15,6 +15,7 @@ import {
 import {
   createMatch,
   getMatchForPlayer,
+  getMatchForPlayerIncludingHistory,
   getMatchById,
   getActiveMatches,
   dismissMatch,
@@ -455,7 +456,10 @@ router.get("/quickmatch/position", requireAuth, (req, res) => {
 // ─── Poll match status ────────────────────────────────────────────────────────
 router.get("/quickmatch/match", requireAuth, (req, res) => {
   const userId = String(req.user!.userId);
-  const match  = getMatchForPlayer(userId);
+  // Use history-inclusive lookup so players who refresh immediately after a
+  // FINALIZED or CANCELLED match still see the correct terminal state instead
+  // of being dropped back to the search/queue screen.
+  const match  = getMatchForPlayerIncludingHistory(userId);
   if (!match) {
     res.json({ status: "none" });
     return;
@@ -476,6 +480,9 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
     resultPendingAt: match.resultPendingAt ?? null,
     // Used by client to determine winner/loser role in PROVISIONAL_WIN / DISPUTE_WINDOW
     provisionalWinnerId: match.provisionalWinnerId ?? null,
+    // Epoch ms when the 10-minute loser dispute-filing window opened.
+    // Used by the client to reconstruct the countdown timer on refresh/reconnect.
+    disputeWindowStartedAt: match.disputeWindowStartedAt ?? null,
   };
 
   if (roomStatus === "ready" && match.credentials) {

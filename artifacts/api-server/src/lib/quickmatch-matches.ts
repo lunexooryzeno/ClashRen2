@@ -92,6 +92,12 @@ export interface QuickMatch {
    * reconnect hydration without a DB query.
    */
   provisionalWinnerId?: string | null;
+  /**
+   * Unix timestamp (ms) when the match entered DISPUTE_WINDOW.
+   * Used by the client to reconstruct the 10-minute filing countdown on
+   * refresh/reconnect without relying on local state.
+   */
+  disputeWindowStartedAt?: number | null;
 }
 
 const MAX_HISTORY = 50;
@@ -172,11 +178,7 @@ export function transitionState(matchId: string, from: MatchState, to: MatchStat
   }
   match.currentState = to;
   match.status = toLegacyStatus(to);
-  // Record the exact moment RESULT_PENDING begins so submit-screenshot can enforce
-  // the server-side 80-second upload deadline.
-  if (to === "RESULT_PENDING") {
-    match.resultPendingAt = Date.now();
-  }
+  stampTimestamps(match, to);
   return match;
 }
 
@@ -189,13 +191,26 @@ export function forceSetState(matchId: string, to: MatchState): QuickMatch | nul
   if (!match) return null;
   match.currentState = to;
   match.status = toLegacyStatus(to);
-  // Record when RESULT_PENDING begins for server-side deadline enforcement.
-  // Only set on FIRST entry — do NOT reset when the match re-enters RESULT_PENDING
-  // after OCR rejection, so the total deadline is measured from the original entry.
-  if (to === "RESULT_PENDING" && !match.resultPendingAt) {
-    match.resultPendingAt = Date.now();
-  }
+  stampTimestamps(match, to);
   return match;
+}
+
+/**
+ * Stamps authoritative timestamps onto a match whenever it enters a time-sensitive state.
+ * Centralised here so transitionState and forceSetState are always consistent.
+ */
+function stampTimestamps(match: QuickMatch, to: MatchState): void {
+  const now = Date.now();
+  // RESULT_PENDING: record FIRST entry only — OCR rejection reverts to this state
+  // but must NOT reset the deadline, so the original 80s window is preserved.
+  if (to === "RESULT_PENDING" && !match.resultPendingAt) {
+    match.resultPendingAt = now;
+  }
+  // DISPUTE_WINDOW: record when the 10-minute loser filing window opens.
+  // Exposed via GET /quickmatch/match so the client can reconstruct the countdown on reconnect.
+  if (to === "DISPUTE_WINDOW") {
+    match.disputeWindowStartedAt = now;
+  }
 }
 
 export function createMatch(
@@ -244,6 +259,33 @@ export function getMatchForPlayer(userId: string): QuickMatch | null {
 export function getMatchById(matchId: string): QuickMatch | null {
   expireStale();
   return activeMatches.find((m) => m.id === matchId) ?? null;
+}
+
+/**
+ * Look up the most recent match for a player, including FINALIZED and CANCELLED
+ * matches in the short-lived matchHistory buffer.
+ *
+ * Use this for reconnect hydration (GET /quickmatch/match) so a player who
+ * refreshes just after their match finalises sees the correct terminal UI
+ * instead of being dropped back to the search/queue screen.
+ *
+ * The history window is approximately 5 minutes (matches are moved there when
+ * expireStale() evicts them after reaching CANCELLED/FINALIZED age > 5 min).
+ */
+export function getMatchForPlayerIncludingHistory(userId: string): QuickMatch | null {
+  expireStale();
+  // Prefer an active (non-terminal) match first
+  const active = activeMatches.find(
+    (m) => m.playerIds.includes(userId) && m.currentState !== "CANCELLED" && m.currentState !== "FINALIZED",
+  );
+  if (active) return active;
+  // Also include active matches already in CANCELLED/FINALIZED (they linger briefly before expiry)
+  const terminal = activeMatches.find(
+    (m) => m.playerIds.includes(userId) && (m.currentState === "CANCELLED" || m.currentState === "FINALIZED"),
+  );
+  if (terminal) return terminal;
+  // Fall back to matchHistory for recently finalised/cancelled matches
+  return matchHistory.find((m) => m.playerIds.includes(userId)) ?? null;
 }
 
 export function attachCredentials(
