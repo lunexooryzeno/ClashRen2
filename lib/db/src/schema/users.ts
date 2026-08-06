@@ -53,6 +53,10 @@ export const usersTable = pgTable("users", {
   twoFaWithdrawalBypass: boolean("two_fa_withdrawal_bypass").notNull().default(false),
   platformId: text("platform_id").unique(),
   adminRole: text("admin_role"),
+  /** Trust/reputation score — starts at 100, decremented for false disputes */
+  trustScore: integer("trust_score").notNull().default(100),
+  /** How many disputes this user has filed and lost */
+  falseDisputeCount: integer("false_dispute_count").notNull().default(0),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true });

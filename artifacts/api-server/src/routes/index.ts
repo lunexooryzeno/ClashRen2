@@ -29,6 +29,7 @@ import quickmatchVerifierRouter from "./quickmatch-verifier.js";
 import adminWorkersRouter from "./admin-workers.js";
 import phoneHostRouter from "./phone-host.js";
 import mediaUploadsRouter from "./media-uploads.js";
+import quickmatchDisputesRouter from "./quickmatch-disputes.js";
 
 const router: IRouter = Router();
 
@@ -62,5 +63,6 @@ router.use(quickmatchVerifierRouter);
 router.use(adminWorkersRouter);
 router.use(phoneHostRouter);
 router.use(mediaUploadsRouter);
+router.use(quickmatchDisputesRouter);
 
 export default router;

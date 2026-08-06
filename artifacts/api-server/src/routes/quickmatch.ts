@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq, isNull, isNotNull, or, sql } from "drizzle-orm";
 import { db, usersTable, walletTransactionsTable, balanceChangeLogsTable, quickmatchVerificationsTable } from "@workspace/db";
+import { sweepExpiredDisputeWindows } from "./quickmatch-disputes.js";
 import {
   getQueueStats,
   joinQueue,
@@ -173,8 +174,11 @@ async function refundQueueEntry(
   });
 }
 
-// Background TTL sweep — runs every 2 minutes to refund timed-out queue entries
+// Background sweep — runs every 2 minutes
+// 1. Refund timed-out queue entries
+// 2. Auto-finalize dispute windows that expired without a dispute
 setInterval(async () => {
+  // Queue TTL refunds
   const expired = sweepExpiredEntries();
   for (const entry of expired) {
     if (entry.entryFee > 0) {
@@ -182,6 +186,10 @@ setInterval(async () => {
         .catch((err) => console.error("[quickmatch] TTL refund failed:", err));
     }
   }
+  // Dispute window auto-finalize
+  sweepExpiredDisputeWindows().catch((err) =>
+    console.error("[quickmatch] Dispute sweep failed:", err),
+  );
 }, 2 * 60 * 1000);
 
 // ─── Join Queue ───────────────────────────────────────────────────────────────
@@ -234,6 +242,15 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
     res.status(403).json({
       error: "You are suspended from QuickMatch",
       bannedUntil: userRow.quickmatchBannedUntil.toISOString(),
+    });
+    return;
+  }
+
+  // Negative balance guard — players with negative balance cannot join
+  if (userRow.diamondBalance < 0) {
+    res.status(402).json({
+      error: "Your balance is negative. Please top up before joining a match.",
+      code: "negative_balance",
     });
     return;
   }

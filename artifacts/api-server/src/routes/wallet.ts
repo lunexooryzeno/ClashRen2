@@ -134,6 +134,31 @@ router.post("/wallet/withdraw", requireAuth, requireFullProfile, withdrawalLimit
   }
 
 
+  // ── Negative balance guard ──────────────────────────────────────────────────
+  if (user.diamondBalance < 0) {
+    res.status(402).json({
+      error: "Your diamond balance is negative. Please top up before withdrawing.",
+      reason: "negative_balance",
+    });
+    return;
+  }
+
+  // ── Pending prize block — cannot withdraw while a prize is locked ────────────
+  const pendingPrize = await db.query.walletTransactionsTable.findFirst({
+    where: and(
+      eq(walletTransactionsTable.userId, userId),
+      eq(walletTransactionsTable.status, "pending"),
+    ),
+    columns: { id: true },
+  });
+  if (pendingPrize) {
+    res.status(409).json({
+      error: "You have a pending QuickMatch prize awaiting verification. Please wait for it to be finalized before withdrawing.",
+      reason: "pending_prize",
+    });
+    return;
+  }
+
   // ── Pending withdrawal block ────────────────────────────────────────────────
   const pendingWithdrawal = await db.query.withdrawalRequestsTable.findFirst({
     where: and(

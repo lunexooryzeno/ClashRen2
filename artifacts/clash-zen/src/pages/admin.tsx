@@ -140,6 +140,19 @@ export default function AdminPanel() {
             <ChevronDown className="w-4 h-4 text-cyan-400/60 shrink-0 -rotate-90" />
           </div>
         </Link>
+        {/* Quick-access: QuickMatch Disputes */}
+        <Link href="/286c81443d1fb388d1b9a8e3b280824c/quickmatch-disputes">
+          <div className="glass-card rounded-2xl p-4 border border-amber-500/25 bg-amber-500/5 hover:bg-amber-500/10 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+              <Flag className="w-5 h-5 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-300 font-heading tracking-wide">QuickMatch Disputes</p>
+              <p className="text-[11px] text-zinc-500">Review & resolve match result disputes · trust penalties</p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-amber-400/60 shrink-0 -rotate-90" />
+          </div>
+        </Link>
         <AdminStats />
         <AdminDataPanel />
         <AdminPushPanel />
