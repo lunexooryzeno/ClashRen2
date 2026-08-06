@@ -52,19 +52,3 @@ VAPID_PRIVATE_KEY = "ZimUTfSar2RPn0aO5jYJlp0gLDOrF9ONhu2zX1ThAD0"
 VAPID_CONTACT = "mailto:noreply@clashzen.app"
 
 [userenv.development]
-
-[[ports]]
-localPort = 5000
-externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
-localPort = 24186
-externalPort = 3000

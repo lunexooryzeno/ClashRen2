@@ -523,6 +523,31 @@ export async function sweepExpiredDisputeWindows(): Promise<void> {
       if (applied) {
         forceSetState(p.matchId, "FINALIZED");
         console.log(`[dispute-sweep] Auto-finalized match ${p.matchId} (no dispute filed)`);
+        // SSE: notify both players of finalization
+        pushToUser(p.winnerUserId, "quickmatch_finalized", {
+          matchId: p.matchId, outcome: "finalized", role: "winner",
+          prizeAmount: p.prizeAmount,
+        });
+        if (p.loserUserId) {
+          pushToUser(p.loserUserId, "quickmatch_finalized", {
+            matchId: p.matchId, outcome: "finalized", role: "loser",
+          });
+        }
+        // Push notifications for finalization
+        notify(p.winnerUserId, {
+          type: "quickmatch_finalized",
+          title: "🎉 Prize Released!",
+          body: `Your match prize of ${p.prizeAmount} coins has been released to your wallet.`,
+          url: `/#/quickmatch/result/${p.matchId}`,
+        }).catch(() => {});
+        if (p.loserUserId) {
+          notify(p.loserUserId, {
+            type: "quickmatch_finalized",
+            title: "Match Finalized",
+            body: "The dispute window has closed and the result has been accepted.",
+            url: `/#/quickmatch/result/${p.matchId}`,
+          }).catch(() => {});
+        }
       }
     }
   } catch (err) {

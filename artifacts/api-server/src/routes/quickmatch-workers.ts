@@ -150,8 +150,9 @@ export function startJoinWindow(match: QuickMatch): void {
   try { transitionState(match.id, "ROOM_READY", "JOIN_WINDOW"); } catch { return; }
 
   const [p1, p2] = match.players;
-  if (p1) {
-    pushToUser(Number(p1.userId), "quickmatch_join_window", {
+  for (const player of [p1, p2]) {
+    if (!player) continue;
+    pushToUser(Number(player.userId), "quickmatch_join_window", {
       matchId: match.id,
       state: "JOIN_WINDOW",
       windowMs: JOIN_WINDOW_MS,
@@ -160,17 +161,13 @@ export function startJoinWindow(match: QuickMatch): void {
       roomId:   match.credentials?.roomId,
       password: match.credentials?.password,
     });
-  }
-  if (p2) {
-    pushToUser(Number(p2.userId), "quickmatch_join_window", {
-      matchId: match.id,
-      state: "JOIN_WINDOW",
-      windowMs: JOIN_WINDOW_MS,
-      graceMs:  JOIN_GRACE_MS,
-      totalMs:  JOIN_WINDOW_MS + JOIN_GRACE_MS,
-      roomId:   match.credentials?.roomId,
-      password: match.credentials?.password,
-    });
+    // Push notification: join reminder (fires even if app is backgrounded)
+    notify(Number(player.userId), {
+      type:  "quickmatch_join_reminder",
+      title: "⏰ Join Now!",
+      body:  `Room is ready — you have ${Math.round((JOIN_WINDOW_MS + JOIN_GRACE_MS) / 1000)}s to join or you'll forfeit.`,
+      url:   `/#/quickmatch/${match.gameType}/${match.modeId}`,
+    }).catch(() => {});
   }
 
   const timer = setTimeout(async () => {
@@ -282,6 +279,15 @@ router.post("/quickmatch/worker/callback", async (req, res) => {
           roomId: room_id, password: room_password,
           me: { ...p2, uid: null }, opponent: p1 ? { ...p1, uid: null } : null,
         });
+        // Push notification: room ready — alert both players even if app is in background
+        for (const player of updated.players) {
+          notify(Number(player.userId), {
+            type:  "quickmatch_room_ready",
+            title: "🏠 Room Ready!",
+            body:  "Your custom room is set up. Open the app to get the room ID and password.",
+            url:   `/#/quickmatch/${updated.gameType}/${updated.modeId}`,
+          }).catch(() => {});
+        }
         // Start join window
         startJoinWindow(updated);
         // Fetch pre-snapshots in background

@@ -4,6 +4,7 @@ import {
   ArrowLeft, Users, Clock, Copy, Check, Shield, Crosshair,
   Heart, Scissors, Target, Map as MapIcon, X, Swords,
   CheckCircle2, Zap, RotateCcw, Cpu, KeyRound, ExternalLink, Trophy,
+  Upload, Lock, AlertTriangle, Camera,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { apiFetch, apiPost } from "@/lib/api";
@@ -53,10 +54,21 @@ interface QueueStats {
   br: { total: number; modes: Record<string, number> };
 }
 type RoomStatus = "opponent_found" | "creating_room" | "booting_game" | "waiting_credentials" | "ready";
-type Phase = "searching" | "preparing" | "found" | "joined" | "cancelled";
+type Phase =
+  | "searching"
+  | "preparing"
+  | "found"
+  | "joined"
+  | "result_pending"    // screenshot upload UI
+  | "verifying"         // OCR in progress
+  | "provisional_win"   // winner: prize locked pending verification
+  | "provisional_loss"  // loser: dispute window countdown
+  | "finalized_win"     // winner: prize released
+  | "finalized_loss"    // loser: result accepted
+  | "cancelled";
 
 const STATUS_MESSAGES = [
-  "Searching for opponent…",
+  "Finding opponent…",
   "Scanning active players…",
   "Matching skill levels…",
   "Almost there…",
@@ -74,7 +86,9 @@ const STEP_ORDER: RoomStatus[] = [
   "opponent_found", "creating_room", "booting_game", "waiting_credentials", "ready",
 ];
 
-let JOIN_WINDOW_SECONDS = 30; // overridden by /api/settings/public on mount
+let JOIN_WINDOW_SECONDS = 45; // 30 join + 15 grace; overridden by /api/settings/public
+const SCREENSHOT_WINDOW_SECONDS = 80;
+const DISPUTE_WINDOW_SECONDS = 10 * 60; // 10 minutes
 
 function stepIndex(s: RoomStatus | null) {
   if (!s) return -1;
@@ -82,17 +96,66 @@ function stepIndex(s: RoomStatus | null) {
   return i === -1 ? 0 : i;
 }
 
-function Avatar({ src, name, size = 64, accent }: { src?: string | null; name: string; size?: number; accent: string }) {
+function Avatar({ src, name, size = 64, accent, checkmark = false }: {
+  src?: string | null; name: string; size?: number; accent: string; checkmark?: boolean;
+}) {
   const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
   return (
-    <div
-      className="rounded-full flex items-center justify-center overflow-hidden shrink-0"
-      style={{ width: size, height: size, background: src ? "transparent" : `${accent}22`, border: `2px solid ${accent}55`, boxShadow: `0 0 24px ${accent}35` }}
-    >
-      {src
-        ? <img src={src} alt={name} className="w-full h-full object-cover" />
-        : <span className="font-black" style={{ fontSize: size * 0.32, color: accent }}>{initials}</span>
-      }
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <div
+        className="rounded-full flex items-center justify-center overflow-hidden w-full h-full"
+        style={{ background: src ? "transparent" : `${accent}22`, border: `2px solid ${accent}55`, boxShadow: `0 0 24px ${accent}35` }}
+      >
+        {src
+          ? <img src={src} alt={name} className="w-full h-full object-cover" />
+          : <span className="font-black" style={{ fontSize: size * 0.32, color: accent }}>{initials}</span>
+        }
+      </div>
+      {checkmark && (
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-[#050505] flex items-center justify-center">
+          <Check className="w-3 h-3 text-white" strokeWidth={3} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Circular countdown ring with color shifts
+function CircularTimer({ seconds, maxSeconds, size = 120, label }: {
+  seconds: number; maxSeconds: number; size?: number; label?: string;
+}) {
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth * 2) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.max(0, seconds / maxSeconds);
+  const dashOffset = circumference * (1 - progress);
+  const color = seconds <= 5 ? "#ef4444" : seconds <= 15 ? "#f59e0b" : "#22d3ee";
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg
+        width={size} height={size}
+        style={{ transform: "rotate(-90deg)", position: "absolute", top: 0, left: 0 }}
+      >
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.5s linear, stroke 0.3s ease" }}
+        />
+      </svg>
+      <div className="flex flex-col items-center justify-center z-10">
+        <span className="text-[26px] font-black tabular-nums leading-none" style={{ color }}>
+          {seconds}
+        </span>
+        {label && <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mt-0.5">{label}</span>}
+      </div>
     </div>
   );
 }
@@ -110,6 +173,7 @@ export default function QuickMatchQueue() {
   const [phase, setPhase]               = useState<Phase>("searching");
   const [elapsed, setElapsed]           = useState(0);
   const [queueCount, setQueueCount]     = useState<number | null>(null);
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [matchInfo, setMatchInfo]       = useState<MatchInfo | null>(null);
   const [copied, setCopied]             = useState<"room" | "pass" | null>(null);
   const [visible, setVisible]           = useState(false);
@@ -124,6 +188,31 @@ export default function QuickMatchQueue() {
   const [entryFee, setEntryFee]         = useState(0);
   const [prizeAmount, setPrizeAmount]   = useState(0);
   const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [refundAmount, setRefundAmount] = useState(0);
+
+  // Join confirmations
+  const [meJoined, setMeJoined]         = useState(false);
+  const [opponentJoined, setOpponentJoined] = useState(false);
+
+  // Credential warning
+  const [warningDismissed, setWarningDismissed] = useState(false);
+
+  // Screenshot upload
+  const [screenshotSecs, setScreenshotSecs] = useState(SCREENSHOT_WINDOW_SECONDS);
+  const [uploading, setUploading]           = useState(false);
+  const [uploadError, setUploadError]       = useState<string | null>(null);
+  const [selectedFile, setSelectedFile]     = useState<File | null>(null);
+  const fileInputRef                        = useRef<HTMLInputElement>(null);
+
+  // Provisional / dispute
+  const [provisionalPrize, setProvisionalPrize] = useState(0);
+  const [disputeSecs, setDisputeSecs]         = useState(DISPUTE_WINDOW_SECONDS);
+  const [disputeFiled, setDisputeFiled]       = useState(false);
+  const [showDisputeSheet, setShowDisputeSheet] = useState(false);
+  const [disputeExplanation, setDisputeExplanation] = useState("");
+  const [disputeEvidence, setDisputeEvidence] = useState<File[]>([]);
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+  const disputeFileRef                        = useRef<HTMLInputElement>(null);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [checkingEnd, setCheckingEnd]           = useState(false);
@@ -144,15 +233,26 @@ export default function QuickMatchQueue() {
   const sseRef        = useRef<EventSource | null>(null);
   const navAllowedRef = useRef(false);
   const pendingNavRef = useRef<(() => void) | null>(null);
+  const screenshotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const disputeTimerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling    = useCallback(() => { if (pollIdRef.current) { clearInterval(pollIdRef.current); pollIdRef.current = null; } }, []);
   const stopJoinWindow = useCallback(() => { if (windowIdRef.current) { clearInterval(windowIdRef.current); windowIdRef.current = null; } }, []);
   const closeSse       = useCallback(() => { if (sseRef.current) { sseRef.current.close(); sseRef.current = null; } }, []);
 
+  const stopScreenshotTimer = useCallback(() => {
+    if (screenshotTimerRef.current) { clearInterval(screenshotTimerRef.current); screenshotTimerRef.current = null; }
+  }, []);
+  const stopDisputeTimer = useCallback(() => {
+    if (disputeTimerRef.current) { clearInterval(disputeTimerRef.current); disputeTimerRef.current = null; }
+  }, []);
+
   useEffect(() => {
     fetch("/api/settings/public")
       .then(r => r.ok ? r.json() : null)
-      .then((d: { joinWindowSeconds?: number } | null) => { if (d?.joinWindowSeconds) JOIN_WINDOW_SECONDS = d.joinWindowSeconds; })
+      .then((d: { joinWindowSeconds?: number } | null) => {
+        if (d?.joinWindowSeconds) JOIN_WINDOW_SECONDS = d.joinWindowSeconds + 15;
+      })
       .catch(() => {});
   }, []);
 
@@ -172,6 +272,28 @@ export default function QuickMatchQueue() {
     update();
     windowIdRef.current = setInterval(update, 500);
   }, [stopJoinWindow]);
+
+  const startScreenshotTimer = useCallback(() => {
+    setScreenshotSecs(SCREENSHOT_WINDOW_SECONDS);
+    screenshotTimerRef.current = setInterval(() => {
+      setScreenshotSecs(s => {
+        if (s <= 1) { stopScreenshotTimer(); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  }, [stopScreenshotTimer]);
+
+  const startDisputeTimer = useCallback((startedAt?: string) => {
+    const start = startedAt ? new Date(startedAt).getTime() : Date.now();
+    const update = () => {
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      const remaining = Math.max(0, DISPUTE_WINDOW_SECONDS - elapsed);
+      setDisputeSecs(remaining);
+      if (remaining === 0) stopDisputeTimer();
+    };
+    update();
+    disputeTimerRef.current = setInterval(update, 1000);
+  }, [stopDisputeTimer]);
 
   const leaveQueue = useCallback(async () => {
     if (leftRef.current) return;
@@ -202,6 +324,20 @@ export default function QuickMatchQueue() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Poll queue position in searching phase
+  useEffect(() => {
+    if (phase !== "searching") return;
+    const poll = async () => {
+      try {
+        const data = await apiFetch<{ position: number | null }>(`/quickmatch/position?gameType=${typeKey}&modeId=${modeId}`);
+        setQueuePosition(data.position);
+      } catch { /* ignore */ }
+    };
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [phase, typeKey, modeId]);
+
   // Local step computation — replicates server getRoomStatus() every 1s so the
   // "Preparing Room" steps animate without needing a server round-trip.
   useEffect(() => {
@@ -222,6 +358,15 @@ export default function QuickMatchQueue() {
     const id = setInterval(() => setRoomStatus(computeStep()), 1000);
     return () => clearInterval(id);
   }, [phase, matchCreatedAt]);
+
+  // Screenshot countdown
+  useEffect(() => {
+    if (phase === "result_pending") {
+      startScreenshotTimer();
+    } else {
+      stopScreenshotTimer();
+    }
+  }, [phase, startScreenshotTimer, stopScreenshotTimer]);
 
   // Navigation blocker — active while searching / preparing / found
   const isBlocking = phase === "searching" || phase === "preparing" || phase === "found";
@@ -343,28 +488,35 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // Join window — server notifies when credentials are ready and timer starts
+    // Join window events — server notifies when credentials are ready and timer starts
     sse.addEventListener("quickmatch_join_window", (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data) as {
           matchId: string;
           state: string;
-          windowMs: number;
-          graceMs: number;
-          totalMs: number;
+          windowMs?: number;
+          graceMs?: number;
+          totalMs?: number;
           roomId?: string;
           password?: string;
+          p1Confirmed?: boolean;
+          p2Confirmed?: boolean;
         };
-        // Only handle if we're in the "found" phase (room is ready) or preparing
+        if (data.state === "IN_GAME") {
+          // Both players confirmed — move to joined phase
+          setPhase("joined");
+          setMeJoined(true);
+          setOpponentJoined(true);
+          return;
+        }
+        // Stay in found phase with updated timer
         setPhase(prev => {
           if (prev === "found" || prev === "preparing") {
-            // Start the join window countdown from now
             startJoinWindow(null);
-            return "found"; // stay in found phase to show the room UI
+            return "found";
           }
           return prev;
         });
-        // If room credentials arrived via join_window event, apply them
         if (data.roomId && data.password) {
           setMatchInfo(prev => prev
             ? { ...prev, roomId: data.roomId!, password: data.password! }
@@ -374,15 +526,155 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // A player confirmed they joined — update UI (e.g. show "opponent confirmed" indicator)
+    // A player confirmed they joined
     sse.addEventListener("quickmatch_join_confirmed", (e: MessageEvent) => {
       try {
-        // Data: { matchId, confirmedBy (userId string), allConfirmed: boolean }
-        // We use this to reset any "joining…" spinner state and confirm both parties joined
-        const data = JSON.parse(e.data) as { matchId: string; confirmedBy: string; allConfirmed: boolean };
+        const data = JSON.parse(e.data) as {
+          matchId: string;
+          confirmedBy: string;
+          allConfirmed: boolean;
+        };
+        // We need to know if it's us or opponent
+        // We compare with mePlayer.userId if available
+        setMePlayer(me => {
+          if (me && String(data.confirmedBy) === String(me.userId)) {
+            setMeJoined(true);
+          } else {
+            setOpponentJoined(true);
+          }
+          return me;
+        });
         if (data.allConfirmed) {
-          setJoining(false);
+          setMeJoined(true);
+          setOpponentJoined(true);
         }
+      } catch { /* ignore */ }
+    });
+
+    // RESULT_PENDING — match ended (stats changed), winner should upload screenshot
+    sse.addEventListener("quickmatch_result_pending", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as { matchId: string; state: string; windowSeconds?: number };
+        setPhase("result_pending");
+        stopPolling();
+      } catch { /* ignore */ }
+    });
+
+    // Screenshot submitted — now verifying
+    sse.addEventListener("quickmatch_screenshot_submitted", (e: MessageEvent) => {
+      try {
+        const _data = JSON.parse(e.data);
+        setPhase("verifying");
+        stopScreenshotTimer();
+      } catch { /* ignore */ }
+    });
+
+    // Screenshot rejected — allow re-upload
+    sse.addEventListener("quickmatch_screenshot_rejected", (e: MessageEvent) => {
+      try {
+        setPhase("result_pending");
+        setUploading(false);
+        setSelectedFile(null);
+        setUploadError("Screenshot not recognized. Please upload a clear result screenshot.");
+        startScreenshotTimer();
+      } catch { /* ignore */ }
+    });
+
+    // Provisional win — winner's prize is locked
+    sse.addEventListener("quickmatch_provisional_win", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as {
+          matchId: string;
+          prizeAmount: number;
+          message?: string;
+        };
+        setProvisionalPrize(data.prizeAmount ?? 0);
+        setPhase("provisional_win");
+        stopScreenshotTimer();
+        startDisputeTimer(); // loser gets 10 min; winner sees timer too
+      } catch { /* ignore */ }
+    });
+
+    // Loser sees dispute window (quickmatch_result with state=DISPUTE_WINDOW)
+    sse.addEventListener("quickmatch_result", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as {
+          matchId: string;
+          resultType?: string;
+          state?: string;
+          coinsEarned?: number;
+          entryFee?: number;
+          prizeAmount?: number;
+        };
+        if (data.state === "DISPUTE_WINDOW" && data.resultType === "loss") {
+          setPhase("provisional_loss");
+          startDisputeTimer();
+          return;
+        }
+        // Other final results (win/loss/refund/no_show/suspended) → navigate to result page
+        // Only navigate if we're in a post-match phase
+        setPhase(prev => {
+          if (prev === "joined" || prev === "result_pending" || prev === "verifying") {
+            // This is a legacy settlement result
+            if (data.matchId) {
+              setTimeout(() => safeNavigate(`/quickmatch/result/${data.matchId}`), 300);
+            }
+          }
+          return prev;
+        });
+      } catch { /* ignore */ }
+    });
+
+    // Dispute filed acknowledgment (loser filed, notified of submission)
+    sse.addEventListener("quickmatch_dispute_filed_ack", (_e: MessageEvent) => {
+      setDisputeFiled(true);
+      setShowDisputeSheet(false);
+    });
+
+    // Dispute filed notification (winner notified opponent disputed)
+    sse.addEventListener("quickmatch_dispute_filed", (_e: MessageEvent) => {
+      // Winner sees a banner that dispute was filed
+      setDisputeFiled(true);
+    });
+
+    // Dispute resolved
+    sse.addEventListener("quickmatch_dispute_resolved", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as {
+          matchId: string;
+          outcome: string;
+          prizeAmount?: number;
+        };
+        stopDisputeTimer();
+        if (data.outcome === "original_wins" || data.outcome === "challenger_wins") {
+          // Navigate to result page for final outcome
+          const mId = data.matchId ?? matchId;
+          if (mId) setTimeout(() => safeNavigate(`/quickmatch/result/${mId}`), 500);
+        }
+      } catch { /* ignore */ }
+    });
+
+    // Match finalized (auto, no dispute)
+    sse.addEventListener("quickmatch_finalized", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as { matchId: string; outcome: string };
+        stopDisputeTimer();
+        setPhase(prev => {
+          if (prev === "provisional_win") return "finalized_win";
+          if (prev === "provisional_loss") return "finalized_loss";
+          return prev;
+        });
+      } catch { /* ignore */ }
+    });
+
+    // Match cancelled
+    sse.addEventListener("quickmatch_cancelled", (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data) as { matchId: string; reason: string; refunded?: number };
+        setRefundAmount(data.refunded ?? 0);
+        if (data.reason) setCancelReason(data.reason);
+        setPhase("cancelled");
+        stopPolling(); stopJoinWindow(); stopScreenshotTimer(); stopDisputeTimer();
       } catch { /* ignore */ }
     });
 
@@ -401,7 +693,7 @@ export default function QuickMatchQueue() {
 
     poll();
     pollIdRef.current = setInterval(poll, 8000);
-    return () => { stopPolling(); stopJoinWindow(); closeSse(); };
+    return () => { stopPolling(); stopJoinWindow(); closeSse(); stopScreenshotTimer(); stopDisputeTimer(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -431,9 +723,12 @@ export default function QuickMatchQueue() {
     if (joining || phase === "joined") return;
     setJoining(true);
     stopJoinWindow();
+    setMeJoined(true);
     await leaveQueue();
     setPhase("joined");
     trackAction("joined").catch(() => {});
+    // Also call the dedicated joined endpoint
+    try { await apiPost("/quickmatch/joined", { matchId }); } catch { /* ignore */ }
     setJoining(false);
   };
 
@@ -459,29 +754,22 @@ export default function QuickMatchQueue() {
             setSnapLoading(false);
             return;
           }
-          // Keep retrying while backend is still fetching AND we haven't hit the deadline
           if (!cancelled && data.reason === "pending" && Date.now() < DEADLINE) {
             setTimeout(fetchSnap, 6000);
             return;
           }
         }
       } catch { /* best-effort */ }
-      // Definitive unavailable/not_found, or deadline passed — stop
       if (!cancelled) { setSnapLoading(false); setSnapFailed(true); }
     };
     fetchSnap();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   // ── App-focus check-end (phase === "joined") ───────────────────────────────
-  // Polls every POLL_INTERVAL_MS while joined. Also fires immediately on
-  // visibilitychange so returning from the game triggers detection right away.
-  //
-  // When the server says reason="no_pre_snapshots" we retry after a short
-  // delay (pre-snapshots are fetched async and may not be ready yet).
-  const POLL_INTERVAL_MS    = 30_000; // normal poll cadence
-  const PRE_SNAP_RETRY_MS   = 8_000;  // retry interval while snapshots not yet ready
+  const POLL_INTERVAL_MS    = 30_000;
+  const PRE_SNAP_RETRY_MS   = 8_000;
   const checkingEndRef      = useRef(false);
   const pollTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -498,7 +786,7 @@ export default function QuickMatchQueue() {
     };
 
     const runCheck = async () => {
-      if (checkingEndRef.current) return; // debounce concurrent calls
+      if (checkingEndRef.current) return;
       checkingEndRef.current = true;
       setCheckingEnd(true);
       setStillInMatch(false);
@@ -514,17 +802,26 @@ export default function QuickMatchQueue() {
           body: JSON.stringify({ matchId }),
         });
         if (resp.ok) {
-          const data = await resp.json() as { ended: boolean; reason?: string; matchId?: string };
+          const data = await resp.json() as {
+            ended: boolean;
+            reason?: string;
+            matchId?: string;
+            resultPending?: boolean;
+          };
           if (data.ended) {
             clearPollTimer();
-            safeNavigate(`/quickmatch/result/${data.matchId ?? matchId}`);
+            if (data.resultPending) {
+              // Match entered RESULT_PENDING — show screenshot upload UI
+              setPhase("result_pending");
+            } else {
+              // Legacy settlement complete — navigate to result page
+              safeNavigate(`/quickmatch/result/${data.matchId ?? matchId}`);
+            }
             return;
           }
           if (data.reason === "no_pre_snapshots") {
-            // Pre-snapshots still being fetched — retry quickly, no toast
             scheduleNext(PRE_SNAP_RETRY_MS);
           } else {
-            // Stats unchanged or no active match — show toast, poll normally
             setStillInMatch(true);
             setTimeout(() => setStillInMatch(false), 4000);
             scheduleNext(POLL_INTERVAL_MS);
@@ -539,16 +836,13 @@ export default function QuickMatchQueue() {
       checkingEndRef.current = false;
     };
 
-    // Immediate check on visibility restore (returning from game)
     const onVisibility = () => {
       if (document.visibilityState !== "visible") return;
-      clearPollTimer(); // cancel pending timer; runCheck will reschedule
+      clearPollTimer();
       runCheck();
     };
 
     document.addEventListener("visibilitychange", onVisibility);
-    // Fire immediately — catches the case where the user is already in the app
-    // when the match ends, and starts the polling loop.
     runCheck();
 
     return () => {
@@ -564,25 +858,127 @@ export default function QuickMatchQueue() {
       ?? `freefire://customroom?roomid=${encodeURIComponent(matchInfo.roomId)}&password=${encodeURIComponent(matchInfo.password)}`;
     trackAction("open_ff").catch(() => {});
     window.open(url, "_blank");
-    // Auto-advance to joined immediately — opening FF means they're going in
     handleJoinRoom();
   };
 
   function copyText(text: string, which: "room" | "pass") {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(which);
-      // Auto-advance to joined after 600 ms — enough to see the ✓ tick
       setTimeout(() => handleJoinRoom(), 600);
       setTimeout(() => setCopied(null), 2500);
     });
     trackAction(which === "room" ? "copy_room" : "copy_pass").catch(() => {});
   }
 
+  // ── Screenshot upload ─────────────────────────────────────────────────────
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setUploadError(null);
+    }
+  };
+
+  const handleScreenshotUpload = async () => {
+    if (!selectedFile || uploading) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(selectedFile.type)) {
+      setUploadError("Please upload a JPEG, PNG, or WebP image.");
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setUploadError("Image must be under 10 MB.");
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Strip data URL prefix
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
+      });
+      const token = localStorage.getItem("clash_ren_token");
+      const resp = await fetch("/api/quickmatch/submit-screenshot", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          matchId,
+          imageBase64: base64,
+          mimeType: selectedFile.type,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({})) as { error?: string };
+        setUploadError(err.error ?? "Upload failed. Please try again.");
+        setUploading(false);
+        return;
+      }
+      // Success — SSE will fire quickmatch_screenshot_submitted to switch phase
+      setPhase("verifying");
+      stopScreenshotTimer();
+    } catch {
+      setUploadError("Network error. Please try again.");
+      setUploading(false);
+    }
+  };
+
+  // ── Dispute submission ────────────────────────────────────────────────────
+  const handleDisputeSubmit = async () => {
+    if (disputeSubmitting || !matchId) return;
+    setDisputeSubmitting(true);
+    try {
+      const evidencePayload: { mimeType: string; data: string }[] = [];
+      for (const file of disputeEvidence.slice(0, 3)) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        evidencePayload.push({ mimeType: file.type, data: base64 });
+      }
+      const token = localStorage.getItem("clash_ren_token");
+      const resp = await fetch("/api/quickmatch/dispute", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ matchId, explanation: disputeExplanation, evidence: evidencePayload }),
+      });
+      if (resp.ok) {
+        setDisputeFiled(true);
+        setShowDisputeSheet(false);
+      } else {
+        const err = await resp.json().catch(() => ({})) as { error?: string };
+        setUploadError(err.error ?? "Dispute submission failed.");
+      }
+    } catch {
+      setUploadError("Network error submitting dispute.");
+    }
+    setDisputeSubmitting(false);
+  };
+
   const Icon           = meta.Icon;
   const currentStepIdx = stepIndex(roomStatus);
   const isMatchLocked  = phase === "preparing" || phase === "found";
   const windowPct      = joinWindowSecs !== null ? (joinWindowSecs / JOIN_WINDOW_SECONDS) * 100 : 100;
-  const windowUrgent   = joinWindowSecs !== null && joinWindowSecs <= 7;
+  const windowColor    = joinWindowSecs !== null && joinWindowSecs <= 5
+    ? "#ef4444"
+    : joinWindowSecs !== null && joinWindowSecs <= 15
+    ? "#f59e0b"
+    : accent;
 
   return (
     <div className="min-h-[100dvh] flex flex-col relative overflow-hidden" style={{ background: "#050505" }}>
@@ -637,14 +1033,24 @@ export default function QuickMatchQueue() {
           0%   { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        @keyframes credential-flash {
-          0%   { background: ${accent}00; }
-          30%  { background: ${accent}20; }
-          100% { background: ${accent}00; }
-        }
         @keyframes trophy-bounce {
           0%, 100% { transform: translateY(0); }
           50%      { transform: translateY(-8px); }
+        }
+        @keyframes warning-pulse {
+          0%, 100% { border-color: rgba(239,68,68,0.4); }
+          50%      { border-color: rgba(239,68,68,0.8); }
+        }
+        @keyframes lock-float {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50%      { transform: translateY(-5px) scale(1.05); }
+        }
+        @keyframes verifying-spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes sheet-in {
+          from { transform: translateY(100%); opacity: 0; }
+          to   { transform: translateY(0); opacity: 1; }
         }
       `}</style>
 
@@ -659,7 +1065,9 @@ export default function QuickMatchQueue() {
       {/* Header */}
       <div className="shrink-0 px-4 pt-12 pb-4 relative z-10" style={{ background: "linear-gradient(180deg,#050505 0%,transparent 100%)" }}>
         <div className="flex items-center justify-between">
-          {(phase === "joined" || isMatchLocked) ? (
+          {(phase === "joined" || phase === "result_pending" || phase === "verifying" ||
+            phase === "provisional_win" || phase === "provisional_loss" ||
+            phase === "finalized_win" || phase === "finalized_loss" || isMatchLocked) ? (
             <div className="w-10 h-10" />
           ) : (
             <button
@@ -687,7 +1095,6 @@ export default function QuickMatchQueue() {
 
           {/* Radar scanner */}
           <div className="relative flex items-center justify-center mt-6 mb-8" style={{ width: 220, height: 220 }}>
-            {/* Outer pulse rings */}
             {[0, 1, 2, 3].map(i => (
               <div key={i} className="absolute rounded-full" style={{
                 inset: 0,
@@ -696,16 +1103,13 @@ export default function QuickMatchQueue() {
                 animation: `radar-ring 3s ease-out ${i * 0.75}s infinite`,
               }} />
             ))}
-            {/* Dashed orbit rings */}
             <div className="absolute rounded-full" style={{ width: 160, height: 160, border: `1px dashed ${accent}30`, animation: "spin-slow 12s linear infinite" }} />
             <div className="absolute rounded-full" style={{ width: 120, height: 120, border: `1px dashed ${accent}20`, animation: "spin-slow-rev 8s linear infinite" }} />
-            {/* Scan sweep */}
             <div className="absolute rounded-full overflow-hidden" style={{ width: 160, height: 160, animation: "scan-line 3s linear infinite" }}>
               <div className="absolute inset-0" style={{
                 background: `conic-gradient(from 0deg, transparent 70%, ${accent}35 100%)`,
               }} />
             </div>
-            {/* Center icon */}
             <div className="relative w-20 h-20 rounded-full flex items-center justify-center z-10" style={{
               background: `radial-gradient(circle, ${accent}25 0%, ${accent}08 100%)`,
               border: `1.5px solid ${accent}55`,
@@ -768,6 +1172,22 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
+          {/* Queue position */}
+          {queuePosition !== null && queuePosition > 0 && (
+            <div className="w-full max-w-xs mb-4 px-4 py-2.5 rounded-2xl flex items-center gap-2.5" style={{
+              background: `${accent}10`,
+              border: `1px solid ${accent}25`,
+            }}>
+              <span className="text-[11px]">⏳</span>
+              <span className="text-[12px] font-bold text-zinc-300">
+                {queuePosition === 1
+                  ? "One match ahead of you"
+                  : `${queuePosition} matches ahead of you`}
+              </span>
+              <span className="ml-auto text-[11px] font-semibold text-zinc-500">~{queuePosition * 30}s</span>
+            </div>
+          )}
+
           {/* Spinner */}
           <div className="w-6 h-6 rounded-full mb-7" style={{
             border: `2px solid ${accent}25`,
@@ -807,7 +1227,6 @@ export default function QuickMatchQueue() {
             border: `1px solid ${accent}30`,
           }}>
             <div className="flex items-center justify-between px-5 py-5 gap-3">
-              {/* Me */}
               <div className="flex-1 flex flex-col items-center gap-2.5 min-w-0">
                 <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={64} accent={accent} />
                 <div className="text-center w-full">
@@ -815,7 +1234,6 @@ export default function QuickMatchQueue() {
                   <p className="text-[10px] text-zinc-600 mt-0.5">You</p>
                 </div>
               </div>
-              {/* VS */}
               <div className="shrink-0 flex flex-col items-center gap-1">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{
                   background: `${accent}15`,
@@ -825,7 +1243,6 @@ export default function QuickMatchQueue() {
                   <span className="text-[11px] font-black tracking-wider" style={{ color: accent }}>VS</span>
                 </div>
               </div>
-              {/* Opponent */}
               <div className="flex-1 flex flex-col items-center gap-2.5 min-w-0">
                 <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={64} accent={accent} />
                 <div className="text-center w-full">
@@ -834,12 +1251,17 @@ export default function QuickMatchQueue() {
                 </div>
               </div>
             </div>
-            <div className="px-5 py-2.5 flex items-center gap-2 justify-center" style={{
-              background: `${accent}08`, borderTop: `1px solid ${accent}18`,
-            }}>
-              <Icon className="w-3.5 h-3.5" style={{ color: accent }} strokeWidth={2} />
-              <span className="text-[11px] font-semibold text-zinc-400">{meta.name} · {meta.mapName}</span>
-            </div>
+            {(entryFee > 0 || prizeAmount > 0) && (
+              <div className="px-5 py-2.5 flex items-center gap-3 justify-center" style={{
+                background: `${accent}08`, borderTop: `1px solid ${accent}18`,
+              }}>
+                <Icon className="w-3.5 h-3.5" style={{ color: accent }} strokeWidth={2} />
+                <span className="text-[11px] font-semibold text-zinc-400">{meta.name}</span>
+                {entryFee > 0 && (
+                  <><div className="w-px h-3 bg-white/10" /><CoinIcon width={11} /><span className="text-[11px] font-bold text-yellow-400">{entryFee} entry</span></>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Timeline */}
@@ -915,10 +1337,10 @@ export default function QuickMatchQueue() {
 
       {/* ─────────────────── FOUND (credentials ready) ─────────────────── */}
       {phase === "found" && matchInfo && (
-        <div className="flex-1 flex flex-col items-center px-4 pb-8" style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+        <div className="flex-1 flex flex-col items-center px-4 pb-8 overflow-y-auto" style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}>
 
-          {/* Badge + countdown */}
-          <div className="mt-2 mb-4 flex flex-col items-center gap-2.5">
+          {/* Badge + circular timer */}
+          <div className="mt-2 mb-3 flex flex-col items-center gap-3">
             <div className="px-6 py-2.5 rounded-full flex items-center gap-2.5" style={{
               background: `${accent}1a`,
               border: `1.5px solid ${accent}55`,
@@ -929,41 +1351,64 @@ export default function QuickMatchQueue() {
               <span className="text-[13px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>Room Ready!</span>
             </div>
 
-            {/* Join window progress bar */}
+            {/* Circular join timer */}
             {joinWindowSecs !== null && (
-              <div className="w-full max-w-xs flex flex-col gap-1.5">
-                <div className="flex items-center justify-between px-0.5">
-                  <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Join window</span>
-                  <span className="text-[11px] font-black tabular-nums" style={{ color: windowUrgent ? "#ef4444" : "rgba(255,255,255,0.5)" }}>
-                    {joinWindowSecs}s
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                  <div className="h-full rounded-full transition-all duration-500" style={{
-                    width: `${windowPct}%`,
-                    background: windowUrgent
-                      ? "linear-gradient(90deg, #ef4444, #f87171)"
-                      : `linear-gradient(90deg, ${accent}, ${accent}bb)`,
-                  }} />
-                </div>
-              </div>
+              <CircularTimer
+                seconds={joinWindowSecs}
+                maxSeconds={JOIN_WINDOW_SECONDS}
+                size={90}
+                label="Join Now"
+              />
             )}
           </div>
 
-          {/* Compact VS row */}
+          {/* Player join status */}
           {(mePlayer || opponent) && (
             <div className="w-full flex items-center justify-between px-4 py-3 rounded-2xl mb-3 gap-2" style={{
               background: `${accent}09`, border: `1px solid ${accent}20`,
-              animation: "slide-up 0.35s ease 0.05s both",
             }}>
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={38} accent={accent} />
-                <p className="text-[12px] font-bold text-white truncate">{mePlayer?.inGameName ?? "You"}</p>
+                <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={38} accent={accent} checkmark={meJoined} />
+                <div>
+                  <p className="text-[12px] font-bold text-white truncate">{mePlayer?.inGameName ?? "You"}</p>
+                  {meJoined && <p className="text-[10px] text-emerald-400 font-bold">Joined ✓</p>}
+                </div>
               </div>
               <span className="text-[10px] font-black text-zinc-700 shrink-0 px-2">VS</span>
               <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end">
-                <p className="text-[12px] font-bold text-white truncate text-right">{opponent?.inGameName ?? "Opponent"}</p>
-                <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={38} accent={accent} />
+                <div className="text-right">
+                  <p className="text-[12px] font-bold text-white truncate">{opponent?.inGameName ?? "Opponent"}</p>
+                  {opponentJoined && <p className="text-[10px] text-emerald-400 font-bold">Joined ✓</p>}
+                </div>
+                <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={38} accent={accent} checkmark={opponentJoined} />
+              </div>
+            </div>
+          )}
+
+          {/* ⚠️ Security warning — mandatory */}
+          {!warningDismissed && (
+            <div
+              className="w-full rounded-2xl p-4 mb-3 relative"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1.5px solid rgba(239,68,68,0.45)",
+                animation: "warning-pulse 2s ease-in-out infinite",
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" strokeWidth={2} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-black text-red-300 mb-1 uppercase tracking-wide">⚠️ Security Warning</p>
+                  <p className="text-[11px] font-semibold text-red-200 leading-relaxed">
+                    Do not share the room ID or password with any third party. Sharing credentials is considered match manipulation and may result in suspension.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setWarningDismissed(true)}
+                  className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                >
+                  <X className="w-3.5 h-3.5 text-white/60" />
+                </button>
               </div>
             </div>
           )}
@@ -1059,11 +1504,7 @@ export default function QuickMatchQueue() {
             <span className="text-[15px] font-extrabold text-white tracking-wide">Open in Free Fire</span>
           </button>
 
-          {/* Hint — copy or open to auto-confirm */}
-          <p
-            className="text-[11px] text-zinc-600 text-center mt-0.5"
-            style={{ animation: "slide-up 0.35s ease 0.25s both" }}
-          >
+          <p className="text-[11px] text-zinc-600 text-center mt-0.5" style={{ animation: "slide-up 0.35s ease 0.25s both" }}>
             Copying credentials or opening Free Fire marks you as joined
           </p>
         </div>
@@ -1081,9 +1522,18 @@ export default function QuickMatchQueue() {
           <h2 className="font-heading text-2xl font-black text-white tracking-tight mb-2">
             {cancelReason ? "Cannot Join" : "Match Cancelled"}
           </h2>
-          <p className="text-[13px] text-zinc-500 text-center mb-8 leading-relaxed max-w-xs">
+          <p className="text-[13px] text-zinc-500 text-center mb-4 leading-relaxed max-w-xs">
             {cancelReason ?? "Your opponent left before the room was ready."}
           </p>
+          {refundAmount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl mb-6" style={{
+              background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.2)",
+            }}>
+              <CoinIcon width={14} />
+              <span className="text-[13px] font-bold text-cyan-300">+{refundAmount} coins refunded</span>
+            </div>
+          )}
+          {!refundAmount && <div className="mb-6" />}
           <button
             onClick={() => safeNavigate(`/quickmatch/${typeKey}/${modeId}`)}
             className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-2.5"
@@ -1148,7 +1598,7 @@ export default function QuickMatchQueue() {
             </div>
           )}
 
-          {/* Pre-snapshot stats — shown once captured */}
+          {/* Pre-snapshot stats */}
           {preSnap && (
             <div className="w-full rounded-2xl overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(34,197,94,0.18)" }}>
               <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(34,197,94,0.06)" }}>
@@ -1196,15 +1646,15 @@ export default function QuickMatchQueue() {
                 <span className="text-base leading-none mt-0.5">🎮</span>
                 <div>
                   <p className="text-[11px] font-bold text-zinc-300 leading-tight">Play the match</p>
-                  <p className="text-[10px] text-zinc-600 leading-relaxed">Wins are verified by comparing your stats before vs. after.</p>
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">Wins are verified by screenshot and stat comparison.</p>
                 </div>
               </div>
               <div className="h-px" style={{ background: "rgba(255,255,255,0.04)" }} />
               <div className="flex items-start gap-2.5">
                 <span className="text-base leading-none mt-0.5">🏆</span>
                 <div>
-                  <p className="text-[11px] font-bold text-zinc-300 leading-tight">Auto-settlement</p>
-                  <p className="text-[10px] text-zinc-600 leading-relaxed">Results settle automatically. Prize credited if you win — refunded if opponent no-shows.</p>
+                  <p className="text-[11px] font-bold text-zinc-300 leading-tight">Upload result screenshot</p>
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">Return to the app after playing and upload your victory screenshot.</p>
                 </div>
               </div>
             </div>
@@ -1236,7 +1686,6 @@ export default function QuickMatchQueue() {
                 {meta.name} · {matchInfo.mapName}
               </span>
             </div>
-
             <div className="px-5 py-5 flex flex-col gap-4">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 mb-1">Room ID</p>
@@ -1264,7 +1713,6 @@ export default function QuickMatchQueue() {
             </div>
           </div>
 
-          {/* Open in FF */}
           <button
             onClick={handleOpenInFF}
             className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-2.5"
@@ -1284,6 +1732,329 @@ export default function QuickMatchQueue() {
         </div>
       )}
 
+      {/* ─────────────────── RESULT PENDING (screenshot upload) ─────────────────── */}
+      {phase === "result_pending" && (
+        <div className="flex-1 flex flex-col items-center px-4 pb-8" style={{ animation: "found-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+          <div className="mt-4 mb-4 flex flex-col items-center gap-2">
+            <CircularTimer
+              seconds={screenshotSecs}
+              maxSeconds={SCREENSHOT_WINDOW_SECONDS}
+              size={110}
+              label="Upload"
+            />
+            <p className="text-[12px] font-bold text-zinc-400 text-center">
+              Upload your result screenshot to claim victory
+            </p>
+          </div>
+
+          {/* Match over badge */}
+          <div className="mb-4 px-5 py-2 rounded-full flex items-center gap-2.5" style={{
+            background: "rgba(234,179,8,0.12)",
+            border: "1.5px solid rgba(234,179,8,0.35)",
+          }}>
+            <Trophy className="w-4 h-4 text-yellow-400" strokeWidth={2} />
+            <span className="text-[12px] font-extrabold tracking-widest uppercase text-yellow-400">Match Over — Submit Result</span>
+          </div>
+
+          {/* Upload area */}
+          <div
+            className="w-full rounded-3xl overflow-hidden mb-3 cursor-pointer"
+            style={{
+              background: selectedFile ? "rgba(34,211,238,0.06)" : "rgba(255,255,255,0.03)",
+              border: `2px dashed ${selectedFile ? accent : "rgba(255,255,255,0.12)"}`,
+              transition: "all 0.25s ease",
+            }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <div className="flex flex-col items-center justify-center py-8 px-5 gap-3">
+              {selectedFile ? (
+                <>
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{
+                    background: `${accent}18`, border: `1px solid ${accent}35`,
+                  }}>
+                    <Camera className="w-7 h-7" style={{ color: accent }} strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[13px] font-bold text-white text-center truncate max-w-[200px]">{selectedFile.name}</p>
+                  <p className="text-[11px] text-zinc-500">
+                    {(selectedFile.size / 1024 / 1024).toFixed(1)} MB · Tap to change
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{
+                    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  }}>
+                    <Upload className="w-7 h-7 text-zinc-500" strokeWidth={1.5} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[13px] font-bold text-zinc-300">Tap to select screenshot</p>
+                    <p className="text-[11px] text-zinc-600 mt-0.5">JPEG, PNG or WebP · Max 10 MB</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {uploadError && (
+            <div className="w-full px-4 py-3 rounded-2xl mb-3 flex items-center gap-2" style={{
+              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+            }}>
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-red-300">{uploadError}</span>
+            </div>
+          )}
+
+          <button
+            onClick={handleScreenshotUpload}
+            disabled={!selectedFile || uploading || screenshotSecs === 0}
+            className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: selectedFile && !uploading && screenshotSecs > 0
+                ? `linear-gradient(135deg, ${accent}, ${accent}cc)`
+                : "rgba(255,255,255,0.08)",
+              boxShadow: selectedFile && !uploading ? `0 8px 32px ${accent}40` : "none",
+            }}
+          >
+            {uploading ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                <span className="text-[15px] font-extrabold text-white">Uploading…</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-5 h-5 text-white" strokeWidth={2} />
+                <span className="text-[15px] font-extrabold text-white">Submit Screenshot</span>
+              </>
+            )}
+          </button>
+
+          {screenshotSecs === 0 && (
+            <p className="text-[11px] text-red-400 text-center font-semibold">
+              Upload window expired
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ─────────────────── VERIFYING ─────────────────── */}
+      {phase === "verifying" && (
+        <div className="flex-1 flex flex-col items-center justify-center px-5 pb-10" style={{ animation: "found-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6" style={{
+            background: "rgba(139,92,246,0.12)",
+            border: "1.5px solid rgba(139,92,246,0.3)",
+            boxShadow: "0 8px 40px rgba(139,92,246,0.2)",
+          }}>
+            <div className="w-12 h-12 rounded-full border-4 border-violet-600/30 border-t-violet-400" style={{
+              animation: "verifying-spin 0.8s linear infinite",
+            }} />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2">Verifying…</h2>
+          <p className="text-[13px] text-zinc-500 text-center max-w-xs leading-relaxed">
+            Our system is analyzing your screenshot. This usually takes less than 30 seconds.
+          </p>
+          <div className="mt-6 px-4 py-3 rounded-2xl flex items-center gap-2" style={{
+            background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)",
+          }}>
+            <span className="w-2 h-2 rounded-full bg-violet-400" style={{ animation: "live-pulse 1.2s ease-in-out infinite" }} />
+            <span className="text-[11px] font-bold text-violet-300">AI verification in progress</span>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────── PROVISIONAL WIN ─────────────────── */}
+      {phase === "provisional_win" && (
+        <div className="flex-1 flex flex-col items-center justify-center px-5 pb-10" style={{ animation: "found-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+          {/* Lock badge */}
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{
+            background: "rgba(250,204,21,0.12)",
+            border: "1.5px solid rgba(250,204,21,0.3)",
+            boxShadow: "0 8px 40px rgba(250,204,21,0.2)",
+            animation: "lock-float 2.5s ease-in-out infinite",
+          }}>
+            <Lock className="w-10 h-10 text-yellow-400" strokeWidth={1.5} />
+          </div>
+
+          <h2 className="text-2xl font-black text-white mb-1">Prize Credited</h2>
+          <p className="text-[12px] font-bold text-yellow-500 mb-4 uppercase tracking-wide">Pending Verification</p>
+
+          {/* Greyed-out prize amount */}
+          <div className="flex items-center gap-2 mb-5 px-6 py-3 rounded-2xl" style={{
+            background: "rgba(250,204,21,0.06)", border: "1px solid rgba(250,204,21,0.15)",
+          }}>
+            <CoinIcon width={22} />
+            <span className="text-[32px] font-black tabular-nums leading-none" style={{ color: "rgba(250,204,21,0.4)" }}>
+              {provisionalPrize || prizeAmount}
+            </span>
+            <span className="text-[11px] font-bold text-zinc-600 mt-2">coins</span>
+          </div>
+
+          <p className="text-[12px] text-zinc-500 text-center max-w-xs mb-4 leading-relaxed">
+            Your prize is locked for 10 minutes while your opponent reviews the result.
+          </p>
+
+          {/* Dispute window countdown (for context) */}
+          <div className="w-full px-4 py-3 rounded-2xl flex items-center justify-between mb-4" style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+          }}>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-zinc-500" />
+              <span className="text-[12px] font-semibold text-zinc-400">Dispute window</span>
+            </div>
+            <span className="text-[13px] font-black text-zinc-300 tabular-nums">{formatTime(disputeSecs)}</span>
+          </div>
+
+          {disputeFiled && (
+            <div className="w-full px-4 py-3 rounded-2xl flex items-center gap-2 mb-3" style={{
+              background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)",
+            }}>
+              <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0" />
+              <span className="text-[12px] font-semibold text-orange-300">Your opponent filed a dispute. Admin will review.</span>
+            </div>
+          )}
+
+          <p className="text-[11px] text-zinc-600 text-center">
+            {disputeSecs === 0
+              ? "Dispute window closed — finalizing prize…"
+              : "Prize will be released automatically when the window closes."}
+          </p>
+        </div>
+      )}
+
+      {/* ─────────────────── PROVISIONAL LOSS (dispute window) ─────────────────── */}
+      {phase === "provisional_loss" && (
+        <div className="flex-1 flex flex-col items-center px-4 pb-8" style={{ animation: "found-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+
+          <div className="mt-6 mb-4 w-20 h-20 rounded-full flex items-center justify-center" style={{
+            background: "rgba(239,68,68,0.12)",
+            border: "1.5px solid rgba(239,68,68,0.3)",
+            boxShadow: "0 8px 40px rgba(239,68,68,0.2)",
+          }}>
+            <X className="w-10 h-10 text-red-400" strokeWidth={1.5} />
+          </div>
+
+          <h2 className="text-xl font-black text-white mb-1">Your Opponent Claimed Victory</h2>
+          <p className="text-[12px] text-zinc-500 text-center mb-5 max-w-xs leading-relaxed">
+            If you believe this is incorrect, you have {formatTime(disputeSecs)} to file a dispute.
+          </p>
+
+          {/* Dispute countdown bar */}
+          <div className="w-full mb-4">
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Dispute window</span>
+              <span className="text-[12px] font-black tabular-nums" style={{
+                color: disputeSecs <= 60 ? "#ef4444" : disputeSecs <= 180 ? "#f59e0b" : "rgba(255,255,255,0.5)",
+              }}>{formatTime(disputeSecs)}</span>
+            </div>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+              <div className="h-full rounded-full transition-all duration-1000" style={{
+                width: `${(disputeSecs / DISPUTE_WINDOW_SECONDS) * 100}%`,
+                background: disputeSecs <= 60 ? "#ef4444" : disputeSecs <= 180 ? "#f59e0b" : "#22d3ee",
+              }} />
+            </div>
+          </div>
+
+          {disputeFiled ? (
+            <div className="w-full px-4 py-4 rounded-2xl flex flex-col items-center gap-2 mb-4" style={{
+              background: "rgba(34,211,238,0.06)", border: "1px solid rgba(34,211,238,0.2)",
+            }}>
+              <CheckCircle2 className="w-8 h-8 text-cyan-400" strokeWidth={1.5} />
+              <p className="text-[14px] font-bold text-white">Dispute Submitted</p>
+              <p className="text-[11px] text-zinc-500 text-center">An admin will review the evidence shortly.</p>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDisputeSheet(true)}
+              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform mb-3"
+              style={{
+                background: "rgba(239,68,68,0.12)",
+                border: "1.5px solid rgba(239,68,68,0.35)",
+              }}
+            >
+              <AlertTriangle className="w-5 h-5 text-red-400" strokeWidth={2} />
+              <span className="text-[15px] font-extrabold text-red-400">File Dispute</span>
+            </button>
+          )}
+
+          {disputeSecs === 0 && !disputeFiled && (
+            <p className="text-[11px] text-zinc-600 text-center">
+              Dispute window closed — result accepted.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ─────────────────── FINALIZED WIN ─────────────────── */}
+      {phase === "finalized_win" && (
+        <div className="flex-1 flex flex-col items-center justify-center px-5 pb-10" style={{ animation: "found-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{
+            background: "rgba(34,197,94,0.14)",
+            border: "1.5px solid rgba(34,197,94,0.35)",
+            boxShadow: "0 8px 40px rgba(34,197,94,0.25)",
+            animation: "trophy-bounce 2s ease-in-out infinite",
+          }}>
+            <Trophy className="w-12 h-12 text-emerald-400" strokeWidth={1.4} />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-1">Prize Released 🎉</h2>
+          <p className="text-[12px] text-zinc-500 text-center mb-4 max-w-xs">
+            Match finalized — your prize has been credited to your wallet.
+          </p>
+          {(provisionalPrize || prizeAmount) > 0 && (
+            <div className="flex items-center gap-2 mb-6 px-6 py-3 rounded-2xl" style={{
+              background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)",
+            }}>
+              <CoinIcon width={22} />
+              <span className="text-[32px] font-black tabular-nums text-emerald-300">+{provisionalPrize || prizeAmount}</span>
+            </div>
+          )}
+          <button
+            onClick={() => safeNavigate("/quickmatch")}
+            className="w-full py-4 rounded-2xl text-[14px] font-extrabold text-white active:scale-95 transition-transform mb-3"
+            style={{ background: "linear-gradient(135deg, #22c55e, #16a34a)", boxShadow: "0 8px 32px rgba(34,197,94,0.35)" }}
+          >
+            Play Again
+          </button>
+          <button onClick={() => safeNavigate("/")} className="w-full py-3.5 rounded-2xl text-[13px] font-bold text-zinc-400 active:scale-95 transition-transform" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            Go Home
+          </button>
+        </div>
+      )}
+
+      {/* ─────────────────── FINALIZED LOSS ─────────────────── */}
+      {phase === "finalized_loss" && (
+        <div className="flex-1 flex flex-col items-center justify-center px-5 pb-10" style={{ animation: "found-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mb-5" style={{
+            background: "rgba(113,113,122,0.12)",
+            border: "1.5px solid rgba(113,113,122,0.3)",
+            boxShadow: "0 8px 40px rgba(113,113,122,0.15)",
+          }}>
+            <CheckCircle2 className="w-12 h-12 text-zinc-400" strokeWidth={1.4} />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-1">Result Accepted</h2>
+          <p className="text-[12px] text-zinc-500 text-center mb-6 max-w-xs leading-relaxed">
+            Match finalized. Better luck next time!
+          </p>
+          <button
+            onClick={() => safeNavigate("/quickmatch")}
+            className="w-full py-4 rounded-2xl text-[14px] font-extrabold text-white active:scale-95 transition-transform mb-3"
+            style={{ background: "linear-gradient(135deg, #52525b, #3f3f46)" }}
+          >
+            Play Again
+          </button>
+          <button onClick={() => safeNavigate("/")} className="w-full py-3.5 rounded-2xl text-[13px] font-bold text-zinc-400 active:scale-95 transition-transform" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            Go Home
+          </button>
+        </div>
+      )}
+
       {/* ─── Leave-confirm overlay ─── */}
       {showLeaveConfirm && (
         <div
@@ -1298,7 +2069,7 @@ export default function QuickMatchQueue() {
               borderBottom: "none",
               boxShadow: "0 -20px 60px rgba(0,0,0,0.6)",
               paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
-              animation: "qhub-sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
+              animation: "sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
             }}
           >
             <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
@@ -1327,6 +2098,104 @@ export default function QuickMatchQueue() {
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
               <span className="text-[14px] font-semibold text-zinc-400">Stay in Queue</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Dispute bottom sheet ─── */}
+      {showDisputeSheet && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.78)", backdropFilter: "blur(8px)" }}
+          onClick={() => !disputeSubmitting && setShowDisputeSheet(false)}
+        >
+          <div
+            className="w-full rounded-t-3xl px-5 pt-6 max-h-[85vh] overflow-y-auto"
+            style={{
+              background: "rgba(12,14,20,0.98)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              borderBottom: "none",
+              boxShadow: "0 -20px 60px rgba(0,0,0,0.6)",
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
+              animation: "sheet-in 0.3s cubic-bezier(0.34,1.2,0.64,1) both",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)" }}>
+                <AlertTriangle className="w-5 h-5 text-red-400" strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-black text-white">File Dispute</h3>
+                <p className="text-[11px] text-zinc-500">Provide evidence you won the match</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Explanation</p>
+              <textarea
+                className="w-full rounded-2xl px-4 py-3 text-[13px] font-semibold text-white resize-none"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  minHeight: 80,
+                  outline: "none",
+                }}
+                placeholder="Describe why you believe you won…"
+                value={disputeExplanation}
+                onChange={e => setDisputeExplanation(e.target.value)}
+                maxLength={500}
+              />
+              <p className="text-[10px] text-zinc-600 mt-1 text-right">{disputeExplanation.length}/500</p>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-2">Evidence (optional, max 3 files)</p>
+              <input
+                ref={disputeFileRef}
+                type="file"
+                accept="image/*,video/mp4,video/quicktime"
+                multiple
+                className="hidden"
+                onChange={e => {
+                  const files = Array.from(e.target.files ?? []).slice(0, 3);
+                  setDisputeEvidence(files);
+                }}
+              />
+              <button
+                onClick={() => disputeFileRef.current?.click()}
+                className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.15)" }}
+              >
+                <Upload className="w-4 h-4 text-zinc-400" />
+                <span className="text-[12px] font-bold text-zinc-400">
+                  {disputeEvidence.length > 0
+                    ? `${disputeEvidence.length} file${disputeEvidence.length > 1 ? "s" : ""} selected`
+                    : "Upload screenshots / video"}
+                </span>
+              </button>
+            </div>
+
+            <button
+              onClick={handleDisputeSubmit}
+              disabled={disputeSubmitting || !disputeExplanation.trim()}
+              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform mb-3 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "rgba(239,68,68,0.18)", border: "1.5px solid rgba(239,68,68,0.35)" }}
+            >
+              {disputeSubmitting ? (
+                <><div className="w-4 h-4 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" /><span className="text-[15px] font-extrabold text-red-400">Submitting…</span></>
+              ) : (
+                <span className="text-[15px] font-extrabold text-red-400">Submit Dispute</span>
+              )}
+            </button>
+            <button
+              onClick={() => !disputeSubmitting && setShowDisputeSheet(false)}
+              className="w-full py-3.5 rounded-2xl active:scale-95 transition-transform"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <span className="text-[13px] font-semibold text-zinc-400">Cancel</span>
             </button>
           </div>
         </div>

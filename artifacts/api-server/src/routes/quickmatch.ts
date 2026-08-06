@@ -10,6 +10,7 @@ import {
   getQueueEntryFee,
   isInQueue,
   sweepExpiredEntries,
+  getQueuePosition,
 } from "../lib/quickmatch-queue.js";
 import {
   createMatch,
@@ -330,6 +331,15 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
       }
       // SSE: notify both players immediately — no poll needed
       pushMatchToPlayers(match, { status: "waiting_room", roomStatus: "opponent_found" });
+      // Push notification: opponent found
+      for (const player of match.players) {
+        notify(Number(player.userId), {
+          type: "quickmatch_match",
+          title: "⚡ Opponent Found!",
+          body: "A match has been found. Room is being created — stay in the app!",
+          url: `/#/quickmatch/${match.gameType}/${match.modeId}`,
+        }).catch(() => {});
+      }
       broadcastStats();
       res.json({ ok: true, matched: true });
       return;
@@ -400,6 +410,21 @@ router.post("/quickmatch/search/leave", requireAuth, async (req, res) => {
   res.json({ ok: true, refunded: refundAmount });
 });
 
+// ─── Queue position ───────────────────────────────────────────────────────────
+// Returns how many players are ahead in the same mode and the estimated wait.
+router.get("/quickmatch/position", requireAuth, (req, res) => {
+  const userId   = String(req.user!.userId);
+  const { gameType, modeId } = req.query as { gameType?: string; modeId?: string };
+  if (!gameType || !modeId) {
+    res.status(400).json({ error: "gameType and modeId are required" });
+    return;
+  }
+  const position = getQueuePosition(userId, gameType, modeId);
+  // Rough estimate: ~30s per match ahead in queue
+  const estimatedWaitSeconds = position === null ? null : position * 30;
+  res.json({ position, estimatedWaitSeconds, inQueue: position !== null });
+});
+
 // ─── Poll match status ────────────────────────────────────────────────────────
 router.get("/quickmatch/match", requireAuth, (req, res) => {
   const userId = String(req.user!.userId);
@@ -432,6 +457,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
       credentialsReadyAt: match.credentialsReadyAt ?? null,
       entryFee: match.entryFee,
       prizeAmount: match.prizeAmount,
+      currentState: match.currentState,
       me,
       opponent,
     });
@@ -447,6 +473,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
     roomStatus,
     entryFee: match.entryFee,
     prizeAmount: match.prizeAmount,
+    currentState: match.currentState,
     me,
     opponent,
   });
@@ -482,6 +509,32 @@ router.post("/quickmatch/match/action", requireAuth, (req, res) => {
       url:   `/#/quickmatch/${match.gameType}/${match.modeId}`,
     }).catch(() => {});
   }
+
+  res.json({ ok: true });
+});
+
+// ─── Dedicated join confirmation endpoint ─────────────────────────────────────
+// Alias for action=joined — cleaner endpoint for the new UI
+router.post("/quickmatch/joined", requireAuth, (req, res) => {
+  const userId    = String(req.user!.userId);
+  const userIdNum = req.user!.userId;
+  const { matchId: reqMatchId } = req.body as { matchId?: string };
+
+  const match = (reqMatchId ? getMatchById(reqMatchId) : null) ?? getMatchForPlayer(userId);
+  if (!match || !match.playerIds.includes(userId)) {
+    res.status(404).json({ error: "No active match" });
+    return;
+  }
+
+  markActionTaken(match.id, userId);
+  recordJoinConfirmed(match.id, userId);
+
+  notify(userIdNum, {
+    type:  "quickmatch_joined",
+    title: "You're In! 🎮",
+    body:  "Room credentials saved. Head to Free Fire and join the custom room — good luck!",
+    url:   `/#/quickmatch/${match.gameType}/${match.modeId}`,
+  }).catch(() => {});
 
   res.json({ ok: true });
 });
@@ -536,6 +589,25 @@ router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
   // (Do NOT short-circuit on noShowHandled here; that bypasses the await.)
   try {
     const result: CheckEndResult = await checkAndSettleIfEnded(match);
+
+    if (result.ended) {
+      // Check if the match transitioned to RESULT_PENDING (screenshot-verification path)
+      // rather than being fully settled. The client should show the upload UI, not navigate away.
+      const freshMatch = getMatchById(match.id);
+      if (freshMatch && freshMatch.currentState === "RESULT_PENDING") {
+        // Notify both players via SSE to switch to the result_pending UI
+        for (const player of freshMatch.players) {
+          pushToUser(Number(player.userId), "quickmatch_result_pending", {
+            matchId: freshMatch.id,
+            state: "RESULT_PENDING",
+            windowSeconds: 80,
+          });
+        }
+        res.json({ ended: true, resultPending: true, matchId: match.id });
+        return;
+      }
+    }
+
     res.json({ ended: result.ended, reason: result.reason, matchId: match.id });
   } catch (err) {
     console.error("[check-end] Error:", err);

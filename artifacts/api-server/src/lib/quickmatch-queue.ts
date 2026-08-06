@@ -100,6 +100,27 @@ export function tryMatch(
   return eligible.map((e) => e.userId);
 }
 
+/**
+ * Returns how many players are ahead of `userId` in the same mode queue.
+ * Null if the player is not in the queue.
+ * Position 0 = next to be matched; 1 = one match ahead; etc.
+ */
+export function getQueuePosition(userId: string, gameType: string, modeId: string): number | null {
+  const k = key(userId, gameType, modeId);
+  const myEntry = queue.get(k);
+  if (!myEntry || isExpired(myEntry)) return null;
+
+  let position = 0;
+  for (const entry of queue.values()) {
+    if (entry.gameType !== gameType || entry.modeId !== modeId) continue;
+    if (entry.userId === userId) continue;
+    if (isExpired(entry)) continue;
+    // Count players who joined before us (earlier joinedAt)
+    if (entry.joinedAt < myEntry.joinedAt) position++;
+  }
+  return position;
+}
+
 export function getQueueStats(): {
   cs: { total: number; modes: Record<string, number> };
   br: { total: number; modes: Record<string, number> };
