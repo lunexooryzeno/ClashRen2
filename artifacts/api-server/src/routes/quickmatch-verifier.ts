@@ -413,6 +413,9 @@ async function handleValidOcr(
   const winner = match.players.find((p) => Number(p.userId) === winnerUserId);
   const loser  = match.players.find((p) => Number(p.userId) !== winnerUserId);
 
+  // Re-fetch the match to get the stamped disputeWindowStartedAt (set by stampTimestamps on DISPUTE_WINDOW).
+  const updatedMatchForNotify = getMatchById(matchId) ?? match;
+
   if (winner) {
     pushToUser(Number(winner.userId), "quickmatch_provisional_win", {
       matchId,
@@ -420,6 +423,9 @@ async function handleValidOcr(
       prizeAmount: match.prizeAmount,
       message: "Prize credited (Pending Verification)",
       nonWithdrawable: true,
+      // Server-authoritative dispute window start — clients initialize their dispute
+      // countdown from this value so SSE delivery delay doesn't inflate the window.
+      disputeWindowStartedAt: updatedMatchForNotify.disputeWindowStartedAt ?? Date.now(),
     });
     notify(Number(winner.userId), {
       type: "quickmatch_result",
@@ -435,6 +441,8 @@ async function handleValidOcr(
       resultType: "loss",
       state: "DISPUTE_WINDOW",
       message: "You can dispute this result within the dispute window.",
+      // Server-authoritative dispute window start — initialize client timer from this.
+      disputeWindowStartedAt: updatedMatchForNotify.disputeWindowStartedAt ?? Date.now(),
     });
     notify(Number(loser.userId), {
       type: "quickmatch_result",

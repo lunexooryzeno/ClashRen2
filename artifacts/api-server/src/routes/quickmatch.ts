@@ -555,32 +555,6 @@ router.post("/quickmatch/match/action", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Dedicated join confirmation endpoint ─────────────────────────────────────
-// Alias for action=joined — cleaner endpoint for the new UI
-router.post("/quickmatch/joined", requireAuth, (req, res) => {
-  const userId    = String(req.user!.userId);
-  const userIdNum = req.user!.userId;
-  const { matchId: reqMatchId } = req.body as { matchId?: string };
-
-  const match = (reqMatchId ? getMatchById(reqMatchId) : null) ?? getMatchForPlayer(userId);
-  if (!match || !match.playerIds.includes(userId)) {
-    res.status(404).json({ error: "No active match" });
-    return;
-  }
-
-  markActionTaken(match.id, userId);
-  recordJoinConfirmed(match.id, userId);
-
-  notify(userIdNum, {
-    type:  "quickmatch_joined",
-    title: "You're In! 🎮",
-    body:  "Room credentials saved. Head to Free Fire and join the custom room — good luck!",
-    url:   `/#/quickmatch/${match.gameType}/${match.modeId}`,
-  }).catch(() => {});
-
-  res.json({ ok: true });
-});
-
 // ─── App-open match-end check ─────────────────────────────────────────────────
 // Called when a player brings the app to the foreground after joining the match.
 // Fetches fresh stats and settles immediately if they differ from pre-snapshot.

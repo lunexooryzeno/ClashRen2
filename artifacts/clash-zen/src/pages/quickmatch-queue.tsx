@@ -368,7 +368,7 @@ export default function QuickMatchQueue() {
   useEffect(() => {
     if (phase === "result_pending") {
       if (resultPendingAt !== null) {
-        // Compute remaining time from server timestamp (80s window + 10s grace = 90s)
+        // Compute remaining time from server-authoritative timestamp (exactly 80s deadline)
         const elapsed = Math.floor((Date.now() - resultPendingAt) / 1000);
         const remaining = Math.max(0, SCREENSHOT_WINDOW_SECONDS - elapsed);
         setScreenshotSecs(remaining);
@@ -671,18 +671,25 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // Provisional win — winner's prize is locked
+    // Provisional win — winner's prize is locked (dispute window now open)
     sse.addEventListener("quickmatch_provisional_win", (e: MessageEvent) => {
       try {
         const data = JSON.parse(e.data) as {
           matchId: string;
           prizeAmount: number;
           message?: string;
+          // Server-authoritative start of the 10-min dispute window
+          disputeWindowStartedAt?: number;
         };
         setProvisionalPrize(data.prizeAmount ?? 0);
         setPhase("provisional_win");
         stopScreenshotTimer();
-        startDisputeTimer(); // loser gets 10 min; winner sees timer too
+        // Initialize dispute timer from server timestamp so network delay doesn't inflate window
+        startDisputeTimer(
+          data.disputeWindowStartedAt
+            ? new Date(data.disputeWindowStartedAt).toISOString()
+            : undefined
+        );
       } catch { /* ignore */ }
     });
 
@@ -696,10 +703,17 @@ export default function QuickMatchQueue() {
           coinsEarned?: number;
           entryFee?: number;
           prizeAmount?: number;
+          // Server-authoritative start of the 10-min dispute window
+          disputeWindowStartedAt?: number;
         };
         if (data.state === "DISPUTE_WINDOW" && data.resultType === "loss") {
           setPhase("provisional_loss");
-          startDisputeTimer();
+          // Initialize timer from server timestamp so network delay doesn't inflate window
+          startDisputeTimer(
+            data.disputeWindowStartedAt
+              ? new Date(data.disputeWindowStartedAt).toISOString()
+              : undefined
+          );
           return;
         }
         // Other final results (win/loss/refund/no_show/suspended) → navigate to result page
