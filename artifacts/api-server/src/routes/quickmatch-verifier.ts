@@ -84,9 +84,11 @@ router.post("/quickmatch/submit-screenshot", requireAuth, async (req, res) => {
     return;
   }
 
-  // Server-side deadline enforcement: 80s window + 10s grace = 90s total
+  // Server-side deadline enforcement: exactly 80s, matching the client SCREENSHOT_WINDOW_SECONDS.
+  // No grace period — keeping the deadline identical on both sides prevents the client showing
+  // an expired UI while the server still accepts the upload.
   // resultPendingAt is set when the match enters RESULT_PENDING via transitionState().
-  const SCREENSHOT_DEADLINE_MS = 90_000; // 80s window + 10s grace
+  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000; // exactly 80s
   if (activeMatch.resultPendingAt) {
     const elapsed = Date.now() - activeMatch.resultPendingAt;
     if (elapsed > SCREENSHOT_DEADLINE_MS) {
@@ -236,8 +238,9 @@ async function rejectSubmission(
       .catch(() => {});
   }
 
-  // Calculate remaining time from the authoritative resultPendingAt timestamp
-  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000 + 10_000; // +10s grace
+  // Calculate remaining time from the authoritative resultPendingAt timestamp.
+  // Deadline is exactly SCREENSHOT_WINDOW_SECONDS (80s) — no grace period.
+  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000; // exactly 80s
   const remainingMs = match.resultPendingAt
     ? Math.max(0, SCREENSHOT_DEADLINE_MS - (Date.now() - match.resultPendingAt))
     : 0;
@@ -463,8 +466,9 @@ async function handleInvalidOcr(
       .catch(() => {});
   }
 
-  // Calculate remaining time from the authoritative resultPendingAt timestamp
-  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000 + 10_000; // +10s grace
+  // Calculate remaining time from the authoritative resultPendingAt timestamp.
+  // Deadline is exactly SCREENSHOT_WINDOW_SECONDS (80s) — no grace period.
+  const SCREENSHOT_DEADLINE_MS = SCREENSHOT_WINDOW_SECONDS * 1000; // exactly 80s
   const remainingMs = match.resultPendingAt
     ? Math.max(0, SCREENSHOT_DEADLINE_MS - (Date.now() - match.resultPendingAt))
     : 0;
