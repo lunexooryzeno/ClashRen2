@@ -80,6 +80,11 @@ export interface QuickMatch {
   joinConfirmed: Record<string, boolean>;
   /** Creation failure attempt count */
   createAttempts: number;
+  /**
+   * Unix timestamp (ms) when the match entered RESULT_PENDING.
+   * Used to enforce the server-side 80-second screenshot upload deadline.
+   */
+  resultPendingAt?: number;
 }
 
 const MAX_HISTORY = 50;
@@ -91,10 +96,18 @@ const matchHistory: QuickMatch[] = [];
 function expireStale() {
   const now = Date.now();
   activeMatches = activeMatches.filter((m) => {
-    if (m.currentState === "ROOM_READY" || m.currentState === "JOIN_WINDOW" ||
-        m.currentState === "IN_GAME" || m.currentState === "RESULT_PENDING") {
-      return true;
-    }
+    // States that must never be evicted by the 15-minute TTL:
+    // - ROOM_READY / JOIN_WINDOW / IN_GAME / RESULT_PENDING: active play
+    // - VERIFYING_SCREENSHOT: OCR in flight (seconds to minutes)
+    // - PROVISIONAL_WIN / DISPUTE_WINDOW: prize locked; dispute may be open (up to 10 min)
+    //   A 10-minute dispute window can begin after ~15 min of match age, so these states
+    //   MUST survive past the general 15-minute TTL.
+    const IS_ACTIVE_STATE = new Set<MatchState>([
+      "ROOM_READY", "JOIN_WINDOW", "IN_GAME",
+      "RESULT_PENDING", "VERIFYING_SCREENSHOT", "PROVISIONAL_WIN", "DISPUTE_WINDOW",
+    ]);
+    if (IS_ACTIVE_STATE.has(m.currentState)) return true;
+
     if (m.currentState === "CANCELLED" || m.currentState === "FINALIZED") {
       // Keep briefly for SSE delivery, then expire
       const age = now - new Date(m.createdAt).getTime();
@@ -105,6 +118,7 @@ function expireStale() {
       }
       return true;
     }
+
     const age = now - new Date(m.createdAt).getTime();
     if (age > MATCH_TTL_MS) {
       m.currentState = "CANCELLED";
@@ -151,6 +165,11 @@ export function transitionState(matchId: string, from: MatchState, to: MatchStat
   }
   match.currentState = to;
   match.status = toLegacyStatus(to);
+  // Record the exact moment RESULT_PENDING begins so submit-screenshot can enforce
+  // the server-side 80-second upload deadline.
+  if (to === "RESULT_PENDING") {
+    match.resultPendingAt = Date.now();
+  }
   return match;
 }
 

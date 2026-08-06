@@ -84,6 +84,21 @@ router.post("/quickmatch/submit-screenshot", requireAuth, async (req, res) => {
     return;
   }
 
+  // Server-side deadline enforcement: 80s window + 10s grace = 90s total
+  // resultPendingAt is set when the match enters RESULT_PENDING via transitionState().
+  const SCREENSHOT_DEADLINE_MS = 90_000; // 80s window + 10s grace
+  if (activeMatch.resultPendingAt) {
+    const elapsed = Date.now() - activeMatch.resultPendingAt;
+    if (elapsed > SCREENSHOT_DEADLINE_MS) {
+      res.status(409).json({
+        error: "Screenshot upload window has expired",
+        code: "window_expired",
+        elapsedMs: elapsed,
+      });
+      return;
+    }
+  }
+
   // Validate image payload
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
   if (!imageBase64 || !mimeType || !ALLOWED_TYPES.includes(mimeType)) {

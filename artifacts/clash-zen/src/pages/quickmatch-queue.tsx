@@ -211,6 +211,7 @@ export default function QuickMatchQueue() {
   const [showDisputeSheet, setShowDisputeSheet] = useState(false);
   const [disputeExplanation, setDisputeExplanation] = useState("");
   const [disputeEvidence, setDisputeEvidence] = useState<File[]>([]);
+  const [disputeEvidenceError, setDisputeEvidenceError] = useState<string | null>(null);
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
   const disputeFileRef                        = useRef<HTMLInputElement>(null);
 
@@ -2156,14 +2157,31 @@ export default function QuickMatchQueue() {
               <input
                 ref={disputeFileRef}
                 type="file"
-                accept="image/*,video/mp4,video/quicktime"
+                accept="image/jpeg,image/png,image/webp"
                 multiple
                 className="hidden"
                 onChange={e => {
-                  const files = Array.from(e.target.files ?? []).slice(0, 3);
-                  setDisputeEvidence(files);
+                  const files = Array.from(e.target.files ?? []);
+                  // 2 MB max per file (base64 adds ~33% overhead; 3×2MB = ~8MB JSON body)
+                  const MAX_FILE_BYTES = 2 * 1024 * 1024;
+                  const oversized = files.filter(f => f.size > MAX_FILE_BYTES);
+                  if (oversized.length > 0) {
+                    setDisputeEvidenceError(`File${oversized.length > 1 ? "s" : ""} too large — max 2 MB each. Use screenshots (JPEG/PNG).`);
+                    setDisputeEvidence([]);
+                    return;
+                  }
+                  setDisputeEvidenceError(null);
+                  setDisputeEvidence(files.slice(0, 3));
                 }}
               />
+              {disputeEvidenceError && (
+                <div className="w-full px-3 py-2 rounded-xl mb-2 flex items-center gap-2" style={{
+                  background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+                }}>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                  <span className="text-[10px] font-semibold text-red-300">{disputeEvidenceError}</span>
+                </div>
+              )}
               <button
                 onClick={() => disputeFileRef.current?.click()}
                 className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
@@ -2172,8 +2190,8 @@ export default function QuickMatchQueue() {
                 <Upload className="w-4 h-4 text-zinc-400" />
                 <span className="text-[12px] font-bold text-zinc-400">
                   {disputeEvidence.length > 0
-                    ? `${disputeEvidence.length} file${disputeEvidence.length > 1 ? "s" : ""} selected`
-                    : "Upload screenshots / video"}
+                    ? `${disputeEvidence.length} screenshot${disputeEvidence.length > 1 ? "s" : ""} selected`
+                    : "Upload screenshots (JPEG/PNG/WebP, max 2 MB each)"}
                 </span>
               </button>
             </div>

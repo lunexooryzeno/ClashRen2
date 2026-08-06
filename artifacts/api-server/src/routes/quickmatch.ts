@@ -16,6 +16,7 @@ import {
   createMatch,
   getMatchForPlayer,
   getMatchById,
+  getActiveMatches,
   dismissMatch,
   hasPendingRoomRequest,
   getRoomStatus,
@@ -175,9 +176,31 @@ async function refundQueueEntry(
   });
 }
 
+// ─── Stuck-RESULT_PENDING sweep ───────────────────────────────────────────────
+// If a player fails to upload a screenshot within the 80s window (network error,
+// app close, etc.) the match stays in RESULT_PENDING indefinitely, blocking both
+// players from joining new matches. This sweep auto-cancels stale RESULT_PENDING
+// matches and issues full refunds to both players.
+const RESULT_PENDING_CANCEL_MS = 5 * 60 * 1000; // 5 minutes before auto-cancel
+async function sweepStuckResultPending(): Promise<void> {
+  const matches = getActiveMatches();
+  for (const match of matches) {
+    if (match.currentState !== "RESULT_PENDING") continue;
+    const age = match.resultPendingAt
+      ? Date.now() - match.resultPendingAt
+      : Date.now() - new Date(match.createdAt).getTime();
+    if (age < RESULT_PENDING_CANCEL_MS) continue;
+    console.log(`[result-pending-sweep] Cancelling stuck RESULT_PENDING match ${match.id} (age=${Math.round(age / 1000)}s)`);
+    cancelMatch(match.id, "screenshot_window_expired", match).catch((err) =>
+      console.error(`[result-pending-sweep] Cancel failed for ${match.id}:`, err),
+    );
+  }
+}
+
 // Background sweep — runs every 2 minutes
 // 1. Refund timed-out queue entries
 // 2. Auto-finalize dispute windows that expired without a dispute
+// 3. Cancel RESULT_PENDING matches whose screenshot window expired
 setInterval(async () => {
   // Queue TTL refunds
   const expired = sweepExpiredEntries();
@@ -190,6 +213,10 @@ setInterval(async () => {
   // Dispute window auto-finalize
   sweepExpiredDisputeWindows().catch((err) =>
     console.error("[quickmatch] Dispute sweep failed:", err),
+  );
+  // Stuck RESULT_PENDING auto-cancel
+  sweepStuckResultPending().catch((err) =>
+    console.error("[quickmatch] Result-pending sweep failed:", err),
   );
 }, 2 * 60 * 1000);
 
