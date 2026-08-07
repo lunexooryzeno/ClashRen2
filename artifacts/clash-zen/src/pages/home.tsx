@@ -20,7 +20,7 @@ import {
 import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
-import { isBookingClosed } from "@/lib/utils";
+import { isUserVisibleTournament } from "@/lib/utils";
 
 interface ApiBanner {
   id: number;
@@ -336,7 +336,7 @@ export default function Home() {
   const rankColors = ["#FFD700", "#C0C0C0", "#CD7F32", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.4)"];
 
   const recentHistory = (myHistory ?? []).slice(0, 3) as (HistoryEntry & { placement?: number | null })[];
-  const visibleUpcoming = (upcoming ?? []).filter(t => !isBookingClosed(t));
+  const visibleUpcoming = (upcoming ?? []).filter(isUserVisibleTournament);
 
 
   return (
@@ -442,7 +442,7 @@ export default function Home() {
         </div>
 
         {/* ── Upcoming Schedule ── */}
-        {(upcomingLoading || (upcoming && upcoming.length > 0)) && (
+        {(upcomingLoading || visibleUpcoming.length > 0) && (
           <div className="mb-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-heading text-base font-extrabold text-white flex items-center gap-2 tracking-wide uppercase">
@@ -456,7 +456,7 @@ export default function Home() {
             <div className="flex overflow-x-auto pb-3 -mx-4 px-4 gap-3 snap-x snap-mandatory hide-scrollbar">
               {upcomingLoading
                 ? [1,2,3].map(i => <Skeleton key={i} className="h-44 min-w-[260px] rounded-2xl bg-white/5 snap-center flex-shrink-0" />)
-                : upcoming!.slice(0, 6).map((t, i) => {
+                : visibleUpcoming.slice(0, 6).map((t, i) => {
                 const start = new Date(t.startTime);
                 const dayLabel = isToday(start) ? "Today" : isTomorrow(start) ? "Tomorrow" : format(start, "EEE d MMM");
                 const timeLabel = format(start, "h:mm a");

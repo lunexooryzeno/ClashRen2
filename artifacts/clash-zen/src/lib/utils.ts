@@ -27,6 +27,24 @@ export function isBookingClosed(tournament: { status?: string; startTime?: strin
   return Date.now() >= new Date(startTime).getTime() - closeMin * 60 * 1000;
 }
 
+export function isTournamentEnded(tournament: { status?: string; startTime?: string }): boolean {
+  const status = (tournament.status ?? "").toLowerCase();
+  if (status === "completed" || status === "cancelled" || status === "canceled" || status === "ended" || status === "finished") {
+    return true;
+  }
+  return status === "upcoming" && !!tournament.startTime && Date.now() >= new Date(tournament.startTime).getTime();
+}
+
+export function isUserVisibleTournament(tournament: {
+  status?: string;
+  startTime?: string;
+  matchSettings?: string | Record<string, unknown> | null;
+  isJoined?: boolean | null | undefined;
+}): boolean {
+  if (isTournamentEnded(tournament)) return false;
+  return !isBookingClosed(tournament);
+}
+
 export function parseGameMode(gameMode: string): {
   isKnockout: boolean;
   teamFormat: string | null;

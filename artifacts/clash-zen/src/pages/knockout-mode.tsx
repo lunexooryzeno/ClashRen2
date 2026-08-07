@@ -4,7 +4,7 @@ import { TournamentCard } from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Zap, Users, User, Swords } from "lucide-react";
 import { useState } from "react";
-import { isBookingClosed } from "@/lib/utils";
+import { isUserVisibleTournament } from "@/lib/utils";
 
 type Mode = "solo" | "duo" | "squad";
 
@@ -71,7 +71,7 @@ export default function KnockoutMode() {
   });
 
   const filtered = (filter === "free" ? tournaments.filter(t => t.entryFeeDiamonds === 0) : tournaments)
-    .filter(t => !isBookingClosed(t));
+    .filter(isUserVisibleTournament);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "hsl(var(--background))" }}>

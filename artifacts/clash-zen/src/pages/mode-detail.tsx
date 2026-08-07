@@ -5,7 +5,7 @@ import { useListTournaments } from "@workspace/api-client-react";
 import type { ListTournamentsStatus } from "@workspace/api-client-react";
 import { TournamentCard } from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { isBookingClosed } from "@/lib/utils";
+import { isUserVisibleTournament } from "@/lib/utils";
 
 type Mode = "solo" | "duo" | "squad";
 
@@ -94,7 +94,7 @@ function SlideSelector({ mode, accent, glow }: {
   });
 
   const tournaments = (active === "knockouts" ? knockoutList : tournamentList)
-    .filter(t => !isBookingClosed(t));
+    .filter(isUserVisibleTournament);
 
   const TOURNAMENT_COLOR = "#eab308";
 

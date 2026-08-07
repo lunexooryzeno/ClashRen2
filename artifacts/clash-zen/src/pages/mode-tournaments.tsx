@@ -4,7 +4,7 @@ import { TournamentCard } from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Trophy, User, Users, Shield, Zap, Plus, Bell, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { isBookingClosed } from "@/lib/utils";
+import { isUserVisibleTournament } from "@/lib/utils";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListTournamentsQueryKey } from "@workspace/api-client-react";
@@ -143,7 +143,7 @@ export default function ModeTournaments() {
       if (mode === "squad") return m.includes("squad");
       return false;
     })
-    .filter(t => !isBookingClosed(t));
+    .filter(isUserVisibleTournament);
 
   // ── New match banner ───────────────────────────────────────────────────────
   const seenIdsRef       = useRef<Set<number> | null>(null);

@@ -21,7 +21,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import { cn, parseGameMode } from "@/lib/utils";
+import { cn, isUserVisibleTournament, parseGameMode } from "@/lib/utils";
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -72,6 +72,10 @@ export function TournamentCard({ tournament, showJoinButton = false }: Tournamen
   const hasBalance = user ? user.diamondBalance >= tournament.entryFeeDiamonds : false;
   const countdown = useCountdown(tournament.startTime);
   const isCutoffPassed = isUpcoming && Date.now() >= new Date(tournament.startTime).getTime() - 15 * 60 * 1000;
+
+  if (!isUserVisibleTournament(tournament)) {
+    return null;
+  }
 
   const targetPath = matchSlug ? `/matches/${matchSlug}` : `/matches/${tournament.id}`;
 

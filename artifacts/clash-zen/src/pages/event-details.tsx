@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
-import { isBookingClosed, parseGameMode } from "@/lib/utils";
+import { isTournamentEnded, isUserVisibleTournament, parseGameMode } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 function resolveImageUrl(url: string | null | undefined): string | null {
@@ -127,7 +127,7 @@ export default function EventDetails() {
   const resolvedTournament: any = isSlug ? slugData : tournament;
 
   useEffect(() => {
-    if (resolvedTournament && isBookingClosed(resolvedTournament)) {
+    if (resolvedTournament && !resolvedTournament.isJoined && !isUserVisibleTournament(resolvedTournament)) {
       navigate("/matches");
     }
   }, [resolvedTournament, navigate]);
@@ -261,7 +261,7 @@ export default function EventDetails() {
         t.id !== resolvedTournament.id &&
         ((t.gameMode ?? "") === (resolvedTournament as any).gameMode) &&
         t.status === "upcoming" &&
-        !isBookingClosed(t) &&
+        isUserVisibleTournament(t) &&
         new Date(t.startTime).getTime() - getCloseMin(t) * 60 * 1000 > now &&
         t.filledSlots < t.maxSlots
       )
@@ -274,7 +274,7 @@ export default function EventDetails() {
     const gm = (resolvedTournament as any).gameMode ?? "";
     const all = (allTournaments as any[])
       .filter(t => (t.gameMode ?? "") === gm)
-      .filter(t => !isBookingClosed(t));
+      .filter(isUserVisibleTournament);
     // Also include the current tournament even if it's not in the list
     const hasCurrentId = all.some(t => t.id === resolvedTournament.id);
     if (!hasCurrentId) all.push(resolvedTournament as any);
@@ -381,7 +381,7 @@ export default function EventDetails() {
   }
 
   const tm = resolvedTournament;
-  if (isBookingClosed(tm)) {
+  if (!tm.isJoined && (isTournamentEnded(tm) || !isUserVisibleTournament(tm))) {
     return null;
   }
   const isUpcoming = tm.status === "upcoming";
