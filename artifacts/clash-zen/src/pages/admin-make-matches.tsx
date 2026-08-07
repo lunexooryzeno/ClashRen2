@@ -75,7 +75,7 @@ const TEAM_SIZE_COUNTS: Record<TeamSize, number> = {
   solo: 1, duo: 2, trio: 3, squad: 4, "5-player": 5, "6-player": 6,
 };
 const MATCH_FORMAT_VALUES: MatchFormat[] = ["none", "1v1", "2v2", "3v3", "4v4", "5v5", "6v6"];
-const PLAYER_SLOT_COUNT = 48;
+const DEFAULT_PLAYER_SLOT_COUNT = 48;
 
 function formatLabel(format: MatchFormat): string {
   return format === "none" ? "None" : format;
@@ -118,11 +118,13 @@ function PlayerSlotBoard({
   matchSlotNumber,
   assignedCount,
   timeLabel,
+  playerSlotCount,
 }: {
   entries: PlayerSlotEntry[];
   matchSlotNumber: number;
   assignedCount: number;
   timeLabel?: string;
+  playerSlotCount: number;
 }) {
   return (
     <div
@@ -138,11 +140,11 @@ function PlayerSlotBoard({
         </div>
         <div className="min-w-0">
           <p className="text-[13px] font-black text-white">Match Slot {matchSlotNumber}</p>
-          <p className="text-[10px] text-zinc-500">Player Slots 1–{PLAYER_SLOT_COUNT} · {assignedCount}/{PLAYER_SLOT_COUNT} assigned</p>
+          <p className="text-[10px] text-zinc-500">Player Slots 1–{playerSlotCount} · {assignedCount}/{playerSlotCount} assigned</p>
         </div>
         {timeLabel && <span className="ml-auto text-[10px] font-semibold text-zinc-400">{timeLabel}</span>}
         <span className={`${timeLabel ? "" : "ml-auto "}text-[9px] font-bold uppercase tracking-wider text-indigo-300 px-2 py-1 rounded-full`} style={{ background: "rgba(99,102,241,0.14)", border: "1px solid rgba(99,102,241,0.25)" }}>
-          {PLAYER_SLOT_COUNT} positions
+          {playerSlotCount} positions
         </span>
       </div>
       <div className="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -182,11 +184,11 @@ function PlayerSlotBoard({
   );
 }
 
-function makeEmptyRow(_teamSize: TeamSize, format: MatchFormat): MatchRow {
-  const sideCapacity = Math.ceil(PLAYER_SLOT_COUNT / 2);
+function makeEmptyRow(_teamSize: TeamSize, format: MatchFormat, playerSlotCount: number): MatchRow {
+  const sideCapacity = Math.ceil(playerSlotCount / 2);
   return {
     id: Math.random().toString(36).slice(2),
-    teamA: Array(format === "none" ? PLAYER_SLOT_COUNT : sideCapacity).fill(null),
+    teamA: Array(format === "none" ? playerSlotCount : sideCapacity).fill(null),
     teamB: format === "none" ? [] : Array(sideCapacity).fill(null),
     scheduledTime: null,
   };
@@ -195,22 +197,23 @@ function makeEmptyRow(_teamSize: TeamSize, format: MatchFormat): MatchRow {
 function normalizeSavedRows(
   savedRows: Array<{ teamA: number[]; teamB: number[]; scheduledTime: string | null }>,
   format: MatchFormat,
+  playerSlotCount: number,
 ): MatchRow[] {
   const playerIds = savedRows.flatMap(row => format === "none" ? row.teamA : [...row.teamA, ...row.teamB]);
   const rows: MatchRow[] = [];
-  const sideCapacity = Math.ceil(PLAYER_SLOT_COUNT / 2);
+  const sideCapacity = Math.ceil(playerSlotCount / 2);
 
-  for (let start = 0; start < playerIds.length; start += PLAYER_SLOT_COUNT) {
-    const group = playerIds.slice(start, start + PLAYER_SLOT_COUNT);
+  for (let start = 0; start < playerIds.length; start += playerSlotCount) {
+    const group = playerIds.slice(start, start + playerSlotCount);
     rows.push({
       id: Math.random().toString(36).slice(2),
       teamA: format === "none"
-        ? Array(PLAYER_SLOT_COUNT).fill(null).map((_, i) => group[i] ?? null)
+        ? Array(playerSlotCount).fill(null).map((_, i) => group[i] ?? null)
         : Array(sideCapacity).fill(null).map((_, i) => group[i] ?? null),
       teamB: format === "none"
         ? []
         : Array(sideCapacity).fill(null).map((_, i) => group[sideCapacity + i] ?? null),
-      scheduledTime: savedRows[Math.floor(start / PLAYER_SLOT_COUNT)]?.scheduledTime ?? null,
+      scheduledTime: savedRows[Math.floor(start / playerSlotCount)]?.scheduledTime ?? null,
     });
   }
 
@@ -222,9 +225,10 @@ function getPlayerSlotEntries(
   rowIndex: number,
   players: Participant[],
   format: MatchFormat,
+  playerSlotCount: number,
 ): PlayerSlotEntry[] {
   const playerMap = new Map(players.map(player => [player.userId, player]));
-  const entries: PlayerSlotEntry[] = Array.from({ length: PLAYER_SLOT_COUNT }, () => ({
+  const entries: PlayerSlotEntry[] = Array.from({ length: playerSlotCount }, () => ({
     player: null,
     matchNumber: rowIndex + 1,
     side: null,
@@ -236,7 +240,7 @@ function getPlayerSlotEntries(
     ...(format === "none" ? [] : row.teamB.map((userId, memberIndex) => ({ userId, side: "B" as const, memberIndex }))),
   ];
   allSidePlayers.forEach(({ userId, side }, playerSlotIndex) => {
-    if (playerSlotIndex >= PLAYER_SLOT_COUNT) return;
+    if (playerSlotIndex >= playerSlotCount) return;
     entries[playerSlotIndex] = {
       player: userId == null ? null : playerMap.get(userId) ?? null,
       matchNumber: rowIndex + 1,
@@ -263,23 +267,23 @@ function buildShuffledRows(
   playerIds: number[],
   teamSize: TeamSize,
   format: MatchFormat,
+  playerSlotCount: number,
 ): { newRows: MatchRow[]; unassigned: number[] } {
   const shuffled = shuffleArray(playerIds);
   const newRows: MatchRow[] = [];
 
-  // A Match Slot is a container for player positions. Keep the complete
-  // 1–48 board together instead of creating one Match Slot per player/team.
-  for (let start = 0; start < shuffled.length; start += PLAYER_SLOT_COUNT) {
-    const playerSlotGroup = shuffled.slice(start, start + PLAYER_SLOT_COUNT);
+  // A Match Slot is a container for the tournament's configured player positions.
+  for (let start = 0; start < shuffled.length; start += playerSlotCount) {
+    const playerSlotGroup = shuffled.slice(start, start + playerSlotCount);
     if (format === "none") {
       newRows.push({
         id: Math.random().toString(36).slice(2),
-        teamA: Array(PLAYER_SLOT_COUNT).fill(null).map((_, i) => playerSlotGroup[i] ?? null),
+        teamA: Array(playerSlotCount).fill(null).map((_, i) => playerSlotGroup[i] ?? null),
         teamB: [],
         scheduledTime: null,
       });
     } else {
-      const sideCapacity = Math.ceil(PLAYER_SLOT_COUNT / 2);
+      const sideCapacity = Math.ceil(playerSlotCount / 2);
       const teamA = Array(sideCapacity).fill(null).map((_, i) => playerSlotGroup[i] ?? null);
       const teamB = Array(sideCapacity).fill(null).map((_, i) => playerSlotGroup[sideCapacity + i] ?? null);
       newRows.push({
@@ -968,7 +972,7 @@ export default function AdminMakeMatchesPage() {
 
   const [teamSize, setTeamSize] = useState<TeamSize>("solo");
   const [matchFormat, setMatchFormat] = useState<MatchFormat>("none");
-  const [rows, setRows] = useState<MatchRow[]>([makeEmptyRow("solo", "none")]);
+  const [rows, setRows] = useState<MatchRow[]>([makeEmptyRow("solo", "none", DEFAULT_PLAYER_SLOT_COUNT)]);
   const [unassignedPlayers, setUnassignedPlayers] = useState<number[]>([]);
   // Players explicitly removed from the pool — excluded from shuffle and player picker
   const [excludedPlayerIds, setExcludedPlayerIds] = useState<Set<number>>(new Set());
@@ -995,6 +999,7 @@ export default function AdminMakeMatchesPage() {
         }
         if (res.ok) {
           const data = await res.json() as { meta: MatchMeta; participants: Participant[] };
+          const configuredPlayerSlotCount = Math.max(1, Number(data.meta.maxSlots) || DEFAULT_PLAYER_SLOT_COUNT);
           setMeta(data.meta);
           setAllPlayers(data.participants);
 
@@ -1022,15 +1027,19 @@ export default function AdminMakeMatchesPage() {
                 } else if (composed.matchType === "1v1") {
                   restoredTeamSize = "solo"; restoredFormat = "1v1";
                 }
-                const sideCapacity = Math.ceil(PLAYER_SLOT_COUNT / 2);
-                const restoredRows = normalizeSavedRows(composed.rows, restoredFormat);
+                const restoredRows = normalizeSavedRows(composed.rows, restoredFormat, configuredPlayerSlotCount);
                 setTeamSize(restoredTeamSize);
                 setMatchFormat(restoredFormat);
                 setRows(restoredRows);
                 setUnassignedPlayers([]);
+              } else {
+                setRows([makeEmptyRow("solo", "none", configuredPlayerSlotCount)]);
               }
+            } else {
+              setRows([makeEmptyRow("solo", "none", configuredPlayerSlotCount)]);
             }
           } catch {
+            setRows([makeEmptyRow("solo", "none", configuredPlayerSlotCount)]);
           }
         }
       } catch {
@@ -1045,6 +1054,7 @@ export default function AdminMakeMatchesPage() {
     () => allPlayers.filter(p => p.slotIndex === slotIndex),
     [allPlayers, slotIndex]
   );
+  const playerSlotCount = Math.max(1, Number(meta?.maxSlots) || DEFAULT_PLAYER_SLOT_COUNT);
 
   // Players available for shuffle and picker — excludes players removed from the pool
   const effectiveSlotPlayers = useMemo(
@@ -1103,7 +1113,7 @@ export default function AdminMakeMatchesPage() {
 
   function doShuffle() {
     const playerIds = effectiveSlotPlayers.map(p => p.userId);
-    const { newRows, unassigned } = buildShuffledRows(playerIds, teamSize, matchFormat);
+    const { newRows, unassigned } = buildShuffledRows(playerIds, teamSize, matchFormat, playerSlotCount);
     setRows(newRows);
     setUnassignedPlayers(unassigned);
     setSaveSuccess(false);
@@ -1121,14 +1131,14 @@ export default function AdminMakeMatchesPage() {
     setTeamSize(nextTeamSize);
     const nextFormat = isCompatibleFormat(nextTeamSize, matchFormat) ? matchFormat : "none";
     setMatchFormat(nextFormat);
-    setRows([makeEmptyRow(nextTeamSize, nextFormat)]);
+    setRows([makeEmptyRow(nextTeamSize, nextFormat, playerSlotCount)]);
     setUnassignedPlayers([]);
     setExcludedPlayerIds(new Set());
     setSaveSuccess(false);
   }
 
   function addRow() {
-    setRows(prev => [...prev, makeEmptyRow(teamSize, matchFormat)]);
+    setRows(prev => [...prev, makeEmptyRow(teamSize, matchFormat, playerSlotCount)]);
     setSaveSuccess(false);
   }
 
@@ -1176,14 +1186,14 @@ export default function AdminMakeMatchesPage() {
       [...unassignedPlayers, ...rowPlayers].filter(id => !excludedPlayerIds.has(id))
     );
 
-    const picked = pool.slice(0, PLAYER_SLOT_COUNT);
-    const newUnassigned = pool.slice(PLAYER_SLOT_COUNT);
-    const sideCapacity = Math.ceil(PLAYER_SLOT_COUNT / 2);
+    const picked = pool.slice(0, playerSlotCount);
+    const newUnassigned = pool.slice(playerSlotCount);
+    const sideCapacity = Math.ceil(playerSlotCount / 2);
 
     const newRow: MatchRow = {
       ...row,
       teamA: matchFormat === "none"
-        ? Array(PLAYER_SLOT_COUNT).fill(null).map((_, i) => picked[i] ?? null)
+        ? Array(playerSlotCount).fill(null).map((_, i) => picked[i] ?? null)
         : Array(sideCapacity).fill(null).map((_, i) => picked[i] ?? null),
       teamB: matchFormat === "none"
         ? []
@@ -1359,7 +1369,7 @@ export default function AdminMakeMatchesPage() {
               <select value={matchFormat} onChange={e => {
                 const next = e.target.value as MatchFormat;
                 setMatchFormat(next);
-                setRows([makeEmptyRow(teamSize, next)]);
+                setRows([makeEmptyRow(teamSize, next, playerSlotCount)]);
                 setUnassignedPlayers([]);
                 setSaveSuccess(false);
               }} className="w-full bg-transparent px-3 py-2.5 text-[12px] font-bold text-white outline-none">
@@ -1453,7 +1463,7 @@ export default function AdminMakeMatchesPage() {
             <div className="rounded-xl px-3 py-2.5" style={{ background: "rgba(34,211,238,0.06)", border: "1px solid rgba(34,211,238,0.18)" }}>
               <p className="text-[11px] font-black text-cyan-300">Match Slots → Player Slots</p>
               <p className="text-[10px] text-zinc-500 mt-0.5">
-                Every Match Slot below contains the complete Player Slot 1–{PLAYER_SLOT_COUNT} board. A player position is unique inside its Match Slot, while the same position may be used by another Match Slot.
+                Every Match Slot below contains the complete Player Slot 1–{playerSlotCount} board. A player position is unique inside its Match Slot, while the same position may be used by another Match Slot.
               </p>
             </div>
             {rows.length === 0 && unassignedPlayers.length === 0 && (
@@ -1464,9 +1474,10 @@ export default function AdminMakeMatchesPage() {
             {rows.map((row, i) => (
               <React.Fragment key={row.id}>
                 <PlayerSlotBoard
-                  entries={getPlayerSlotEntries(row, i, effectiveSlotPlayers, matchFormat)}
+                  entries={getPlayerSlotEntries(row, i, effectiveSlotPlayers, matchFormat, playerSlotCount)}
                   matchSlotNumber={i + 1}
                   assignedCount={[...row.teamA, ...row.teamB].filter(id => id !== null).length}
+                  playerSlotCount={playerSlotCount}
                   timeLabel={row.scheduledTime ? format(new Date(row.scheduledTime), "h:mm a") : undefined}
                 />
                 <MatchRowCard
