@@ -142,7 +142,8 @@ export default function ModeTournaments() {
       if (mode === "duo")   return m.includes("duo");
       if (mode === "squad") return m.includes("squad");
       return false;
-    });
+    })
+    .filter(t => !isBookingClosed(t));
 
   // ── New match banner ───────────────────────────────────────────────────────
   const seenIdsRef       = useRef<Set<number> | null>(null);

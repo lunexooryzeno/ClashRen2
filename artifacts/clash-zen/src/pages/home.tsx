@@ -336,6 +336,7 @@ export default function Home() {
   const rankColors = ["#FFD700", "#C0C0C0", "#CD7F32", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.4)"];
 
   const recentHistory = (myHistory ?? []).slice(0, 3) as (HistoryEntry & { placement?: number | null })[];
+  const visibleUpcoming = (upcoming ?? []).filter(t => !isBookingClosed(t));
 
 
   return (
@@ -539,8 +540,8 @@ export default function Home() {
           <div className="flex overflow-x-auto pb-3 -mx-4 px-4 gap-3 snap-x snap-mandatory hide-scrollbar">
             {upcomingLoading
               ? [1, 2, 3].map(i => <Skeleton key={i} className="h-40 min-w-[272px] rounded-2xl bg-white/5 snap-center flex-shrink-0" />)
-              : upcoming && upcoming.length > 0
-                ? upcoming.map(t => (
+              : visibleUpcoming.length > 0
+                ? visibleUpcoming.map(t => (
                     <div key={t.id} className="min-w-[272px] snap-center flex-shrink-0">
                       <TournamentCard tournament={t} showJoinButton />
                     </div>

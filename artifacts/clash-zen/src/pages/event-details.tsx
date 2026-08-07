@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
-import { parseGameMode } from "@/lib/utils";
+import { isBookingClosed, parseGameMode } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 function resolveImageUrl(url: string | null | undefined): string | null {
@@ -125,6 +125,12 @@ export default function EventDetails() {
 
   const isLoading = isSlug ? slugLoading : numLoading;
   const resolvedTournament: any = isSlug ? slugData : tournament;
+
+  useEffect(() => {
+    if (resolvedTournament && isBookingClosed(resolvedTournament)) {
+      navigate("/matches");
+    }
+  }, [resolvedTournament, navigate]);
 
   useEffect(() => {
     if (resolvedTournament) {
@@ -255,6 +261,7 @@ export default function EventDetails() {
         t.id !== resolvedTournament.id &&
         ((t.gameMode ?? "") === (resolvedTournament as any).gameMode) &&
         t.status === "upcoming" &&
+        !isBookingClosed(t) &&
         new Date(t.startTime).getTime() - getCloseMin(t) * 60 * 1000 > now &&
         t.filledSlots < t.maxSlots
       )
@@ -265,7 +272,9 @@ export default function EventDetails() {
   const sameGameModeSlots = useMemo(() => {
     if (!resolvedTournament || !allTournaments) return [];
     const gm = (resolvedTournament as any).gameMode ?? "";
-    const all = (allTournaments as any[]).filter(t => (t.gameMode ?? "") === gm);
+    const all = (allTournaments as any[])
+      .filter(t => (t.gameMode ?? "") === gm)
+      .filter(t => !isBookingClosed(t));
     // Also include the current tournament even if it's not in the list
     const hasCurrentId = all.some(t => t.id === resolvedTournament.id);
     if (!hasCurrentId) all.push(resolvedTournament as any);
@@ -372,6 +381,9 @@ export default function EventDetails() {
   }
 
   const tm = resolvedTournament;
+  if (isBookingClosed(tm)) {
+    return null;
+  }
   const isUpcoming = tm.status === "upcoming";
   const isOngoing = tm.status === "ongoing";
   const isFull = tm.filledSlots >= tm.maxSlots;
