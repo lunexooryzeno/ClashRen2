@@ -14,9 +14,10 @@ const KNOCKOUT_FORMAT_MAP: Record<string, string> = {
 
 export function isBookingClosed(tournament: { status?: string; startTime?: string; matchSettings?: string | Record<string, unknown> | null; isJoined?: boolean | null | undefined }): boolean {
   if (tournament.isJoined) return false; // joined players always see their match
-  if (tournament.status !== "upcoming") return false;
-  const startTime = tournament.startTime;
-  if (!startTime) return false;
+  return isRegistrationClosed(tournament);
+}
+
+function getRegistrationCloseMinutes(tournament: { matchSettings?: string | Record<string, unknown> | null }): number {
   let closeMin = 15;
   try {
     const ms = typeof tournament.matchSettings === "string"
@@ -24,7 +25,14 @@ export function isBookingClosed(tournament: { status?: string; startTime?: strin
       : (tournament.matchSettings ?? {});
     if (typeof ms.registrationCloseMinutes === "number") closeMin = ms.registrationCloseMinutes;
   } catch { /* keep default */ }
-  return Date.now() >= new Date(startTime).getTime() - closeMin * 60 * 1000;
+  return closeMin;
+}
+
+function isRegistrationClosed(tournament: { status?: string; startTime?: string; matchSettings?: string | Record<string, unknown> | null }): boolean {
+  if (tournament.status !== "upcoming") return false;
+  const startTime = tournament.startTime;
+  if (!startTime) return false;
+  return Date.now() >= new Date(startTime).getTime() - getRegistrationCloseMinutes(tournament) * 60 * 1000;
 }
 
 export function isTournamentEnded(tournament: { status?: string; startTime?: string }): boolean {
@@ -41,8 +49,11 @@ export function isUserVisibleTournament(tournament: {
   matchSettings?: string | Record<string, unknown> | null;
   isJoined?: boolean | null | undefined;
 }): boolean {
+  // Discovery pages show only open future tournaments. Joined/ended matches
+  // remain available through the user's history and match-detail flows.
+  if (tournament.status !== "upcoming") return false;
   if (isTournamentEnded(tournament)) return false;
-  return !isBookingClosed(tournament);
+  return !isRegistrationClosed(tournament);
 }
 
 export function parseGameMode(gameMode: string): {
