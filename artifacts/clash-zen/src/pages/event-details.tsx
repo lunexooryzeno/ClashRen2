@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
-import { isTournamentEnded, isUserVisibleTournament, parseGameMode } from "@/lib/utils";
+import { getTournamentTimeSlots, isTournamentEnded, isUserVisibleTournament, parseGameMode } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 function resolveImageUrl(url: string | null | undefined): string | null {
@@ -175,7 +175,11 @@ export default function EventDetails() {
   const joinTournament = useJoinTournament();
 
   // ── Countdown hooks must be here (before any early returns) ──
-  const _startTime = resolvedTournament?.status === "upcoming" ? (resolvedTournament as any).startTime : null;
+  const resolvedTimeSlots = getTournamentTimeSlots(resolvedTournament ?? {});
+  const selectedTimeSlot = resolvedTimeSlots[selectedSlotIndex ?? 0];
+  const _startTime = resolvedTournament?.status === "upcoming"
+    ? (selectedTimeSlot?.startTime ?? (resolvedTournament as any).startTime)
+    : null;
   const countdown = useCountdown(_startTime);
   const _roomOpenTime = _startTime
     ? new Date(new Date(_startTime).getTime() - 60000).toISOString()
@@ -1480,9 +1484,7 @@ export default function EventDetails() {
 
       {/* ── Slot Picker Bottom Sheet ── */}
       {slotDropOpen && (() => {
-        const sheetTimeSlots = Array.isArray((ms as any).timeSlots)
-          ? (ms as any).timeSlots as Array<{ startTime: string; endTime: string; label: string }>
-          : null;
+         const sheetTimeSlots = resolvedTimeSlots.length > 0 ? resolvedTimeSlots : null;
 
         const dateLabel = format(new Date(tm.startTime), "EEE, MMM d");
 
@@ -1513,11 +1515,12 @@ export default function EventDetails() {
                   </div>
                 ) : sheetTimeSlots.map((slot, i) => {
                   const slotPast    = nowMs > new Date(slot.startTime).getTime();
+                   const slotCutoffPassed = nowMs >= new Date(slot.startTime).getTime() - registrationCloseMinutes * 60 * 1000;
                   const isSelected  = selectedSlotIndex === i;
                   const isLocked    = !!tm.isJoined;
                   const isBookedSlot = isLocked && bookedSlotIndices.includes(i);
                   const isPlayed    = isBookedSlot && slotPast;
-                  const isDisabled  = isBookedSlot || (slotPast && !isSelected);
+                   const isDisabled  = isBookedSlot || (slotCutoffPassed && !isSelected);
 
                   let statusVisuals = {
                      border: "border-white/5",
@@ -1547,7 +1550,7 @@ export default function EventDetails() {
                         indicator: "border-primary bg-primary", icon: <Check className="w-3 h-3 text-white" />,
                         badge: null
                      };
-                  } else if (slotPast) {
+                   } else if (slotCutoffPassed) {
                      statusVisuals = {
                         border: "border-transparent", bg: "bg-transparent opacity-40", text: "text-zinc-500", subtext: "text-zinc-600",
                         indicator: "border-white/10", icon: null,
@@ -1580,7 +1583,7 @@ export default function EventDetails() {
                          </div>
                          <div className="text-left">
                             <p className={`text-sm ${statusVisuals.text}`}>{slot.label}</p>
-                            {!isPlayed && !isBookedSlot && !slotPast && <p className={`text-[11px] mt-0.5 ${statusVisuals.subtext}`}>Available to join</p>}
+                             {!isPlayed && !isBookedSlot && !slotCutoffPassed && <p className={`text-[11px] mt-0.5 ${statusVisuals.subtext}`}>Available to join</p>}
                             {(isPlayed || isBookedSlot) && <p className={`text-[11px] mt-0.5 ${statusVisuals.subtext}`}>Registered session</p>}
                          </div>
                       </div>
