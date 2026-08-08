@@ -1138,27 +1138,39 @@ router.get("/admin/users/bin", requireAdmin, async (_req, res) => {
 router.patch("/admin/users/:id/diamonds", requireAdmin, requireFinanceAdmin, async (req, res) => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
-  const { amount } = req.body as { amount?: number };
+  const { amount, creditType } = req.body as { amount?: number; creditType?: "winning" | "deposit" };
   if (amount === undefined) { res.status(400).json({ error: "Amount is required" }); return; }
+  if (creditType !== undefined && creditType !== "winning" && creditType !== "deposit") {
+    res.status(400).json({ error: "creditType must be 'winning' or 'deposit'" }); return;
+  }
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   const newBalance = Math.max(0, user.diamondBalance + amount);
   const [updated] = await db.update(usersTable).set({ diamondBalance: newBalance }).where(eq(usersTable.id, id)).returning();
 
   if (amount !== 0) {
+    const isCredit = amount > 0;
+    const transactionType = isCredit
+      ? (creditType === "winning" ? "prize" : "topup")
+      : "deduct";
+    const transactionLabel = isCredit
+      ? (creditType === "winning" ? "Admin Winning Credit" : "Admin Deposit Credit")
+      : "Admin Deduction";
     await db.insert(walletTransactionsTable).values({
       userId: id,
-      type: "topup",
+      type: transactionType,
       amount,
-      label: amount > 0 ? "Admin Top-Up" : "Admin Adjustment",
+      label: transactionLabel,
     });
 
     await db.insert(notificationsTable).values({
       userId: id,
       type: "wallet",
-      title: amount > 0 ? "Diamonds Added!" : "Diamonds Deducted",
+      title: isCredit
+        ? (creditType === "winning" ? "Winning Coins Added!" : "Deposit Coins Added!")
+        : "Diamonds Deducted",
       body: amount > 0
-        ? `${amount} diamonds have been added to your wallet by Clash Zen Support.`
+        ? `${amount} diamonds have been added to your wallet by Clash Zen Support as ${creditType === "winning" ? "winning credits" : "a deposit"}.`
         : `${Math.abs(amount)} diamonds have been deducted from your wallet by Clash Zen Support.`,
     });
 
@@ -1174,8 +1186,14 @@ router.patch("/admin/users/:id/diamonds", requireAdmin, requireFinanceAdmin, asy
       userId: id, adminId: req.user!.userId, amount,
       balanceBefore: user.diamondBalance,
       balanceAfter: newBalance,
-      reason: amount > 0 ? `Admin added ${amount} diamonds` : `Admin deducted ${Math.abs(amount)} diamonds`,
-      source: "admin_adjustment",
+      reason: amount > 0
+        ? `Admin added ${amount} diamonds as ${creditType === "winning" ? "winning" : "deposit"}`
+        : `Admin deducted ${Math.abs(amount)} diamonds`,
+      source: amount > 0 && creditType === "winning"
+        ? "prize_distribution"
+        : amount > 0 && creditType === "deposit"
+          ? "super_admin_topup"
+          : "admin_adjustment",
     });
   }
 

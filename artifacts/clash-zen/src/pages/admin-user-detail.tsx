@@ -243,6 +243,7 @@ export default function AdminUserDetailPage() {
   const [showBinForm, setShowBinForm] = useState(false);
 
   const [diamondAmount, setDiamondAmount] = useState("");
+  const [diamondCreditType, setDiamondCreditType] = useState<"winning" | "deposit">("winning");
   const [showDiamondForm, setShowDiamondForm] = useState(false);
 
   const [notifTitle, setNotifTitle] = useState("");
@@ -646,11 +647,19 @@ export default function AdminUserDetailPage() {
     const amt = parseInt(diamondAmount, 10);
     if (isNaN(amt) || amt <= 0) { toast({ title: "Enter a positive amount", variant: "destructive" }); return; }
     const finalAmt = mode === "deduct" ? -amt : amt;
-    const ok = await doAction(`/admin/users/${userId}/diamonds`, "PATCH", { amount: finalAmt });
+    const ok = await doAction(`/admin/users/${userId}/diamonds`, "PATCH", {
+      amount: finalAmt,
+      ...(mode === "add" ? { creditType: diamondCreditType } : {}),
+    });
     if (ok) {
       setShowDiamondForm(false);
       setDiamondAmount("");
-      toast({ title: mode === "add" ? `+${amt} coins added` : `-${amt} coins deducted`, description: "User has been notified." });
+      toast({
+        title: mode === "add"
+          ? `+${amt} coins added as ${diamondCreditType === "winning" ? "winning" : "deposit"}`
+          : `-${amt} coins deducted`,
+        description: "User has been notified.",
+      });
     }
   };
   const handleToggleAdmin = async () => {
@@ -1448,6 +1457,20 @@ export default function AdminUserDetailPage() {
                       placeholder="Amount (e.g. 100)"
                       className="w-full rounded-xl bg-black/50 border border-white/15 text-white text-sm px-3 py-2 placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50"
                     />
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Credit type</label>
+                      <select
+                        value={diamondCreditType}
+                        onChange={e => setDiamondCreditType(e.target.value as "winning" | "deposit")}
+                        className="w-full rounded-xl bg-black/50 border border-white/15 text-white text-sm px-3 py-2 focus:outline-none focus:border-cyan-500/50"
+                      >
+                        <option value="winning" className="bg-zinc-900">Winning</option>
+                        <option value="deposit" className="bg-zinc-900">Deposit</option>
+                      </select>
+                      <p className="text-[10px] text-zinc-600">
+                        Winning credits are recorded as prize winnings; deposits are recorded as top-ups.
+                      </p>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleDiamonds("add")}
