@@ -19,20 +19,20 @@ import { useAuth } from "@/lib/auth";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 const steps = [
-  ["01", "Select Tournament", "Browse open brackets and pick the mode that suits your playstyle.", "/modes/solo.jpg"],
-  ["02", "Match Instantly", "Get paired with competitive players in seconds.", "/modes/duo.webp"],
-  ["03", "Battle to Win", "Play focused, high-energy matches built for real competition.", "/banners/banner1.jpg"],
-  ["04", "Verify Victory", "Submit your result and keep every win transparent.", "/banners/banner2.jpg"],
-  ["05", "Claim Rewards", "Collect prizes and climb the leaderboard toward glory.", "/banners/banner3.jpg"],
+  ["01", "Select Tournament", "Browse open brackets and pick the mode that suits your playstyle.", "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_8e9977f9b8_9e7561f246335339.png"],
+  ["02", "Match Instantly", "Get paired with competitive players in seconds.", "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_d70e499ba5_5ef1704ac7477c6c.png"],
+  ["03", "Battle to Win", "Play focused, high-energy matches built for real competition.", "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_7c7edd120b_b5305f68ebadf645.png"],
+  ["04", "Verify Victory", "Submit your result and keep every win transparent.", "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_3538d3fa49_aea9340b26e2c89e.png"],
+  ["05", "Claim Rewards", "Collect prizes and climb the leaderboard toward glory.", "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_4ae500a6fd_a3e6cf4105b64fc7.png"],
 ];
 
 const features = [
-  { icon: Users, title: "Global Arena", text: "Connect and compete with thousands of verified players daily.", image: "/banners/banner1.jpg" },
-  { icon: BarChart3, title: "Advanced Stats", text: "Track every match, streak, and step toward the top.", image: "/banners/banner2.jpg" },
-  { icon: Gamepad2, title: "Multiple Modes", text: "Ranked ladders, quick matches, and featured cups.", image: "/modes/squad.jpg", wide: true },
-  { icon: Gift, title: "Elite Rewards", text: "Win exclusive rewards and cash prizes in every conquest.", image: "/banners/banner3.jpg" },
-  { icon: ShieldCheck, title: "Fair & Secure", text: "Verified matches, transparent scoring, and fair play.", image: "/banners/banner4.jpg" },
-  { icon: Zap, title: "Instant Matchmaking", text: "Jump into a match within seconds. No waiting, just competition.", image: "/modes/solo_new_1.jpg", wide: true },
+  { icon: Users, title: "Global Arena", text: "Connect and compete with thousands of verified players daily.", image: "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_8f8529fdfb_baf232bbd8cedd63.png" },
+  { icon: BarChart3, title: "Advanced Stats", text: "Track every match, streak, and step toward the top.", image: "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_1abfbd058b_76eeebd0a08ea1b0.png" },
+  { icon: Gamepad2, title: "Multiple Modes", text: "Ranked ladders, quick matches, and featured cups.", image: "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_63727a524d_5bc0bfca8172be82.png", wide: true },
+  { icon: Gift, title: "Elite Rewards", text: "Win exclusive rewards and cash prizes in every conquest.", image: "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_e57b34f37e_272506039668f3fd.png" },
+  { icon: ShieldCheck, title: "Fair & Secure", text: "Verified matches, transparent scoring, and fair play.", image: "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_bedb32d1a9_46dd57c963dfb6be.png" },
+  { icon: Zap, title: "Instant Matchmaking", text: "Jump into a match within seconds. No waiting, just competition.", image: "https://storage.googleapis.com/uxpilot-auth.appspot.com/gen_46b7fa72e9_4b50c5631846b0c6.png", wide: true },
 ];
 
 export default function LandingExport() {
@@ -49,7 +49,7 @@ export default function LandingExport() {
         className="fixed left-0 top-0 z-50 flex w-full items-center justify-between border-b border-white/5 bg-black/70 px-4 py-3 backdrop-blur-xl md:px-12"
       >
         <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2">
-          <img src="/icons/logo.png" alt="ClashRen" className="h-9 w-9 object-contain md:h-11 md:w-11" />
+          <img src="https://github.com/lunexooryzeno/ClashRen2/blob/main/attached_assets/logo/4f55a4f7-34e4-4bfd-917f-63446ec6b5de-removebg-preview.jpg?raw=true" alt="ClashRen" className="h-9 w-9 object-contain md:h-11 md:w-11" />
           <span className="font-heading text-lg font-black tracking-tight md:text-xl">CLASH<span className="text-red-500">REN</span></span>
         </button>
         <div className="flex items-center gap-2">
@@ -96,7 +96,7 @@ export default function LandingExport() {
             <motion.div initial={{ opacity: 0, scale: .94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .8, delay: .15 }} className="relative mx-auto w-full max-w-lg">
               <div className="absolute -inset-8 rounded-full bg-red-600/20 blur-3xl" />
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-red-950/40">
-                <img src="/banners/banner1.jpg" alt="ClashRen tournament arena" className="h-full w-full object-cover" />
+                <img src="https://github.com/lunexooryzeno/ClashRen2/blob/main/attached_assets/logo/1d88ab71-ecd0-4731-860b-c6cae072eed4.png?raw=true" alt="ClashRen tournament arena" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
                 <div className="absolute bottom-6 left-6"><p className="text-xs font-black uppercase tracking-[.3em] text-red-400">Enter the arena</p><p className="mt-2 font-heading text-3xl font-black uppercase">Your next win starts here.</p></div>
               </div>
@@ -129,7 +129,7 @@ export default function LandingExport() {
         <section className="px-5 py-20 md:px-12"><div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950 px-6 py-20 text-center md:px-20"><div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,30,39,.2),transparent_65%)]" /><div className="relative"><div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold tracking-widest text-red-400"><Check className="h-4 w-4" /> JOIN 10,000+ COMPETITORS</div><h2 className="font-heading text-4xl font-black uppercase md:text-6xl">Ready to <span className="text-red-500">dominate?</span></h2><p className="mx-auto mt-5 max-w-2xl text-zinc-300">Your legend starts with a single match. Step into the arena and make your move.</p><button onClick={play} className="mt-9 inline-flex h-14 items-center gap-3 rounded-2xl bg-red-500 px-9 text-sm font-bold uppercase tracking-widest shadow-[0_0_25px_rgba(255,30,39,.4)] transition hover:bg-red-600"><Rocket className="h-5 w-5" /> Play Now</button></div></div></section>
       </main>
 
-      <footer className="border-t border-white/5 bg-black px-6 py-12 md:px-12"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 md:flex-row"><div className="flex items-center gap-3"><img src="/icons/logo.png" alt="" className="h-9 w-9 object-contain" /><span className="font-heading text-xl font-black">CLASH<span className="text-red-500">REN</span></span></div><div className="flex gap-6 text-sm text-zinc-500"><a href="#how-it-works" className="hover:text-white">How it works</a><button onClick={play} className="hover:text-white">Play now</button></div><p className="text-xs text-zinc-600">© {new Date().getFullYear()} ClashRen. All rights reserved.</p></div></footer>
+      <footer className="border-t border-white/5 bg-black px-6 py-12 md:px-12"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 md:flex-row"><div className="flex items-center gap-3"><img src="https://github.com/lunexooryzeno/ClashRen2/blob/main/attached_assets/logo/4f55a4f7-34e4-4bfd-917f-63446ec6b5de-removebg-preview.jpg?raw=true" alt="" className="h-9 w-9 object-contain" /><span className="font-heading text-xl font-black">CLASH<span className="text-red-500">REN</span></span></div><div className="flex gap-6 text-sm text-zinc-500"><a href="#how-it-works" className="hover:text-white">How it works</a><button onClick={play} className="hover:text-white">Play now</button></div><p className="text-xs text-zinc-600">© {new Date().getFullYear()} ClashRen. All rights reserved.</p></div></footer>
     </div>
   );
 }
