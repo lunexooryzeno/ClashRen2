@@ -1,0 +1,345 @@
+I need you to fix the current ClashRen landing page implementation.
+
+The UI design/export I provided in the project ZIP is the **SOURCE OF TRUTH**. The current implementation is close, but it is NOT visually faithful enough. Do not redesign it, reinterpret it, simplify it, or replace parts with your own styling.
+
+## PRIMARY GOAL
+
+Rebuild/refine the landing page so that the implemented website matches the provided UI design **as closely as technically possible — pixel-for-pixel where practical**.
+
+The existing implementation should be treated as a rough implementation that needs correction.
+
+## 1. USE THE PROVIDED DESIGN FILES AS THE SOURCE OF TRUTH
+
+Before changing anything:
+
+* Inspect the entire provided UI/design export.
+* Inspect every image, SVG, icon, font, CSS file, component, asset, and configuration included with it.
+* Identify the exact fonts used.
+* Identify font weights, sizes, letter spacing, line heights, and text transformations.
+* Identify exact image dimensions/aspect ratios.
+* Identify the intended positioning and alignment of every major element.
+* Identify spacing, padding, margins, gaps, borders, shadows, gradients, blur effects, opacity, radius, and animations.
+* Reuse the original assets whenever possible.
+
+DO NOT substitute:
+
+* system fonts
+* random Google Fonts
+* approximate icons
+* replacement images
+* generic gradients
+* approximate spacing
+* different typography
+
+If the original project contains the font files, actually load them with @font-face and use them.
+
+## 2. TYPOGRAPHY MUST MATCH
+
+The current page incorrectly uses a different/approximate font.
+
+Fix this first.
+
+Find the exact font files in the provided design/export and load them properly.
+
+For every text element, reproduce:
+
+* font-family
+* font-weight
+* font-size
+* line-height
+* letter-spacing
+* text-transform
+* text rendering
+* opacity
+
+Pay particular attention to the distinctive uppercase/letter-spaced typography used in sections such as:
+
+"PROCESS"
+
+"HOW CLASHREN WORKS"
+
+"CHOOSE"
+
+"STEP 01"
+
+"MULTIPLE MODES"
+
+"LIVE NOW"
+
+"WHY CLASHREN?"
+
+The typography must visually match the supplied design rather than merely displaying the same words.
+
+## 3. IMAGES AND ASSETS
+
+Do NOT replace the supplied images with newly generated or stock images.
+
+Use the exact assets from the provided project.
+
+Check:
+
+* image dimensions
+* aspect ratio
+* object-fit
+* object-position
+* cropping
+* transparency
+* layering
+* z-index
+* opacity
+* blur
+* glow
+* positioning
+
+The current implementation has image alignment problems.
+
+Fix the actual positioning instead of simply changing the image size until it "looks okay."
+
+If an image is intended to extend outside a container, preserve that behavior.
+
+If an image is positioned relative to another element, reproduce that relationship.
+
+## 4. LAYOUT / SPACING
+
+Compare the implementation against the supplied design section by section.
+
+Fix:
+
+* navbar height
+* container width
+* horizontal alignment
+* vertical alignment
+* section heights
+* margins
+* padding
+* gaps
+* grid columns
+* flex alignment
+* card positioning
+* button positioning
+* image positioning
+* text positioning
+* whitespace
+
+Do not randomly add margins to compensate for incorrect parent layouts.
+
+Fix the underlying layout structure.
+
+## 5. LANDING PAGE SECTIONS
+
+Make sure the implemented landing page faithfully reproduces all sections from the provided design.
+
+The design includes content such as:
+
+CLASHREN
+
+"The ultimate destination for competitive gaming tournaments."
+
+Navigation sections:
+
+PLATFORM
+
+* Tournaments
+* Leaderboard
+* Rewards
+
+COMPANY
+
+* About Us
+* Careers
+* Contact
+
+LEGAL
+
+* Terms of Service
+* Privacy Policy
+
+PROCESS
+
+HOW CLASHREN WORKS
+
+CHOOSE
+
+SELECT TOURNAMENT
+
+"Browse open brackets and pick the mode that suits your playstyle."
+
+STEP 01
+
+MULTIPLE MODES
+
+"Ranked ladders, casual skirmishes, and weekly featured cups."
+
+LIVE NOW
+
+WHY CLASHREN?
+
+"Don't wait for your moment. Create it. Challenge real players, compete in intense matches, and turn every victory into another step toward the top."
+
+Stats:
+
+10K+
+ACTIVE PLAYERS
+
+₹50K+
+PRIZES WON
+
+24/7
+MATCHMAKING
+
+CTA:
+
+LET'S BEGIN
+EXPLORE
+
+CLASHREN
+Sign In
+Download
+
+Do not alter this content unless the existing application architecture requires it.
+
+## 6. RESPONSIVE BEHAVIOR
+
+The design must remain faithful on:
+
+* desktop
+* laptop
+* tablet
+* mobile
+
+Do not create a completely different design for mobile.
+
+Instead, preserve the same visual identity and layout hierarchy while adapting dimensions responsively.
+
+Check especially:
+
+* text wrapping
+* image cropping
+* button placement
+* section spacing
+* navigation behavior
+* hero positioning
+* card widths
+* typography scaling
+
+## 7. DO NOT BREAK EXISTING FUNCTIONALITY
+
+This is extremely important.
+
+Do NOT remove or break:
+
+* existing routes
+* authentication
+* buttons
+* navigation
+* API calls
+* backend functionality
+* matchmaking functionality
+* existing components
+* PWA functionality
+* existing responsive behavior
+
+This task is primarily a **UI fidelity correction**, not a backend rewrite.
+
+If an existing component already works, preserve its functionality and only correct its visual implementation.
+
+## 8. COMPONENT ARCHITECTURE
+
+Before editing, inspect the current codebase and determine:
+
+* which component controls each landing-page section
+* where global CSS is defined
+* where fonts are loaded
+* where assets are stored
+* which styles are inherited
+* which responsive breakpoints are used
+
+Then make the smallest clean architectural changes necessary.
+
+Do not create duplicated CSS or unnecessary components just to force the design into place.
+
+## 9. VISUAL COMPARISON
+
+After implementation, actually compare the rendered page against the provided design.
+
+Perform multiple passes:
+
+PASS 1 — Typography
+
+* font family
+* weights
+* sizes
+* letter spacing
+* line heights
+
+PASS 2 — Layout
+
+* positions
+* widths
+* heights
+* spacing
+* alignment
+
+PASS 3 — Assets
+
+* correct images
+* correct cropping
+* correct positioning
+* correct layering
+
+PASS 4 — Visual effects
+
+* gradients
+* glow
+* blur
+* shadows
+* borders
+* opacity
+
+PASS 5 — Responsive behavior
+
+* desktop
+* tablet
+* mobile
+
+Do not stop when it is "roughly similar."
+
+Keep correcting the implementation until the visual difference is minimal.
+
+## 10. IMPORTANT RULE
+
+Do NOT tell me that the current design is "close enough."
+
+The objective is:
+
+PROVIDED DESIGN → IMPLEMENTATION
+
+not:
+
+PROVIDED DESIGN → YOUR INTERPRETATION
+
+If something in the current implementation conflicts with the provided design, **the provided design wins**.
+
+If you cannot find an exact asset/font/style in the provided files, inspect the project further before substituting anything.
+
+## FINAL CHECK
+
+Before finishing, verify:
+
+[ ] Exact supplied fonts are being used
+[ ] Font weights match
+[ ] Typography matches
+[ ] Images are the supplied assets
+[ ] Image alignment matches
+[ ] Section spacing matches
+[ ] Container widths match
+[ ] Buttons match
+[ ] Navigation matches
+[ ] Colors/gradients match
+[ ] Borders/shadows/glows match
+[ ] Mobile layout is faithful
+[ ] Desktop layout is faithful
+[ ] Existing functionality still works
+[ ] No unnecessary redesign was introduced
+
+Do the implementation yourself. Do not just explain what needs to be changed.
