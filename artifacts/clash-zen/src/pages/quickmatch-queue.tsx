@@ -440,12 +440,6 @@ export default function QuickMatchQueue() {
     setEntryFee(storedEntry);
     setPrizeAmount(storedPrize);
 
-    apiPost("/quickmatch/search/join", { gameType: typeKey, modeId, entryFee: storedEntry, prizeAmount: storedPrize })
-      .catch((err: Error) => {
-        setCancelReason(err?.message ?? "Unable to join match");
-        setPhase("cancelled");
-      });
-
     // Shared handler — called by both SSE and poll paths
     const applyMatchData = (match: {
       status: string;
@@ -518,8 +512,7 @@ export default function QuickMatchQueue() {
 
       // ── Pre-match / in-game states ────────────────────────────────────────────
       if (match.status === "waiting_room") {
-        // roomStatus is driven locally by the timer effect — skip overwrite from poll
-        if (fromSse && match.roomStatus) setRoomStatus(match.roomStatus);
+        if (match.roomStatus) setRoomStatus(match.roomStatus);
         setPhase("preparing");
       } else if (match.status === "ready" && match.roomId && match.password) {
         stopPolling();
@@ -543,8 +536,26 @@ export default function QuickMatchQueue() {
       }
     };
 
-    // ── SSE connection ────────────────────────────────────────────────────────
-    const sse = new EventSource("/api/users/sse", { withCredentials: true });
+    apiPost<{ ok?: boolean; matched?: boolean }>("/quickmatch/search/join", { gameType: typeKey, modeId, entryFee: storedEntry, prizeAmount: storedPrize })
+      .then(async (joinRes) => {
+        if (joinRes?.matched) {
+          try {
+            const match = await apiFetch<Parameters<typeof applyMatchData>[0]>("/quickmatch/match");
+            applyMatchData(match, false);
+          } catch { /* poll loop will retry */ }
+        }
+      })
+      .catch((err: Error) => {
+        setCancelReason(err?.message ?? "Unable to join match");
+        setPhase("cancelled");
+      });
+
+    // ── SSE connection (token query param — EventSource cannot send Authorization) ─
+    const sseToken = localStorage.getItem("clash_ren_token");
+    const sseUrl = sseToken
+      ? `/api/users/sse?token=${encodeURIComponent(sseToken)}`
+      : "/api/users/sse";
+    const sse = new EventSource(sseUrl, { withCredentials: true });
     sseRef.current = sse;
 
     sse.addEventListener("quickmatch_match", (e: MessageEvent) => {
@@ -796,7 +807,8 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // ── 8s fallback poll (SSE handles the fast path) ──────────────────────────
+    // ── 2s fallback poll (prototype polls every 1–2s; SSE handles the fast path) ─
+    const POLL_MS = 2000;
     const poll = async () => {
       try {
         const stats = await apiFetch<QueueStats>("/quickmatch/stats");
@@ -810,7 +822,7 @@ export default function QuickMatchQueue() {
     };
 
     poll();
-    pollIdRef.current = setInterval(poll, 8000);
+    pollIdRef.current = setInterval(poll, POLL_MS);
     return () => { stopPolling(); stopJoinWindow(); closeSse(); stopScreenshotTimer(); stopDisputeTimer(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

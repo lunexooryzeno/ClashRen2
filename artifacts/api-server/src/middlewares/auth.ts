@@ -35,6 +35,8 @@ function extractToken(req: Request): string | null {
   if (cookie) return cookie;
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+  const queryToken = req.query.token;
+  if (typeof queryToken === "string" && queryToken.trim()) return queryToken.trim();
   return null;
 }
 

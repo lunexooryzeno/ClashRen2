@@ -4,6 +4,7 @@ export interface SearchEntry {
   modeId: string;
   joinedAt: number;
   entryFee: number;
+  prizeAmount: number;
 }
 
 const SEARCH_TTL_MS = 5 * 60 * 1000;
@@ -23,11 +24,17 @@ function isExpired(entry: SearchEntry): boolean {
  * Returns the previous expired entry for this slot, if any — the caller MUST
  * issue a wallet refund for that entry to prevent fee loss on rejoin.
  */
-export function joinQueue(userId: string, gameType: string, modeId: string, entryFee = 0): SearchEntry | null {
+export function joinQueue(
+  userId: string,
+  gameType: string,
+  modeId: string,
+  entryFee = 0,
+  prizeAmount = 0,
+): SearchEntry | null {
   const k = key(userId, gameType, modeId);
   const existing = queue.get(k);
   const expiredEntry = (existing && isExpired(existing)) ? { ...existing } : null;
-  queue.set(k, { userId, gameType, modeId, joinedAt: Date.now(), entryFee });
+  queue.set(k, { userId, gameType, modeId, joinedAt: Date.now(), entryFee, prizeAmount });
   return expiredEntry;
 }
 
@@ -72,13 +79,19 @@ const MODE_REQUIRED: Record<string, number> = {
   "zone-control": 2,
 };
 
+export interface MatchResult {
+  playerIds: string[];
+  entryFee: number;
+  prizeAmount: number;
+}
+
 // Only matches players with the same entryFee to prevent economic mismatches.
 // Does NOT delete expired entries — leaves them for sweepExpiredEntries.
 export function tryMatch(
   gameType: string,
   modeId: string,
   entryFee: number,
-): string[] | null {
+): MatchResult | null {
   const required = MODE_REQUIRED[modeId] ?? 2;
   const eligible: SearchEntry[] = [];
 
@@ -97,7 +110,22 @@ export function tryMatch(
     queue.delete(key(entry.userId, gameType, modeId));
   }
 
-  return eligible.map((e) => e.userId);
+  return {
+    playerIds: eligible.map((e) => e.userId),
+    entryFee,
+    prizeAmount: eligible[0]?.prizeAmount ?? 0,
+  };
+}
+
+/** Unique queue buckets that currently have at least one waiting player. */
+export function getActiveQueueBuckets(): Array<{ gameType: string; modeId: string; entryFee: number }> {
+  const buckets = new Map<string, { gameType: string; modeId: string; entryFee: number }>();
+  for (const entry of queue.values()) {
+    if (isExpired(entry)) continue;
+    const k = `${entry.gameType}:${entry.modeId}:${entry.entryFee}`;
+    buckets.set(k, { gameType: entry.gameType, modeId: entry.modeId, entryFee: entry.entryFee });
+  }
+  return [...buckets.values()];
 }
 
 /**
