@@ -1,14 +1,23 @@
 const BASE = "/api";
 export const apiBase = BASE;
 
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const headers: Record<string, string> = {};
+  try {
+    const token = localStorage.getItem("clash_ren_token");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  } catch { /* storage unavailable */ }
+  return { ...headers, ...extra };
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const isJson = options?.body && typeof options.body === "string";
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
-    headers: {
+    headers: authHeaders({
       ...(isJson ? { "Content-Type": "application/json" } : {}),
       ...options?.headers,
-    },
+    }),
     ...options,
   });
   if (!res.ok) {

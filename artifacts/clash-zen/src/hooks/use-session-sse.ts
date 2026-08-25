@@ -53,7 +53,11 @@ export function useSessionSSE({
 
     cleanup();
 
-    const es = new EventSource("/api/users/sse", { withCredentials: true });
+    const token = localStorage.getItem("clash_ren_token");
+    const sseUrl = token
+      ? `/api/users/sse?token=${encodeURIComponent(token)}`
+      : "/api/users/sse";
+    const es = new EventSource(sseUrl, { withCredentials: true });
     esRef.current = es;
 
     es.addEventListener("connected", () => {

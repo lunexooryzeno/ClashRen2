@@ -11,6 +11,7 @@ import {
   isInQueue,
   sweepExpiredEntries,
   getQueuePosition,
+  getActiveQueueBuckets,
 } from "../lib/quickmatch-queue.js";
 import {
   createMatch,
@@ -19,7 +20,6 @@ import {
   getMatchById,
   getActiveMatches,
   dismissMatch,
-  hasPendingRoomRequest,
   getRoomStatus,
   markWebhookFired,
   markActionTaken,
@@ -198,6 +198,63 @@ async function sweepStuckResultPending(): Promise<void> {
   }
 }
 
+/** Create a match from paired queue players and notify both clients. */
+async function finalizeQueuedMatch(
+  playerIds: string[],
+  gameType: string,
+  modeId: string,
+  entryFee: number,
+  prizeAmount: number,
+): Promise<QuickMatch | null> {
+  const players = await fetchPlayers(playerIds);
+  const match = createMatch(players, gameType, modeId, entryFee, prizeAmount);
+  if (prizeAmount > 0) {
+    seedPrize(match.id, prizeAmount).catch((err) =>
+      console.error("[quickmatch] Failed to seed prize:", err),
+    );
+  }
+  try { transitionState(match.id, "MATCHED", "WAITING_FOR_ROOM"); } catch { /* already transitioned */ }
+  if (!match.webhookFired) {
+    dispatchMatchToWorker(match).catch((err) => {
+      console.error("[quickmatch] Worker dispatch failed:", err);
+    });
+  }
+  pushMatchToPlayers(match, { status: "waiting_room", roomStatus: "opponent_found" });
+  for (const player of match.players) {
+    notify(Number(player.userId), {
+      type: "quickmatch_match",
+      title: "⚡ Opponent Found!",
+      body: "A match has been found. Room is being created — stay in the app!",
+      url: `/#/quickmatch/${match.gameType}/${match.modeId}`,
+    }).catch(() => {});
+  }
+  broadcastStats();
+  return match;
+}
+
+/** Background queue processor — mirrors ClashRen_Instant's processQueue interval. */
+async function processQueueMatches(): Promise<void> {
+  for (const bucket of getActiveQueueBuckets()) {
+    if (!MODE_MACRO_SUPPORTED.has(bucket.modeId)) continue;
+    const result = tryMatch(bucket.gameType, bucket.modeId, bucket.entryFee);
+    if (!result) continue;
+    await finalizeQueuedMatch(
+      result.playerIds,
+      bucket.gameType,
+      bucket.modeId,
+      result.entryFee,
+      result.prizeAmount,
+    );
+  }
+}
+
+// Pair waiting players every second even while another room is being created.
+setInterval(() => {
+  processQueueMatches().catch((err) =>
+    console.error("[quickmatch] Queue processor failed:", err),
+  );
+}, 1000);
+
 // Background sweep — runs every 2 minutes
 // 1. Refund timed-out queue entries
 // 2. Auto-finalize dispute windows that expired without a dispute
@@ -331,44 +388,23 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
   }
 
   // Enqueue player — may return an expired entry that must be refunded
-  const expiredEntry = joinQueue(userId, valid.gameType, valid.modeId, entryFee);
+  const expiredEntry = joinQueue(userId, valid.gameType, valid.modeId, entryFee, prizeAmount);
   if (expiredEntry && expiredEntry.entryFee > 0) {
     refundQueueEntry(Number(userId), expiredEntry.entryFee, "QuickMatch Queue Timeout Refund")
       .catch((err) => console.error("[quickmatch] Expired-entry refund failed:", err));
   }
 
-  // Attempt match-making — only match players with same entry fee
-  if (MODE_MACRO_SUPPORTED.has(valid.modeId) && !hasPendingRoomRequest()) {
-    const playerIds = tryMatch(valid.gameType, valid.modeId, entryFee);
-    if (playerIds) {
-      const players = await fetchPlayers(playerIds);
-      const match   = createMatch(players, valid.gameType, valid.modeId, entryFee, prizeAmount);
-      // Seed prize row immediately so the state machine is ready
-      if (prizeAmount > 0) {
-        seedPrize(match.id, prizeAmount).catch((err) =>
-          console.error("[quickmatch] Failed to seed prize:", err),
-        );
-      }
-      // Transition to WAITING_FOR_ROOM then dispatch to worker phone
-      try { transitionState(match.id, "MATCHED", "WAITING_FOR_ROOM"); } catch {}
-      // One-fire guard: only fire if not already fired for this match
-      if (!match.webhookFired) {
-        dispatchMatchToWorker(match).catch((err) => {
-          console.error("[quickmatch] Worker dispatch failed:", err);
-        });
-      }
-      // SSE: notify both players immediately — no poll needed
-      pushMatchToPlayers(match, { status: "waiting_room", roomStatus: "opponent_found" });
-      // Push notification: opponent found
-      for (const player of match.players) {
-        notify(Number(player.userId), {
-          type: "quickmatch_match",
-          title: "⚡ Opponent Found!",
-          body: "A match has been found. Room is being created — stay in the app!",
-          url: `/#/quickmatch/${match.gameType}/${match.modeId}`,
-        }).catch(() => {});
-      }
-      broadcastStats();
+  // Attempt match-making immediately on join (same entry fee bucket).
+  if (MODE_MACRO_SUPPORTED.has(valid.modeId)) {
+    const result = tryMatch(valid.gameType, valid.modeId, entryFee);
+    if (result) {
+      await finalizeQueuedMatch(
+        result.playerIds,
+        valid.gameType,
+        valid.modeId,
+        result.entryFee,
+        result.prizeAmount,
+      );
       res.json({ ok: true, matched: true });
       return;
     }
