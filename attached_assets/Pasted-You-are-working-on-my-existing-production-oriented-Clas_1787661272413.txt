@@ -1,0 +1,540 @@
+You are working on my existing production-oriented ClashRen2 application.
+
+MAIN PROJECT:
+https://github.com/lunexooryzeno/ClashRen2
+
+I also have a separate Google AI Studio prototype for the Instant Matchmaking feature:
+
+PROTOTYPE:
+https://github.com/lunexooryzeno/ClashRen_Instant
+
+The prototype is inside:
+clashren-prototype/
+
+IMPORTANT:
+Do NOT replace, rebuild, or overwrite the existing ClashRen2 application.
+Do NOT create a separate app.
+Do NOT throw away the existing architecture.
+Do NOT blindly copy the prototype into ClashRen2.
+
+Your job is to study the Instant Matchmaking prototype, understand its UI, UX, flows, components, state handling, and logic, and then integrate the useful parts into the existing ClashRen2 architecture.
+
+==================================================
+PHASE 1 — ANALYZE BEFORE CHANGING CODE
+======================================
+
+First inspect both projects completely.
+
+Inspect:
+
+1. ClashRen2 frontend architecture
+2. ClashRen2 backend architecture
+3. Database schema and Drizzle setup
+4. Existing routing
+5. Existing authentication
+6. Existing tournament/match functionality
+7. Existing wallet/diamond functionality
+8. Existing UI/component system
+9. API structure and API client
+10. Existing shared libraries
+
+Then inspect:
+
+ClashRen_Instant/clashren-prototype/
+
+Pay special attention to:
+
+* src/
+* server.ts
+* package.json
+* vite.config.ts
+* UI components
+* matchmaking screens
+* queue states
+* animations
+* match status UI
+* player pairing flow
+* loading states
+* error states
+* timers
+* responsive behavior
+* any prototype-only/mock data
+
+Before making changes, explain internally which prototype functionality is reusable and which parts are only mock/prototype logic.
+
+==================================================
+PHASE 2 — PRESERVE CLASHREN2 ARCHITECTURE
+=========================================
+
+ClashRen2 remains the source of truth.
+
+Use the existing:
+
+* React
+* TypeScript
+* Vite
+* Express
+* PostgreSQL
+* Drizzle ORM
+* existing API architecture
+* existing authentication
+* existing design system
+
+Do not introduce another framework unless absolutely necessary.
+
+Do not migrate PostgreSQL to another database.
+
+Do not replace Drizzle.
+
+Do not create a second backend.
+
+Do not create a second authentication system.
+
+Do not create a second wallet system.
+
+Do not duplicate existing user/match/tournament tables unnecessarily.
+
+If the prototype uses mock data, replace that with real ClashRen2 backend data.
+
+==================================================
+PHASE 3 — INSTANT MATCHMAKING PRODUCT FLOW
+==========================================
+
+Implement Instant Matchmaking as a real ClashRen2 feature.
+
+The intended flow is:
+
+PLAYER
+↓
+Instant Matchmaking
+↓
+Select game mode
+↓
+Select entry amount
+↓
+Join matchmaking queue
+↓
+Wait for opponent
+↓
+Opponent found
+↓
+Match created
+↓
+Room creation process
+↓
+Room ready
+↓
+Room credentials delivered
+↓
+Players join Free Fire
+↓
+Match starts
+↓
+Match finishes
+↓
+Result verification
+↓
+Settlement
+
+For the first implementation, focus on the matchmaking and match lifecycle.
+
+Do NOT pretend that room creation or result verification is already automated if the existing backend does not support it.
+
+Use explicit statuses.
+
+Recommended state machine:
+
+QUEUED
+→ MATCHED
+→ ROOM_CREATING
+→ ROOM_READY
+→ WAITING_FOR_PLAYERS
+→ IN_PROGRESS
+→ RESULT_PENDING
+→ VERIFIED
+→ SETTLED
+
+Also support failure/cancellation states where appropriate:
+
+CANCELLED
+ROOM_CREATION_FAILED
+EXPIRED
+DISPUTED
+
+==================================================
+PHASE 4 — MATCHMAKING BACKEND
+=============================
+
+Build the matchmaking logic on the ClashRen2 backend.
+
+Do not implement matchmaking as frontend-only state.
+
+The server must be authoritative.
+
+A player joining the queue should create a server-side matchmaking record.
+
+The server should safely pair compatible players.
+
+At minimum, matchmaking should consider:
+
+* game mode
+* entry amount
+* player eligibility
+* queue status
+* existing active match
+* account status
+
+Prevent:
+
+* duplicate queue entries
+* matching a player with themselves
+* double matching
+* joining multiple incompatible queues
+* race-condition pairing
+* two matches being created for the same player
+
+The matchmaking operation must be safe against concurrent requests.
+
+Use database transactions/appropriate locking or another reliable server-side mechanism where required.
+
+Do NOT rely on:
+
+setTimeout()
+frontend timers
+localStorage
+React state
+client-side random matching
+
+for authoritative matchmaking.
+
+==================================================
+PHASE 5 — DATABASE
+==================
+
+Before creating new tables, inspect the existing ClashRen2 schema.
+
+Reuse existing tables wherever appropriate.
+
+If new tables are genuinely required, design them properly.
+
+Potential concepts:
+
+matchmaking_queue
+matches
+match_players
+match_events
+
+But do not create these blindly if equivalent tables already exist.
+
+Every matchmaking record should have a clear lifecycle.
+
+Store timestamps such as:
+
+created_at
+matched_at
+room_ready_at
+started_at
+finished_at
+cancelled_at
+
+Use server timestamps.
+
+Make important transitions auditable.
+
+==================================================
+PHASE 6 — ENTRY FEE / WALLET SAFETY
+===================================
+
+IMPORTANT:
+
+Do not simply modify the user's balance with something like:
+
+balance = balance - entryFee
+
+The existing wallet/diamond architecture must be inspected first.
+
+If entry fees are already implemented, integrate with the existing system.
+
+If not, create the correct foundation rather than a temporary balance hack.
+
+Every financial transaction must be traceable.
+
+The system must prevent double charging.
+
+A user should never be charged twice because they clicked the matchmaking button twice or because a network request was retried.
+
+Use idempotency where appropriate.
+
+Do NOT implement real-money payouts yet unless the existing system already supports secure settlement.
+
+For this phase, the priority is a safe matchmaking foundation.
+
+==================================================
+PHASE 7 — FRONTEND / UI
+=======================
+
+Use the Instant prototype as the visual/UX reference.
+
+Preserve its useful:
+
+* layout
+* hierarchy
+* animations
+* loading states
+* matchmaking queue experience
+* opponent-found experience
+* match status presentation
+* responsive mobile-first behavior
+
+However, adapt everything to the existing ClashRen2 design system.
+
+Do NOT blindly copy the prototype's entire styling system if it conflicts with ClashRen2.
+
+The final result should look like one application, not two different applications stitched together.
+
+The existing ClashRen2 landing page and existing navigation must remain intact.
+
+==================================================
+PHASE 8 — MATCHMAKING SCREEN
+============================
+
+Create the Instant Matchmaking experience inside ClashRen2.
+
+It should clearly communicate:
+
+1. Selected mode
+2. Entry amount
+3. Player status
+4. Queue status
+5. Search/matching animation
+6. Opponent found
+7. Match ID
+8. Current match state
+9. Room state when available
+10. Errors
+11. Cancellation where allowed
+
+The user should never be left wondering whether the system is working.
+
+Example:
+
+Finding opponent...
+↓
+Opponent found
+↓
+Creating match...
+↓
+Preparing room...
+↓
+Room ready
+↓
+Join the match
+
+Use real backend state instead of fake animation timers.
+
+==================================================
+PHASE 9 — API DESIGN
+====================
+
+Follow the existing ClashRen2 API conventions.
+
+Do not create random endpoints without checking the existing API architecture.
+
+Potential endpoints, only if they fit the existing architecture:
+
+POST /api/matchmaking/join
+GET /api/matchmaking/status
+POST /api/matchmaking/cancel
+
+The actual routes should follow the project's existing conventions.
+
+Validate all incoming data server-side.
+
+Use existing Zod/API schema infrastructure where applicable.
+
+Never trust:
+
+* entry fee
+* user ID
+* opponent ID
+* match result
+* wallet balance
+* permissions
+
+from the client.
+
+==================================================
+PHASE 10 — REALTIME STATE
+=========================
+
+Inspect the existing ClashRen2 architecture before deciding how matchmaking status should update.
+
+If the project already has a realtime mechanism, use it.
+
+If not, start with a robust polling mechanism rather than introducing unnecessary infrastructure.
+
+The architecture should be designed so WebSockets/SSE can be added later if needed.
+
+Do not introduce WebSockets just because they sound better.
+
+==================================================
+PHASE 11 — SECURITY
+===================
+
+Treat matchmaking as a security-sensitive feature.
+
+Prevent:
+
+* duplicate requests
+* replayed requests
+* unauthorized match access
+* manipulating entry fees from the frontend
+* manipulating opponent IDs
+* joining after queue expiration
+* accessing another player's match
+* duplicate settlement
+* race conditions
+
+Every important action must be authorized server-side.
+
+Do not expose secrets or Gemini API keys in frontend code.
+
+If the prototype contains GEMINI_API_KEY or other secrets, do not copy them into the ClashRen2 repository.
+
+Use environment variables/secrets only where actually required.
+
+==================================================
+PHASE 12 — DO NOT BREAK EXISTING FEATURES
+=========================================
+
+Before modifying anything, identify existing functionality that could be affected.
+
+After implementation, verify:
+
+* landing page
+* navigation
+* authentication
+* signup/login
+* tournaments
+* profile
+* history
+* leaderboard
+* admin functionality
+* wallet
+* existing API routes
+
+still work.
+
+Do not remove existing features simply because they are unrelated to Instant Matchmaking.
+
+==================================================
+PHASE 13 — TESTING
+==================
+
+Test the matchmaking system with multiple simulated users.
+
+At minimum test:
+
+TEST 1:
+Player A joins queue.
+Expected:
+A becomes QUEUED.
+
+TEST 2:
+Player B with compatible settings joins.
+Expected:
+A and B become MATCHED exactly once.
+
+TEST 3:
+Player A sends join request twice.
+Expected:
+Only one queue entry exists.
+
+TEST 4:
+Two requests arrive simultaneously.
+Expected:
+No duplicate match is created.
+
+TEST 5:
+Player cancels before matching.
+Expected:
+Player leaves queue safely.
+
+TEST 6:
+Player attempts to access another player's match.
+Expected:
+Request rejected.
+
+TEST 7:
+Server restarts while players are queued.
+Expected:
+Queue state remains consistent according to the persistence strategy.
+
+TEST 8:
+Network request is retried.
+Expected:
+No duplicate charge and no duplicate match.
+
+==================================================
+PHASE 14 — GIT WORKFLOW
+=======================
+
+Do not make a huge uncontrolled change.
+
+Work incrementally.
+
+Create a dedicated branch:
+
+feature/instant-matchmaking
+
+Make logical commits.
+
+For example:
+
+1. Analyze existing architecture
+2. Add matchmaking database foundation
+3. Add matchmaking API
+4. Add matchmaking service
+5. Add frontend matchmaking flow
+6. Integrate prototype UI
+7. Add validation/error handling
+8. Add tests
+9. Final integration/fixes
+
+Do not commit secrets.
+
+==================================================
+FINAL RULE
+==========
+
+The Google AI Studio repository is a PROTOTYPE/reference implementation.
+
+ClashRen2 is the REAL application.
+
+Your job is NOT:
+
+"copy prototype into ClashRen2."
+
+Your job is:
+
+"extract the best Instant Matchmaking UX and functionality from the prototype and implement it properly inside the existing ClashRen2 architecture."
+
+Before making major changes, inspect the repository and existing implementation.
+
+If something already exists in ClashRen2, extend it instead of duplicating it.
+
+If something in the prototype is only fake/mock behavior, replace it with real backend-driven behavior.
+
+Do not claim a feature is production-ready unless it actually works end-to-end.
+
+At the end, provide a concise report containing:
+
+* files changed
+* database changes
+* API changes
+* frontend changes
+* prototype functionality reused
+* prototype functionality intentionally discarded
+* commands used to run/test the application
+* remaining limitations
+* recommended next engineering step

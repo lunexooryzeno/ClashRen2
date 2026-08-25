@@ -1,701 +1,203 @@
+import { useEffect, useState } from "react";
+import { ArrowLeft, Check, ChevronDown, Copy, Flame, ShieldCheck, Trophy, User, Users, Zap } from "lucide-react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Trophy, Users, ChevronDown, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
-import { useState, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const PRIZE_POOLS = [
-  { entry: 12, prize: 20, activePlayers: 18 },
-  { entry: 30, prize: 50, activePlayers: 11 },
-  { entry: 42, prize: 70, activePlayers: 7 },
+  { entry: 12, prize: 20 },
+  { entry: 30, prize: 50 },
+  { entry: 42, prize: 70 },
+];
+
+const MODES = [
+  { id: "duel", label: "Normal 1v1", team: "Solo" },
+  { id: "healing", label: "Healing Battle", team: "Solo", comingSoon: true },
+  { id: "knife", label: "Knife Fight", team: "Solo", comingSoon: true },
 ];
 
 const GAME_TYPES = [
-  { id: "cs" as const, label: "Clash Squad" },
-  { id: "br" as const, label: "Battle Royale", comingSoon: true },
+  { id: "cs", label: "Clash Squad" },
+  { id: "br", label: "Battle Royale", comingSoon: true },
 ];
-
-const SQUAD_OPTIONS: Record<string, { id: string; label: string }[]> = {
-  cs: [
-    { id: "solo",  label: "Solo"  },
-    { id: "duo",   label: "Duo"   },
-    { id: "squad", label: "Squad" },
-  ],
-  br: [
-    { id: "solo",  label: "Solo"  },
-    { id: "duo",   label: "Duo"   },
-    { id: "squad", label: "Squad" },
-  ],
-};
-
-const MODE_OPTIONS: Record<string, Record<string, { id: string; label: string; comingSoon?: boolean; random?: boolean }[]>> = {
-  cs: {
-    solo:  [
-      { id: "any",     label: "Any (Random)",  random: true        },
-      { id: "duel",    label: "Normal 1v1"                          },
-      { id: "healing", label: "Healing Battle", comingSoon: true    },
-      { id: "knife",   label: "Knife Fight",    comingSoon: true    },
-    ],
-    duo:   [
-      { id: "any",  label: "Any (Random)", random: true             },
-      { id: "duel", label: "2v2 Duel",     comingSoon: true         },
-    ],
-    squad: [
-      { id: "any",         label: "Any (Random)", random: true      },
-      { id: "clash-squad", label: "CS 4v4",       comingSoon: true  },
-    ],
-  },
-  br: {
-    solo:  [
-      { id: "any",          label: "Any (Random)", random: true     },
-      { id: "solo-drop",    label: "Solo Drop",    comingSoon: true  },
-      { id: "zone-control", label: "Zone Control", comingSoon: true  },
-    ],
-    duo:   [
-      { id: "any",      label: "Any (Random)", random: true        },
-      { id: "duo-rush", label: "Duo Rush",     comingSoon: true     },
-    ],
-    squad: [
-      { id: "any",        label: "Any (Random)", random: true      },
-      { id: "squad-wipe", label: "Squad Wipe",   comingSoon: true   },
-    ],
-  },
-};
-
-function Dropdown({
-  label,
-  options,
-  value,
-  onChange,
-  accent = "#22d3ee",
-}: {
-  label?: string;
-  options: { id: string; label: string; comingSoon?: boolean }[];
-  value: string;
-  onChange: (id: string) => void;
-  accent?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const selected = options.find(o => o.id === value) ?? options[0];
-
-  useEffect(() => {
-    if (!open) return;
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative flex-1">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl active:scale-[0.97] transition-transform"
-        style={{
-          background: open ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
-          border: `1.5px solid ${open ? accent + "60" : "rgba(255,255,255,0.1)"}`,
-          transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-        }}
-      >
-        <div className="flex flex-col items-start min-w-0">
-          {label && <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 leading-none mb-0.5">{label}</span>}
-          <span className="text-[13px] font-extrabold text-white truncate">{selected.label}</span>
-        </div>
-        <ChevronDown
-          className="w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-200"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
-        />
-      </button>
-
-      {open && (
-        <div
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl overflow-hidden"
-          style={{
-            background: "rgba(14,16,22,0.98)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.7)",
-            backdropFilter: "blur(24px)",
-          }}
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => { if (!opt.comingSoon) { onChange(opt.id); setOpen(false); } }}
-              className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
-              style={{
-                background: opt.id === value ? "rgba(255,255,255,0.06)" : "transparent",
-                opacity: opt.comingSoon ? 0.4 : 1,
-                cursor: opt.comingSoon ? "not-allowed" : "pointer",
-              }}
-            >
-              <span className={`text-[13px] font-bold ${opt.id === value ? "text-white" : "text-zinc-400"}`}>
-                {opt.label}
-              </span>
-              {opt.id === value && (
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
-              )}
-              {opt.comingSoon && (
-                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Soon</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 
 export default function QuickMatchHub() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-
-  const [gameType, setGameType] = useState<"cs" | "br">("cs");
-  const [squadSize, setSquadSize] = useState("solo");
-  const [modeId, setModeId] = useState("any");
-  const [prizeIdx, setPrizeIdx] = useState(0);
+  const [gameType, setGameType] = useState("cs");
+  const [teamSize, setTeamSize] = useState("Solo");
+  const [modeId, setModeId] = useState("duel");
+  const [poolIndex, setPoolIndex] = useState(0);
   const [visible, setVisible] = useState(false);
-  const [showTypeSheet, setShowTypeSheet] = useState(false);
-  const [onlineCount, setOnlineCount] = useState<number | null>(null);
-  const [queueStats, setQueueStats] = useState<{
-    cs: { total: number; modes: Record<string, number> };
-    br: { total: number; modes: Record<string, number> };
-  } | null>(null);
-  const [activeMatch, setActiveMatch] = useState<{
-    matchId: string;
-    gameType: string;
-    modeId: string;
-    status: string;
-  } | null>(null);
-  const [showBlockedModal, setShowBlockedModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [activeMatch, setActiveMatch] = useState<{ matchId: string; gameType: string; modeId: string } | null>(null);
 
-  // Check if user has an active match on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 60);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     apiFetch<{ status: string; matchId?: string; gameType?: string; modeId?: string }>("/quickmatch/match")
       .then(data => {
         if (data.status !== "none" && data.matchId) {
-          setActiveMatch({
-            matchId: data.matchId,
-            gameType: data.gameType ?? "cs",
-            modeId:   data.modeId   ?? "duel",
-            status:   data.status,
-          });
+          setActiveMatch({ matchId: data.matchId, gameType: data.gameType ?? "cs", modeId: data.modeId ?? "duel" });
         }
       })
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 60);
-    return () => clearTimeout(t);
-  }, []);
+  const pool = PRIZE_POOLS[poolIndex];
+  const currentMode = MODES.find(mode => mode.id === modeId) ?? MODES[0];
+  const displayName = user?.inGameName || user?.username || "Player";
+  const userId = String(user?.id ?? user?.uid ?? "—");
 
-  useEffect(() => {
-    async function fetchOnline() {
-      try {
-        const stats = await apiFetch<{
-          cs: { total: number; modes: Record<string, number> };
-          br: { total: number; modes: Record<string, number> };
-        }>("/quickmatch/stats");
-        setQueueStats(stats);
-        const total = (stats.cs?.total ?? 0) + (stats.br?.total ?? 0);
-        setOnlineCount(total);
-      } catch {
-        setOnlineCount(null);
-      }
-    }
-    fetchOnline();
-    const id = setInterval(fetchOnline, 8_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const pool = PRIZE_POOLS[prizeIdx];
-  const squadOpts = SQUAD_OPTIONS[gameType];
-  const modeOpts = MODE_OPTIONS[gameType][squadSize] ?? [];
-  const currentMode = modeOpts.find(m => m.id === modeId) ?? modeOpts[0];
-  const isComingSoon = currentMode?.comingSoon ?? false;
-
-  // Real active player count for the current selection
-  const activePlayers = (() => {
-    if (!queueStats) return null;
-    const gt = queueStats[gameType];
-    if (!gt) return 0;
-    if (!currentMode || currentMode.id === "any") return gt.total;
-    return gt.modes[currentMode.id] ?? 0;
-  })();
-
-  const accent = gameType === "cs" ? "#22d3ee" : "#f97316";
-
-  const handleSquadChange = (id: string) => {
-    setSquadSize(id);
-    const newModes = MODE_OPTIONS[gameType][id] ?? [];
-    if (newModes.length > 0) setModeId(newModes[0].id);
+  const copyUserId = async () => {
+    if (userId === "—") return;
+    try {
+      await navigator.clipboard.writeText(userId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch { /* clipboard is optional */ }
   };
 
-  const handleTypeChange = (id: string) => {
-    const gt = id as "cs" | "br";
-    setGameType(gt);
-    setShowTypeSheet(false);
-    const newSquad = SQUAD_OPTIONS[gt][0].id;
-    setSquadSize(newSquad);
-    const newModes = MODE_OPTIONS[gt][newSquad] ?? [];
-    if (newModes.length > 0) setModeId(newModes[0].id);
+  const selectGameType = (value: string) => {
+    if (value === "br") return;
+    setGameType(value);
+    setModeId("duel");
+    setTeamSize("Solo");
   };
-
-  const prevPrize = () => setPrizeIdx(i => (i - 1 + PRIZE_POOLS.length) % PRIZE_POOLS.length);
-  const nextPrize = () => setPrizeIdx(i => (i + 1) % PRIZE_POOLS.length);
-
-  const [balanceError, setBalanceError] = useState<string | null>(null);
 
   const handleJoin = () => {
-    if (isComingSoon) return;
     setBalanceError(null);
-
-    // Block if already in an active match
     if (activeMatch) {
-      setShowBlockedModal(true);
+      navigate(`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`);
       return;
     }
-
     const balance = user?.diamondBalance ?? 0;
     if (balance < pool.entry) {
       setBalanceError(`You need ${pool.entry} coins to join. Your balance: ${balance}`);
       return;
     }
-
     sessionStorage.setItem("qm_entry", String(pool.entry));
     sessionStorage.setItem("qm_prize", String(pool.prize));
-    let targetMode = currentMode?.id ?? "duel";
-    if (targetMode === "any") {
-      const liveModes = modeOpts.filter(m => !m.random && !m.comingSoon);
-      if (liveModes.length > 0) {
-        targetMode = liveModes[Math.floor(Math.random() * liveModes.length)].id;
-      } else {
-        targetMode = "duel";
-      }
-    }
-    navigate(`/quickmatch/${gameType}/${targetMode}`);
+    navigate(`/quickmatch/${gameType}/${modeId}`);
   };
 
   return (
-    <div
-      className="min-h-[100dvh] flex flex-col relative overflow-hidden"
-      style={{ background: "#06070a" }}
-    >
+    <div className="qm-hub min-h-[100dvh] bg-slate-950 text-slate-100">
       <style>{`
-        @keyframes qhub-in { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes qhub-card-swap { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
-        @keyframes qhub-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
-        @keyframes qhub-sheet-in { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
-        @keyframes qhub-banner-in { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+        .qm-hub { font-family: Inter, sans-serif; }
+        .qm-hub .qm-heading { font-family: Rajdhani, sans-serif; }
+        .qm-hub select { color-scheme: dark; }
+        @keyframes qm-enter { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes qm-pulse { 0%,100% { opacity:1 } 50% { opacity:.45 } }
+        @keyframes qm-shimmer { 0% { transform:translateX(-120%) } 100% { transform:translateX(120%) } }
+        .qm-enter { animation: qm-enter .45s ease both; }
+        .qm-shimmer { animation: qm-shimmer 3s ease-in-out infinite; }
       `}</style>
 
-      {/* ── Active-match resume banner ── */}
-      {activeMatch && (
-        <button
-          onClick={() => navigate(`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`)}
-          className="mx-4 mt-2 flex items-center gap-3 px-4 py-3 rounded-2xl w-[calc(100%-32px)] active:scale-[0.98] transition-transform shrink-0"
-          style={{
-            background: "linear-gradient(135deg, rgba(34,211,238,0.14) 0%, rgba(34,211,238,0.06) 100%)",
-            border: "1.5px solid rgba(34,211,238,0.35)",
-            boxShadow: "0 4px 24px rgba(34,211,238,0.12)",
-            animation: "qhub-banner-in 0.3s ease both",
-          }}
-        >
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(34,211,238,0.18)", border: "1px solid rgba(34,211,238,0.3)" }}
-          >
-            <Zap className="w-4 h-4 text-cyan-400" strokeWidth={2.2} />
+      <header className="border-b border-white/5 bg-slate-950/95 px-4 py-4 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <button onClick={() => navigate("/")} aria-label="Back to home" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[.06] transition hover:bg-white/10 active:scale-95">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
+              <Zap className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="qm-heading text-xl font-bold text-white">Instant Matchmaking</h1>
+              <p className="truncate text-[11px] text-slate-500">Find a worthy opponent in seconds</p>
+            </div>
           </div>
-          <div className="flex-1 text-left min-w-0">
-            <p className="text-[12px] font-black uppercase tracking-widest text-cyan-400 leading-none mb-0.5">Active Match</p>
-            <p className="text-[13px] font-bold text-white truncate">Tap to resume your match room</p>
+          <div className="hidden items-center gap-1.5 text-[11px] font-bold text-emerald-400 sm:flex">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> LIVE
           </div>
-          <ChevronRight className="w-4 h-4 text-cyan-500 shrink-0" />
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 pb-10 sm:px-6">
+        <section className={`flex items-center justify-between rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/30 p-4 shadow-xl sm:p-5 ${visible ? "qm-enter" : "opacity-0"}`}>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
+              <User className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="truncate text-base font-bold text-white">{displayName}</h2>
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400">PLAYER</span>
+              </div>
+              <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">ID: {userId}</p>
+            </div>
+          </div>
+          <button onClick={copyUserId} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-2 text-[10px] font-semibold text-slate-300 transition hover:bg-slate-700 sm:px-3 sm:text-xs">
+            {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="text-emerald-400">Copied</span></> : <><Copy className="h-3.5 w-3.5 text-amber-400" /> Copy ID</>}
+          </button>
+        </section>
+
+        <section className={`rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl ${visible ? "qm-enter [animation-delay:80ms]" : "opacity-0"}`}>
+          <div className="mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-slate-200"><Flame className="h-4 w-4 text-amber-400" /> Match Settings</h2>
+            <span className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-400">Free Fire 1v1</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="relative block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Category</span>
+              <select value={gameType} onChange={e => selectGameType(e.target.value)} className="w-full appearance-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-3 pr-8 text-xs font-medium outline-none transition focus:border-amber-500">
+                {GAME_TYPES.map(game => <option key={game.id} value={game.id} disabled={game.comingSoon}>{game.label}{game.comingSoon ? " (Soon)" : ""}</option>)}
+              </select><ChevronDown className="pointer-events-none absolute right-3 top-9 h-4 w-4 text-slate-500" />
+            </label>
+            <label className="relative block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Mode</span>
+              <select value={teamSize} onChange={e => setTeamSize(e.target.value)} className="w-full appearance-none rounded-xl border border-slate-800 bg-slate-950 px-3 py-3 pr-8 text-xs font-medium outline-none transition focus:border-amber-500">
+                <option>Solo</option><option>Duo (Coming Soon)</option><option>Squad (Coming Soon)</option>
+              </select><ChevronDown className="pointer-events-none absolute right-3 top-9 h-4 w-4 text-slate-500" />
+            </label>
+            <label className="relative block">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Game</span>
+              <select value={modeId} onChange={e => setModeId(e.target.value)} className="w-full appearance-none rounded-xl border border-amber-500/30 bg-slate-950 px-3 py-3 pr-8 text-xs font-semibold text-amber-300 outline-none transition focus:border-amber-500">
+                {MODES.map(mode => <option key={mode.id} value={mode.id} disabled={mode.comingSoon}>{mode.label}{mode.comingSoon ? " (Soon)" : ""}</option>)}
+              </select><ChevronDown className="pointer-events-none absolute right-3 top-9 h-4 w-4 text-amber-400" />
+            </label>
+          </div>
+        </section>
+
+        <section className={`${visible ? "qm-enter [animation-delay:160ms]" : "opacity-0"}`}>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-300"><Trophy className="h-4 w-4 text-amber-400" /> Select Entry Fee &amp; Prize</h2>
+            <span className="text-[10px] text-slate-500">Instant Match</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            {PRIZE_POOLS.map((item, index) => {
+              const selected = index === poolIndex;
+              return <button key={item.entry} onClick={() => setPoolIndex(index)} className={`relative rounded-2xl border p-3.5 text-left transition-all sm:p-4 ${selected ? "scale-[1.02] border-amber-500 bg-gradient-to-br from-amber-500/20 via-slate-900 to-slate-900 shadow-lg shadow-amber-500/10" : "border-slate-800 bg-slate-900/80 hover:border-slate-700"}`}>
+                {selected && <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-slate-950"><Check className="h-3.5 w-3.5 stroke-[3]" /></span>}
+                <span className="mb-1 block text-[9px] font-medium uppercase tracking-wider text-slate-500">Entry Fee</span>
+                <span className="flex items-center gap-1 text-lg font-black text-white sm:text-xl"><CoinIcon width={15} /> {item.entry}</span>
+                <span className="mt-3 flex items-center justify-between border-t border-slate-800 pt-2.5 text-[10px] text-slate-500"><span>Win Prize</span><span className="flex items-center gap-1 font-bold text-amber-400"><Trophy className="h-3 w-3" /> {item.prize}</span></span>
+              </button>;
+            })}
+          </div>
+        </section>
+
+        <section className="flex items-center justify-between rounded-2xl border border-yellow-500/20 bg-yellow-500/[.07] px-4 py-3">
+          <div className="flex items-center gap-2"><CoinIcon width={17} /><span className="text-xs font-bold text-yellow-300">Your Balance</span></div>
+          <span className="text-sm font-black tabular-nums text-white">{(user?.diamondBalance ?? 0).toLocaleString()} coins</span>
+        </section>
+
+        {balanceError && <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">{balanceError}</div>}
+
+        <button onClick={handleJoin} className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 text-slate-950 shadow-xl shadow-orange-600/20 transition hover:from-amber-400 hover:to-orange-500 active:scale-[.98]">
+          <div className="qm-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <span className="relative flex items-center justify-center gap-2.5 text-sm font-black uppercase tracking-wide sm:text-base"><Zap className="h-5 w-5 fill-slate-950" /> {activeMatch ? "Resume Active Match" : `Find Opponent (${pool.entry} Coins)`}</span>
         </button>
-      )}
 
-      {/* Ambient glow behind card */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          top: "38%", left: "50%", transform: "translate(-50%,-50%)",
-          width: 320, height: 320,
-          background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`,
-          filter: "blur(40px)",
-          transition: "background 0.4s ease",
-        }}
-      />
-
-      {/* ── Header ── */}
-      <div
-        className="shrink-0 px-4 pt-4 pb-4"
-        style={{
-          paddingTop: "calc(env(safe-area-inset-top) + 16px)",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(-12px)",
-          transition: "opacity 0.35s ease, transform 0.4s ease",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          {/* Back */}
-          <button
-            onClick={() => navigate("/")}
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-            style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
-          >
-            <ArrowLeft className="w-4 h-4 text-white" />
-          </button>
-
-          {/* Game type selector — tappable pill */}
-          <button
-            onClick={() => setShowTypeSheet(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl flex-1 active:scale-[0.97] transition-transform"
-            style={{
-              background: `${accent}14`,
-              border: `1.5px solid ${accent}45`,
-              boxShadow: `0 0 16px ${accent}18`,
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: accent, animation: "qhub-pulse 1.6s ease-in-out infinite" }} />
-            <span className="text-[14px] font-extrabold text-white flex-1 text-left">{GAME_TYPES.find(t => t.id === gameType)?.label}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
-          </button>
-
-        </div>
-      </div>
-
-      {/* ── Squad size + Mode dropdowns ── */}
-      <div
-        className="px-4 pb-4 flex gap-3"
-        style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(10px)",
-          transition: "opacity 0.35s ease 60ms, transform 0.4s ease 60ms",
-        }}
-      >
-        <Dropdown
-          label="Team Size"
-          options={squadOpts}
-          value={squadSize}
-          onChange={handleSquadChange}
-          accent={accent}
-        />
-        <Dropdown
-          label="Mode"
-          options={modeOpts}
-          value={currentMode?.id ?? ""}
-          onChange={setModeId}
-          accent={accent}
-        />
-      </div>
-
-      {/* ── Prize pool carousel card ── */}
-      <div
-        className="flex-1 flex flex-col items-center justify-center px-4 pb-4"
-        style={{
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.4s ease 120ms",
-        }}
-      >
-        <div className="w-full flex items-center gap-3">
-          {/* Left arrow */}
-          <button
-            onClick={prevPrize}
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <ChevronLeft className="w-5 h-5 text-zinc-400" />
-          </button>
-
-          {/* Card */}
-          <div
-            key={prizeIdx}
-            className="flex-1 rounded-3xl overflow-hidden relative"
-            style={{
-              background: "linear-gradient(160deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)",
-              border: `1.5px solid ${accent}35`,
-              boxShadow: `0 4px 40px ${accent}14, 0 0 0 1px rgba(255,255,255,0.03) inset`,
-              animation: "qhub-card-swap 0.22s ease both",
-            }}
-          >
-            {/* Top neon line */}
-            <div
-              className="absolute top-0 left-0 right-0 h-[1.5px]"
-              style={{ background: `linear-gradient(90deg, transparent 0%, ${accent}80 50%, transparent 100%)` }}
-            />
-
-            {/* Trophy + Prize amount */}
-            <div className="flex flex-col items-center pt-7 pb-5 gap-2">
-              <div
-                className="w-16 h-16 rounded-3xl flex items-center justify-center mb-1"
-                style={{
-                  background: `${accent}14`,
-                  border: `1.5px solid ${accent}35`,
-                  boxShadow: `0 0 24px ${accent}20`,
-                }}
-              >
-                <Trophy className="w-7 h-7" style={{ color: accent }} strokeWidth={1.8} />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CoinIcon width={22} />
-                <span className="text-[36px] font-black text-white leading-none tabular-nums">{pool.prize}</span>
-              </div>
-              <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Prize Pool</span>
-            </div>
-
-            {/* Divider */}
-            <div className="mx-5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-
-            {/* Stats row */}
-            <div className="grid grid-cols-3 divide-x divide-white/[0.05] px-2 py-4">
-              {[
-                { label: "Entry", value: pool.entry, icon: <CoinIcon width={14} /> },
-                { label: "Prize", value: pool.prize, icon: <CoinIcon width={14} /> },
-                { label: "Active", value: activePlayers !== null ? activePlayers : "—", icon: <Users className="w-3 h-3 text-emerald-400" strokeWidth={2} /> },
-              ].map(({ label, value, icon }) => (
-                <div key={label} className="flex flex-col items-center gap-1 py-1">
-                  <div className="flex items-center gap-1">
-                    {icon}
-                    <span className="text-[18px] font-black text-white tabular-nums leading-none">{value}</span>
-                  </div>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom shimmer */}
-            <div
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-px"
-              style={{ background: `linear-gradient(90deg, transparent, ${accent}60, transparent)` }}
-            />
-          </div>
-
-          {/* Right arrow */}
-          <button
-            onClick={nextPrize}
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <ChevronRight className="w-5 h-5 text-zinc-400" />
-          </button>
-        </div>
-
-        {/* Dot indicators */}
-        <div className="flex items-center gap-1.5 mt-4">
-          {PRIZE_POOLS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setPrizeIdx(i)}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: i === prizeIdx ? 20 : 6,
-                height: 6,
-                background: i === prizeIdx ? accent : "rgba(255,255,255,0.15)",
-                boxShadow: i === prizeIdx ? `0 0 8px ${accent}80` : "none",
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Real user balance */}
-        <div className="flex items-center gap-2 mt-4 px-4 py-2.5 rounded-2xl"
-          style={{ background: "rgba(250,204,21,0.07)", border: "1px solid rgba(250,204,21,0.18)" }}>
-          <CoinIcon width={16} />
-          <span className="text-[12px] font-bold text-yellow-300">Your Balance:</span>
-          <span className="text-[13px] font-black text-white tabular-nums ml-auto">
-            {(user?.diamondBalance ?? 0).toLocaleString()} coins
-          </span>
-        </div>
-      </div>
-
-      {/* ── Join button ── */}
-      <div
-        className="shrink-0 px-4 pb-8"
-        style={{
-          paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(12px)",
-          transition: "opacity 0.35s ease 200ms, transform 0.4s ease 200ms",
-        }}
-      >
-        {balanceError && (
-          <div
-            className="w-full mb-3 px-4 py-3 rounded-2xl flex items-center gap-2"
-            style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.30)" }}
-          >
-            <span className="text-[12px] font-bold text-red-400">{balanceError}</span>
-          </div>
-        )}
-
-        <button
-          onClick={handleJoin}
-          disabled={isComingSoon}
-          className="w-full relative overflow-hidden rounded-3xl active:scale-[0.97] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: isComingSoon
-              ? "rgba(255,255,255,0.04)"
-              : `linear-gradient(135deg, ${accent}ee 0%, ${accent}99 100%)`,
-            boxShadow: isComingSoon
-              ? "none"
-              : `0 8px 40px ${accent}55, 0 1px 0 rgba(255,255,255,0.25) inset`,
-            border: isComingSoon ? "1px solid rgba(255,255,255,0.08)" : `1px solid ${accent}40`,
-          }}
-        >
-          {/* Shimmer sweep */}
-          {!isComingSoon && (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)",
-                animation: "qhub-shimmer 2.8s ease-in-out infinite",
-              }}
-            />
-          )}
-          <style>{`@keyframes qhub-shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }`}</style>
-
-          <div className="relative flex items-center justify-between px-5 py-4">
-            {/* Left: icon + label stack */}
-            <div className="flex flex-col items-start gap-0.5">
-              <span
-                className="font-heading font-black tracking-wide uppercase leading-none"
-                style={{ fontSize: 17, color: isComingSoon ? "rgba(255,255,255,0.3)" : "#fff" }}
-              >
-                {isComingSoon ? "Coming Soon" : "Find Match"}
-              </span>
-              {!isComingSoon && (
-                <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "rgba(255,255,255,0.65)" }}>
-                  {currentMode?.id === "any" ? "Any mode" : currentMode?.label} · <CoinIcon width={11} /> {pool.entry} entry
-                </span>
-              )}
-            </div>
-
-            {/* Right: play icon circle */}
-            {!isComingSoon && (
-              <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
-                style={{
-                  background: "rgba(255,255,255,0.18)",
-                  border: "1px solid rgba(255,255,255,0.25)",
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                  <polygon points="6,3 20,12 6,21" />
-                </svg>
-              </div>
-            )}
-          </div>
-        </button>
-      </div>
-
-      {/* ── Active-match blocked modal ── */}
-      {showBlockedModal && activeMatch && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end justify-center"
-          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)" }}
-          onClick={() => setShowBlockedModal(false)}
-        >
-          <div
-            className="w-full rounded-t-3xl px-5 pt-6"
-            style={{
-              background: "rgba(12,14,20,0.98)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              borderBottom: "none",
-              boxShadow: "0 -20px 60px rgba(0,0,0,0.6)",
-              paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)",
-              animation: "qhub-sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: "rgba(34,211,238,0.12)", border: "1.5px solid rgba(34,211,238,0.3)" }}
-            >
-              <Zap className="w-7 h-7 text-cyan-400" strokeWidth={1.6} />
-            </div>
-            <h3 className="text-[18px] font-black text-white text-center mb-1">You're already in a match</h3>
-            <p className="text-[13px] text-zinc-500 text-center mb-6 leading-relaxed px-2">
-              Complete your current match before joining a new one. Go back to your active room to finish it.
-            </p>
-            <button
-              onClick={() => navigate(`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`)}
-              className="w-full py-4 rounded-2xl mb-3 active:scale-[0.97] transition-transform"
-              style={{
-                background: "linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)",
-                boxShadow: "0 8px 32px rgba(34,211,238,0.35)",
-              }}
-            >
-              <span className="text-[15px] font-extrabold text-white">Go to Active Match</span>
-            </button>
-            <button
-              onClick={() => setShowBlockedModal(false)}
-              className="w-full py-3.5 rounded-2xl active:scale-95 transition-transform"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <span className="text-[14px] font-semibold text-zinc-400">Cancel</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showTypeSheet && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-            onClick={() => setShowTypeSheet(false)}
-          />
-          <div
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
-            style={{
-              background: "rgba(12,14,20,0.98)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderBottom: "none",
-              animation: "qhub-sheet-in 0.28s cubic-bezier(0.34,1.2,0.64,1) both",
-              paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)",
-            }}
-          >
-            <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mt-3 mb-5" />
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-600 px-5 mb-3">Game Type</p>
-            {GAME_TYPES.map((gt) => (
-              <button
-                key={gt.id}
-                onClick={() => !gt.comingSoon && handleTypeChange(gt.id)}
-                className="w-full flex items-center justify-between px-5 py-4 transition-colors"
-                style={{
-                  background: gt.id === gameType ? "rgba(255,255,255,0.05)" : "transparent",
-                  opacity: gt.comingSoon ? 0.4 : 1,
-                  cursor: gt.comingSoon ? "not-allowed" : "pointer",
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center"
-                    style={{
-                      background: gt.id === "cs" ? "rgba(34,211,238,0.12)" : "rgba(249,115,22,0.12)",
-                      border: `1px solid ${gt.id === "cs" ? "rgba(34,211,238,0.25)" : "rgba(249,115,22,0.25)"}`,
-                    }}
-                  >
-                    <Zap className="w-4 h-4" style={{ color: gt.id === "cs" ? "#22d3ee" : "#f97316" }} strokeWidth={2} />
-                  </div>
-                  <div>
-                    <span className="text-[14px] font-extrabold text-white block">{gt.label}</span>
-                    {gt.comingSoon && <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Coming Soon</span>}
-                  </div>
-                </div>
-                {gt.id === gameType && (
-                  <div className="w-2 h-2 rounded-full" style={{ background: accent }} />
-                )}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+        <div className="flex items-center justify-center gap-5 pt-1 text-[10px] text-slate-600"><span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Fair play verified</span><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-amber-500" /> Server-matched</span></div>
+        <p className="text-center text-[10px] leading-relaxed text-slate-600">Your entry fee is secured when you join the queue and refunded automatically if the search expires.</p>
+      </main>
     </div>
   );
 }
