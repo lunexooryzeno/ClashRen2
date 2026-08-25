@@ -70,6 +70,12 @@ export default function LandingExport() {
           <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-2">
             <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
               <p className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-[.35em] text-red-500"><Sparkles className="h-4 w-4" /> Competitive gaming, redefined</p>
+              <div className="relative mt-8 aspect-[4/3] w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-red-950/40">
+                <div className="absolute -inset-8 -z-10 rounded-full bg-red-600/20 blur-3xl" />
+                <img src="https://github.com/lunexooryzeno/ClashRen2/blob/main/attached_assets/logo/1d88ab71-ecd0-4731-860b-c6cae072eed4.png?raw=true" alt="ClashRen tournament arena" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
+                <div className="absolute bottom-6 left-6"><p className="text-xs font-black uppercase tracking-[.3em] text-red-400">Enter the arena</p><p className="mt-2 font-heading text-3xl font-black uppercase">Your next win starts here.</p></div>
+              </div>
               <h1 className="font-heading text-6xl font-black uppercase leading-[.85] tracking-tight md:text-8xl">
                 CLASH<span className="text-red-500">REN</span>
               </h1>
@@ -91,14 +97,6 @@ export default function LandingExport() {
                     <div><strong className="block text-xl text-white">{value}</strong><span className="text-[10px] font-bold uppercase tracking-widest">{["Active Players", "Prizes Won", "Matchmaking"][i]}</span></div>
                   </div>
                 ))}
-              </div>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, scale: .94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .8, delay: .15 }} className="relative mx-auto w-full max-w-lg">
-              <div className="absolute -inset-8 rounded-full bg-red-600/20 blur-3xl" />
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-red-950/40">
-                <img src="https://github.com/lunexooryzeno/ClashRen2/blob/main/attached_assets/logo/1d88ab71-ecd0-4731-860b-c6cae072eed4.png?raw=true" alt="ClashRen tournament arena" className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
-                <div className="absolute bottom-6 left-6"><p className="text-xs font-black uppercase tracking-[.3em] text-red-400">Enter the arena</p><p className="mt-2 font-heading text-3xl font-black uppercase">Your next win starts here.</p></div>
               </div>
             </motion.div>
           </div>
