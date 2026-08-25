@@ -63,13 +63,13 @@ export default function LandingExport() {
         <section className="relative flex min-h-screen items-center overflow-hidden px-5 pb-20 pt-28 md:px-12 md:pt-32">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(255,30,39,.18),transparent_35%),radial-gradient(circle_at_20%_80%,rgba(255,30,39,.08),transparent_32%)]" />
           <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-2">
-            <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }} className="order-2 flex flex-col items-center text-center lg:order-1">
+            <motion.div initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }} className="order-2 flex w-full min-w-0 flex-col items-center text-center lg:order-1">
               <p className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-[.35em] text-[#ff1e27]"><Sparkles className="h-4 w-4" /> Competitive gaming, redefined</p>
-              <h1 className="display text-6xl font-black uppercase leading-[.85] tracking-tight md:text-8xl">CLASH<span className="brand-red">REN</span></h1>
-              <p className="mt-7 max-w-xl text-lg font-medium leading-relaxed text-zinc-400 md:text-xl">Don&apos;t wait for your moment. Create it. Challenge real players, compete in intense matches, and turn every victory into another step toward the top.</p>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <button onClick={play} className="group flex h-14 items-center justify-center gap-3 rounded-xl bg-[#ff1e27] px-8 text-sm font-black uppercase tracking-widest shadow-[0_0_30px_rgba(255,30,39,.35)] transition hover:bg-red-600 hover:shadow-[0_0_45px_rgba(255,30,39,.55)]"><Rocket className="h-5 w-5 transition group-hover:-translate-y-1 group-hover:translate-x-1" /> Play Now <ArrowRight className="h-4 w-4" /></button>
-                <a href="#how-it-works" className="flex h-14 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-8 text-sm font-black uppercase tracking-widest transition hover:border-[#ff1e27]/50 hover:bg-white/10"><Eye className="h-4 w-4 text-[#ff1e27]" /> Explore</a>
+              <h1 className="display whitespace-nowrap text-5xl font-black uppercase leading-[.85] tracking-tight sm:text-6xl md:text-8xl">CLASH<span className="brand-red">REN</span></h1>
+              <p className="mt-7 max-w-xl px-2 text-lg font-medium leading-relaxed text-zinc-400 md:text-xl">Don&apos;t wait for your moment. Create it. Challenge real players, compete in intense matches, and turn every victory into another step toward the top.</p>
+              <div className="mt-9 flex w-full max-w-[350px] flex-row gap-2">
+                <button onClick={play} className="group flex h-14 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#ff1e27] px-3 text-xs font-black uppercase tracking-widest shadow-[0_0_30px_rgba(255,30,39,.35)] transition hover:bg-red-600 hover:shadow-[0_0_45px_rgba(255,30,39,.55)] sm:gap-3 sm:px-5 sm:text-sm"><Rocket className="h-4 w-4 shrink-0 sm:h-5 sm:w-5 transition group-hover:-translate-y-1 group-hover:translate-x-1" /> Play Now <ArrowRight className="h-4 w-4 shrink-0" /></button>
+                <a href="#how-it-works" className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-black uppercase tracking-widest transition hover:border-[#ff1e27]/50 hover:bg-white/10 sm:gap-3 sm:px-5 sm:text-sm"><Eye className="h-4 w-4 shrink-0 text-[#ff1e27]" /> Explore</a>
               </div>
               <div className="mt-12 flex max-w-xl items-center justify-center gap-6 border-t border-white/10 pt-7 text-zinc-500">
                 {[["10K+", "Active Players"], ["₹50K+", "Prizes Won"], ["24/7", "Matchmaking"]].map(([value, label], i) => <div key={value} className="flex items-center gap-6">{i > 0 && <span className="h-8 w-px bg-white/10" />}<div><strong className="display block text-xl text-white">{value}</strong><span className="text-[10px] font-bold uppercase tracking-widest">{label}</span></div></div>)}
@@ -80,7 +80,7 @@ export default function LandingExport() {
                 <div className="absolute -inset-8 -z-10 rounded-full bg-red-600/20 blur-3xl" />
                 <img src={art.hero} alt="ClashRen tournament arena" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
-                <div className="absolute bottom-6 left-6"><p className="text-xs font-black uppercase tracking-[.3em] text-red-400">Enter the arena</p><p className="display mt-2 text-3xl font-black uppercase">Your next win starts here.</p></div>
+                <div className="absolute bottom-6 left-6"><p className="display mt-2 text-3xl font-black uppercase">Your next win starts here.</p></div>
               </div>
             </motion.div>
           </div>
