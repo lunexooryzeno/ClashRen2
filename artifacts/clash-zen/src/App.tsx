@@ -78,7 +78,7 @@ const Profile             = lazy(() => import("@/pages/profile"));
 const AdminPanel          = lazy(() => import("@/pages/admin"));
 const SetupProfileScreen  = lazy(() => import("@/pages/setup-profile"));
 const NotFound            = lazy(() => import("@/pages/not-found"));
-const LandingPage         = lazy(() => import("@/pages/landing"));
+const LandingPage         = lazy(() => import("@/pages/landing-export"));
 const GetStartedPage      = lazy(() => import("@/pages/get-started"));
 const TopUpPage           = lazy(() => import("@/pages/top-up"));
 const WalletPage          = lazy(() => import("@/pages/wallet"));

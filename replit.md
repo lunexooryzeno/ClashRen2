@@ -39,10 +39,17 @@ Tables: `users`, `tournaments`, `tournament_participants`
 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
+- `pnpm run build:deploy` — build the frontend and the single-process API bundle used by the Replit Run button
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 - `pnpm --filter @workspace/clash-zen run dev` — run frontend locally
+
+## Running on Replit
+
+Use the **Start application** workflow. It runs `pnpm run build:deploy`, then starts the bundled Express server on port 5000; that server serves both the `/api` routes and the built React app from one origin.
+
+The app requires a PostgreSQL connection through `EXTERNAL_DATABASE_URL` (or `DATABASE_URL`). Authentication, push notifications, and administrative features use the corresponding configured Replit secrets.
 
 ## Diamond Currency
 1 diamond = ₹0.50. Users start with 100 diamonds. Entry fees are deducted on join. The first user to register automatically becomes admin.

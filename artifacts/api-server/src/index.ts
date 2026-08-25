@@ -87,7 +87,7 @@ ensureMediaUploadsTable()
   .then(() => logger.info("media_uploads table ready"))
   .catch((err) => logger.error({ err }, "Failed to ensure media_uploads table"));
 
-app.listen(port, (err) => {
+app.listen(port, "0.0.0.0", (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
