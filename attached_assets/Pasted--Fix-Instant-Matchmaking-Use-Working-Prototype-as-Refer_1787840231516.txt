@@ -1,0 +1,329 @@
+# Fix Instant Matchmaking — Use Working Prototype as Reference
+
+I need you to fix the **Instant Matchmaking** feature in the current ClashRen project.
+
+## Critical reference
+
+The original working prototype is:
+
+`https://github.com/lunexooryzeno/ClashRen_Instant`
+
+**The prototype's Instant Matchmaking flow works correctly.**
+
+The current ClashRen project has the matchmaking UI/feature, but there is a critical bug:
+
+> When Player A and Player B enter matchmaking and are successfully matched, neither player sees **"Opponent Found"** or the matched opponent information.
+
+Do **not** rebuild the entire matchmaking system.
+
+Your job is to identify why the current implementation fails to propagate/display the successful match and fix it using the working prototype as the reference implementation.
+
+---
+
+## 1. First inspect both projects
+
+Before changing anything:
+
+1. Inspect the current ClashRen project.
+2. Inspect the `ClashRen_Instant` repository.
+3. Find the exact files responsible for:
+
+   * joining matchmaking
+   * creating/joining a queue
+   * detecting when 2 players are matched
+   * updating match status
+   * notifying both players
+   * polling/WebSocket/SSE/realtime communication
+   * displaying "Opponent Found"
+   * redirecting/showing the matched opponent
+4. Compare the working prototype implementation against the current implementation.
+
+Do NOT make broad architectural changes before understanding the difference.
+
+---
+
+## 2. Reproduce the bug
+
+Test the current implementation with two separate players/sessions.
+
+Example:
+
+Player A:
+
+* Enters Instant Matchmaking
+* Joins queue
+* Waits
+
+Player B:
+
+* Enters Instant Matchmaking
+* Joins queue
+
+Expected:
+
+```text
+Player A → Opponent Found → Player B
+Player B → Opponent Found → Player A
+```
+
+Current problem:
+
+```text
+Player A → waiting
+Player B → waiting
+```
+
+even though the backend may have successfully paired them.
+
+Determine exactly where the state propagation breaks.
+
+---
+
+## 3. Compare against the working prototype
+
+Use `ClashRen_Instant` as the source of truth for matchmaking behavior.
+
+Compare:
+
+* queue creation
+* player identification
+* matchmaking request
+* pairing logic
+* match ID generation
+* database state
+* API response
+* realtime event/state update
+* polling interval
+* WebSocket/SSE connection if used
+* frontend state management
+* match status transitions
+* opponent data
+* cleanup after successful matchmaking
+
+Pay special attention to this sequence:
+
+```text
+Player joins queue
+        ↓
+Backend detects second player
+        ↓
+Players are paired
+        ↓
+Match state is updated
+        ↓
+Both clients receive the updated state/event
+        ↓
+Frontend detects matched state
+        ↓
+"Opponent Found" is displayed
+```
+
+Find which step is broken in the current ClashRen implementation.
+
+---
+
+## 4. Minimal-resource rule
+
+Use the **minimum possible resources and changes**.
+
+Do NOT:
+
+* rewrite the application
+* replace the existing framework
+* create unnecessary files
+* install unnecessary packages
+* redesign the UI
+* change unrelated tournament functionality
+* change authentication
+* change wallet/payment logic
+* change database architecture unless absolutely required
+* duplicate the matchmaking system
+* create a second matchmaking implementation
+
+Prefer modifying the smallest number of existing files possible.
+
+If the current implementation is structurally correct, fix the bug rather than replacing it.
+
+---
+
+## 5. Preserve the current UI
+
+The current ClashRen UI should remain unchanged unless a tiny change is required to correctly display the matched state.
+
+Do not redesign the matchmaking page.
+
+Only make the minimum UI/state changes required for:
+
+```text
+Opponent Found
+```
+
+to appear reliably for both players.
+
+---
+
+## 6. Important state requirements
+
+When two players are matched, BOTH clients must independently detect the match.
+
+For example:
+
+```text
+Player A:
+status = matched
+matchId = XXXXX
+opponent = Player B
+
+Player B:
+status = matched
+matchId = XXXXX
+opponent = Player A
+```
+
+Do not rely on only the player who triggered the pairing request receiving the result.
+
+The matchmaking backend must create a persistent match result/state that both clients can retrieve or receive.
+
+---
+
+## 7. Check for these common bugs
+
+Explicitly investigate whether the issue is caused by:
+
+* frontend polling the wrong endpoint
+* polling stopping too early
+* stale React/state values
+* incorrect player ID
+* incorrect queue ID
+* incorrect match ID
+* backend updating one player but not the other
+* race condition when two players join simultaneously
+* response containing the match but frontend ignoring it
+* mismatched status names such as `matched` vs `MATCHED`
+* incorrect API response structure
+* database transaction timing
+* realtime event not being emitted
+* WebSocket/SSE subscription not being established
+* frontend subscribing after the event was already emitted
+* incorrect cache
+* server/client state mismatch
+* match result being deleted too early
+* queue cleanup happening before clients retrieve the match
+
+Do not assume the problem is the UI.
+
+Trace the complete data flow.
+
+---
+
+## 8. Use the prototype intelligently
+
+Do not blindly copy the prototype.
+
+Instead:
+
+1. Find the working implementation.
+2. Identify the exact mechanism that makes both players receive the matched state.
+3. Compare it with the current implementation.
+4. Port only the missing/faulty logic.
+5. Adapt it to the current ClashRen architecture.
+
+The goal is:
+
+**Same reliable behavior as `ClashRen_Instant`, while preserving the current ClashRen architecture.**
+
+---
+
+## 9. Test after fixing
+
+Test with at least two independent browser sessions.
+
+Test:
+
+### Test A — Normal matchmaking
+
+```text
+Player A joins
+Player B joins
+```
+
+Expected:
+
+```text
+Player A → Opponent Found
+Player B → Opponent Found
+```
+
+Both should receive the same match ID and opposite opponent IDs.
+
+### Test B — Different timing
+
+```text
+Player A joins
+(wait several seconds)
+Player B joins
+```
+
+Both should still receive the match.
+
+### Test C — Simultaneous joining
+
+Have both players join almost simultaneously.
+
+Expected:
+
+* exactly one match
+* exactly two players
+* both clients receive the match
+* no duplicate match
+* no player stuck in queue
+
+### Test D — Queue cleanup
+
+After successful matchmaking:
+
+* players must leave the matchmaking queue
+* refreshing should not create another match
+* the same players should not accidentally be matched twice
+
+---
+
+## 10. Logging
+
+If necessary, temporarily add focused debugging logs around:
+
+```text
+QUEUE_JOIN
+MATCH_SEARCH
+MATCH_CREATED
+MATCH_STATUS_UPDATED
+MATCH_RESULT_RETURNED
+OPPONENT_FOUND
+QUEUE_REMOVED
+```
+
+Use logs to identify the exact failure.
+
+Remove unnecessary debug logging after the fix.
+
+---
+
+## 11. Final requirements
+
+After making the fix:
+
+1. Explain the **root cause** in 2–5 sentences.
+2. List the files changed.
+3. Explain exactly what was changed.
+4. Confirm that the current UI was preserved.
+5. Confirm that both players receive the matched state.
+6. Confirm that no unrelated features were modified.
+7. Run the relevant tests/build and fix any errors caused by your changes.
+
+### Most important instruction
+
+**Do not start coding immediately.**
+
+First inspect the current implementation and the working `ClashRen_Instant` prototype, compare the matchmaking data flow, identify the exact discrepancy, and then make the smallest possible fix.
+
+The working prototype is the behavioral reference. The current ClashRen project is the codebase that must be fixed.

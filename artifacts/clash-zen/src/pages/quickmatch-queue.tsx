@@ -440,12 +440,6 @@ export default function QuickMatchQueue() {
     setEntryFee(storedEntry);
     setPrizeAmount(storedPrize);
 
-    apiPost("/quickmatch/search/join", { gameType: typeKey, modeId, entryFee: storedEntry, prizeAmount: storedPrize })
-      .catch((err: Error) => {
-        setCancelReason(err?.message ?? "Unable to join match");
-        setPhase("cancelled");
-      });
-
     // Shared handler — called by both SSE and poll paths
     const applyMatchData = (match: {
       status: string;
@@ -796,7 +790,10 @@ export default function QuickMatchQueue() {
       } catch { /* ignore */ }
     });
 
-    // ── 8s fallback poll (SSE handles the fast path) ──────────────────────────
+    // ── Authoritative fallback poll (SSE handles the fast path) ────────────────
+    // The match event can be emitted before a newly opened SSE stream finishes
+    // subscribing. Polling the player's match record independently ensures both
+    // clients discover the same pairing, just like the working prototype.
     const poll = async () => {
       try {
         const stats = await apiFetch<QueueStats>("/quickmatch/stats");
@@ -810,7 +807,26 @@ export default function QuickMatchQueue() {
     };
 
     poll();
-    pollIdRef.current = setInterval(poll, 8000);
+    pollIdRef.current = setInterval(poll, 1000);
+
+    // Open the realtime stream and establish the recovery poll before joining.
+    // The join response only acknowledges the queue operation; when it reports
+    // an immediate match, fetch the authoritative match payload so the same
+    // state handler is used for both players.
+    apiPost<{ matched?: boolean }>("/quickmatch/search/join", {
+      gameType: typeKey,
+      modeId,
+      entryFee: storedEntry,
+      prizeAmount: storedPrize,
+    })
+      .then((joinResult) => {
+        if (joinResult.matched) void poll();
+      })
+      .catch((err: Error) => {
+        setCancelReason(err?.message ?? "Unable to join match");
+        setPhase("cancelled");
+      });
+
     return () => { stopPolling(); stopJoinWindow(); closeSse(); stopScreenshotTimer(); stopDisputeTimer(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -926,6 +942,7 @@ export default function QuickMatchQueue() {
             matchId?: string;
             resultPending?: boolean;
             resultPendingAt?: number;
+            isClaimant?: boolean;
           };
           if (data.ended) {
             clearPollTimer();
