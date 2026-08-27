@@ -4,6 +4,7 @@ import {
   ArrowLeft, Users, Clock, Copy, Check, Shield, Crosshair,
   Heart, Scissors, Target, Map as MapIcon, X, Swords,
   CheckCircle2, Zap, RotateCcw, Cpu, KeyRound, ExternalLink, Trophy,
+  Loader2, Smartphone,
   Upload, Lock, AlertTriangle, Camera,
 } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
@@ -1348,130 +1349,98 @@ export default function QuickMatchQueue() {
         </div>
       )}
 
-      {/* ─────────────────── PREPARING ─────────────────── */}
+      {/* ─────────────────── PREPARING / OPPONENT FOUND ─────────────────── */}
       {phase === "preparing" && (
         <div className="flex-1 flex flex-col items-center px-4 pb-10" style={{ animation: "preparing-in 0.5s ease both" }}>
-
-          {/* Badge */}
-          <div className="mt-2 mb-4 px-5 py-2 rounded-full flex items-center gap-2.5" style={{
-            background: `${accent}18`,
-            border: `1.5px solid ${accent}50`,
-            animation: "badge-glow 2s ease-in-out infinite",
-          }}>
-            <span className="w-2 h-2 rounded-full" style={{ background: accent, animation: "live-pulse 1s ease-in-out infinite" }} />
-            <span className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: accent }}>Opponent Found!</span>
-          </div>
-
-          {/* VS card */}
-          <div className="w-full rounded-3xl overflow-hidden mb-4" style={{
-            background: `linear-gradient(145deg, ${accent}0d 0%, rgba(255,255,255,0.018) 100%)`,
-            border: `1px solid ${accent}30`,
-          }}>
-            <div className="flex items-center justify-between px-5 py-5 gap-3">
-              <div className="flex-1 flex flex-col items-center gap-2.5 min-w-0">
-                <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={64} accent={accent} />
-                <div className="text-center w-full">
-                  <p className="text-[13px] font-extrabold text-white truncate">{mePlayer?.inGameName ?? "You"}</p>
-                  <p className="text-[10px] text-zinc-600 mt-0.5">You</p>
-                </div>
-              </div>
-              <div className="shrink-0 flex flex-col items-center gap-1">
-                <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{
-                  background: `${accent}15`,
-                  border: `1.5px solid ${accent}40`,
-                  boxShadow: `0 0 20px ${accent}30`,
-                }}>
-                  <span className="text-[11px] font-black tracking-wider" style={{ color: accent }}>VS</span>
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col items-center gap-2.5 min-w-0">
-                <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={64} accent={accent} />
-                <div className="text-center w-full">
-                  <p className="text-[13px] font-extrabold text-white truncate">{opponent?.inGameName ?? "Opponent"}</p>
-                  <p className="text-[10px] text-zinc-600 mt-0.5">Opponent</p>
-                </div>
-              </div>
+          {/* Pairing complete banner — adapted from ClashRen_Instant */}
+          <div className="w-full max-w-md bg-gradient-to-r from-emerald-950/80 via-zinc-900 to-zinc-900 border border-emerald-500/30 rounded-2xl p-5 text-center shadow-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold mb-3">
+              <Zap className="w-3.5 h-3.5 fill-emerald-400" strokeWidth={2} />
+              <span>MATCH PAIRING COMPLETE</span>
             </div>
-            {(entryFee > 0 || prizeAmount > 0) && (
-              <div className="px-5 py-2.5 flex items-center gap-3 justify-center" style={{
-                background: `${accent}08`, borderTop: `1px solid ${accent}18`,
-              }}>
-                <Icon className="w-3.5 h-3.5" style={{ color: accent }} strokeWidth={2} />
-                <span className="text-[11px] font-semibold text-zinc-400">{meta.name}</span>
-                {entryFee > 0 && (
-                  <><div className="w-px h-3 bg-white/10" /><CoinIcon width={11} /><span className="text-[11px] font-bold text-yellow-400">{entryFee} entry</span></>
-                )}
-              </div>
+            <h2 className="text-2xl font-black text-white">Opponent Found!</h2>
+            {matchId && (
+              <p className="text-xs text-zinc-400 mt-1">
+                Match ID: <span className="font-mono font-bold text-amber-400">{matchId}</span>
+              </p>
             )}
           </div>
 
-          {/* Timeline */}
-          <div className="w-full rounded-3xl overflow-hidden mb-4" style={{
-            background: "rgba(255,255,255,0.025)",
-            border: "1px solid rgba(255,255,255,0.07)",
-          }}>
-            <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="text-[10px] font-black tracking-widest uppercase text-zinc-600">Preparing Room</span>
+          {/* Player versus cards */}
+          <div className="w-full max-w-md grid grid-cols-2 gap-3 relative mt-4">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-amber-500 text-zinc-950 font-black text-xs flex items-center justify-center shadow-lg border-2 border-zinc-950">
+              VS
             </div>
-            <div className="px-5 py-4 flex flex-col gap-0">
-              {ROOM_STEPS.map((step, i) => {
-                const isActive = i === currentStepIdx;
-                const isDone   = i < currentStepIdx;
-                const StepIcon = step.Icon;
-                return (
-                  <div key={step.key} className="flex items-start gap-4">
-                    <div className="flex flex-col items-center" style={{ width: 30, paddingTop: 2 }}>
-                      <div className="relative flex items-center justify-center" style={{ width: 30, height: 30 }}>
-                        {isActive && (
-                          <div className="absolute rounded-full" style={{
-                            inset: -3, background: `${accent}25`,
-                            animation: "step-ping 1.8s ease-out infinite",
-                          }} />
-                        )}
-                        <div className="relative rounded-full flex items-center justify-center" style={{
-                          width: 30, height: 30,
-                          background: isDone ? `${accent}28` : isActive ? `${accent}18` : "rgba(255,255,255,0.04)",
-                          border: `1.5px solid ${isDone ? accent : isActive ? `${accent}aa` : "rgba(255,255,255,0.09)"}`,
-                          transition: "all 0.35s ease",
-                        }}>
-                          {isDone
-                            ? <Check className="w-3.5 h-3.5" style={{ color: accent }} strokeWidth={2.5} />
-                            : <StepIcon className="w-3.5 h-3.5" strokeWidth={2} style={{
-                                color: isActive ? accent : "rgba(255,255,255,0.18)",
-                                animation: isActive && step.key === "creating_room" ? "icon-spin 1.4s linear infinite" : undefined,
-                              }} />
-                          }
-                        </div>
-                      </div>
-                      {i < ROOM_STEPS.length - 1 && (
-                        <div style={{
-                          width: 1.5, height: 22, marginTop: 2,
-                          background: isDone ? accent : "rgba(255,255,255,0.07)",
-                          transition: "background 0.35s ease", borderRadius: 2,
-                        }} />
-                      )}
-                    </div>
-                    <div className="flex-1 pb-4" style={{ paddingTop: 5 }}>
-                      <p className="text-[13px] font-semibold leading-tight" style={{
-                        color: isDone ? accent : isActive ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.2)",
-                        transition: "color 0.35s ease",
-                      }}>
-                        {step.label}
-                        {isActive && <span className="ml-1.5 text-[11px]" style={{ color: `${accent}aa` }}>…</span>}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center space-y-1.5 min-w-0">
+              <div className="flex justify-center">
+                <Avatar src={mePlayer?.profilePicture} name={mePlayer?.inGameName ?? "You"} size={64} accent={accent} />
+              </div>
+              <h4 className="font-bold text-sm text-white truncate">{mePlayer?.inGameName ?? "You"}</h4>
+              <p className="text-[10px] font-mono text-amber-400/90 truncate">{mePlayer?.userId ?? "—"}</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">You</p>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center space-y-1.5 min-w-0">
+              <div className="flex justify-center">
+                <Avatar src={opponent?.profilePicture} name={opponent?.inGameName ?? "Opponent"} size={64} accent={accent} />
+              </div>
+              <h4 className="font-bold text-sm text-white truncate">{opponent?.inGameName ?? "Opponent"}</h4>
+              <p className="text-[10px] font-mono text-orange-400/90 truncate">{opponent?.userId ?? "—"}</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Opponent</p>
             </div>
           </div>
 
-          {/* Lock notice */}
-          <div className="px-4 py-2.5 rounded-2xl flex items-center gap-2" style={{
-            background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)",
-          }}>
-            <Shield className="w-3.5 h-3.5 text-zinc-700" strokeWidth={2} />
-            <span className="text-[11px] font-semibold text-zinc-600">Match locked — cannot cancel</span>
+          {/* Match details */}
+          <div className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 text-xs space-y-2.5 mt-4">
+            <div className="flex justify-between py-1 border-b border-zinc-800">
+              <span className="text-zinc-400">Game Mode</span>
+              <span className="font-semibold text-zinc-200">{meta.name} ({meta.format})</span>
+            </div>
+            <div className="flex justify-between items-center py-1 border-b border-zinc-800">
+              <span className="text-zinc-400">Entry Fee</span>
+              <span className="font-semibold text-zinc-200 flex items-center gap-1.5">
+                <CoinIcon width={13} /> {entryFee} Coins
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-1">
+              <span className="text-zinc-400">Winning Prize</span>
+              <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                <CoinIcon width={13} /> {prizeAmount} Coins
+              </span>
+            </div>
+          </div>
+
+          {/* Single live status, matching the prototype's host-phone view */}
+          <div className="w-full max-w-md bg-zinc-900 border border-amber-500/30 rounded-2xl p-5 space-y-3 shadow-xl mt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider block">
+                  Host Phone Status
+                </span>
+                <h3 className="text-base font-black text-amber-300 mt-0.5">
+                  {ROOM_STEPS[currentStepIdx]?.label ?? "Creating Room"}…
+                </h3>
+              </div>
+            </div>
+
+            <div className="bg-zinc-950 rounded-xl p-3 border border-zinc-800/80 font-mono text-[11px] space-y-1.5 text-zinc-300">
+              <div className="flex items-center justify-between text-emerald-400 border-b border-zinc-800/80 pb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5" />
+                  Room creation
+                </span>
+                <span className="text-[10px] text-amber-400 font-bold px-1.5 py-0.5 bg-amber-500/10 rounded border border-amber-500/20">
+                  LIVE
+                </span>
+              </div>
+              <div className="text-amber-400/90 pt-0.5">
+                &gt; {ROOM_STEPS[currentStepIdx]?.label ?? "Creating Room"}
+              </div>
+            </div>
           </div>
         </div>
       )}

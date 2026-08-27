@@ -1,0 +1,353 @@
+# Fix Instant Matchmaking UI + Logic to Match the Working Prototype
+
+The current Instant Matchmaking flow is now finding the opponent, but the resulting screen is NOT matching the original working prototype.
+
+The current screen contains things like:
+
+* `Classic Survival`
+* `1v1 Duel`
+* `Opponent Found!`
+* `lunexon`
+* `You`
+* `VS`
+* `꧁༒ClutchX༒꧂`
+* `Opponent`
+* `12 entry`
+* `Preparing Room`
+* `Opponent Found`
+* `Creating Room`
+* `Booting Game`
+* `Waiting for Credentials…`
+* `Room Ready!`
+
+Some elements are also appearing as raw `svg` text/icons or otherwise incorrectly rendered.
+
+## Source of truth
+
+Use this working prototype as the reference:
+
+`https://github.com/lunexooryzeno/ClashRen_Instant`
+
+The prototype has the correct:
+
+* matchmaking behavior
+* matched-state logic
+* opponent detection
+* UI
+* status progression
+* transitions
+* loading states
+* icons
+* typography
+* spacing
+* layout
+* timing
+* room preparation flow
+
+I want the current ClashRen Instant Matchmaking implementation to behave and look like that prototype.
+
+---
+
+# IMPORTANT: Do NOT redesign it
+
+Do NOT create your own interpretation of the UI.
+
+Do NOT make a "similar" UI.
+
+**Inspect the prototype and reproduce its existing UI and logic as closely as possible.**
+
+The prototype is the reference.
+
+---
+
+# 1. Compare the complete matched screen
+
+Open and inspect the relevant Instant Matchmaking screen in:
+
+`ClashRen_Instant`
+
+Compare it directly with the current ClashRen implementation.
+
+Check:
+
+* page structure
+* cards
+* player avatar
+* player names
+* "You" label
+* VS section
+* opponent section
+* game mode
+* entry fee
+* icons
+* status indicator
+* progress steps
+* animations
+* spacing
+* font sizes
+* font weights
+* borders
+* radius
+* shadows/glows
+* background
+* red/black esports styling
+* loading indicators
+* transitions
+
+Do not modify unrelated screens.
+
+---
+
+# 2. Fix the raw SVG/icon problem
+
+The current UI is showing things such as:
+
+```text
+svg
+svg
+coin
+```
+
+or raw SVG-related text instead of the actual icon.
+
+Find why this is happening.
+
+If the prototype already has the correct icon implementation/assets, use the same approach.
+
+Do NOT replace working icons with random emoji or generic icons.
+
+The final UI should render the actual intended icons/assets.
+
+---
+
+# 3. Match the prototype's state machine
+
+The UI must not simply display every status at once.
+
+The states should progress according to the prototype.
+
+For example:
+
+```text
+Searching
+   ↓
+Opponent Found
+   ↓
+Preparing Room
+   ↓
+Creating Room
+   ↓
+Booting Game
+   ↓
+Waiting for Credentials
+   ↓
+Room Ready
+```
+
+Use the prototype to determine the **exact state names, ordering, timing and visual behavior**.
+
+Do not invent new states.
+
+If the prototype uses a different sequence, follow the prototype.
+
+---
+
+# 4. Both players must see the same match state
+
+When Player A and Player B are matched:
+
+Player A must see:
+
+```text
+You
+VS
+Opponent
+```
+
+with Player B's actual information.
+
+Player B must see:
+
+```text
+You
+VS
+Opponent
+```
+
+with Player A's actual information.
+
+The `You` and `Opponent` labels must be determined from the logged-in user's identity.
+
+Do NOT hardcode names.
+
+Do NOT assume the first player is always "You".
+
+---
+
+# 5. Preserve real backend data
+
+The UI must use the actual matchmaking response/backend state for:
+
+* player ID
+* opponent ID
+* username
+* avatar
+* match ID
+* game mode
+* entry amount
+* match status
+* room status
+
+Do not hardcode:
+
+```text
+lunexon
+ClutchX
+12
+```
+
+Those are examples of currently rendered data, not fixed values.
+
+---
+
+# 6. Preserve the prototype's logic
+
+This is NOT just a visual task.
+
+The following must remain connected:
+
+```text
+Backend matchmaking
+        ↓
+Match created
+        ↓
+Both players receive match state
+        ↓
+Frontend updates
+        ↓
+Prototype-style matched UI
+        ↓
+Room creation
+        ↓
+Room credentials
+        ↓
+Room ready
+```
+
+Do not fake the UI by immediately setting all states on the frontend.
+
+The UI must represent the actual backend state.
+
+---
+
+# 7. Minimal-resource requirement
+
+Use the minimum possible changes.
+
+Before coding:
+
+1. Inspect the prototype.
+2. Inspect the current implementation.
+3. Find the existing matchmaking components.
+4. Find the existing assets/icons.
+5. Find the existing state-management/API logic.
+6. Identify exactly what differs.
+7. Modify only the necessary files.
+
+Do NOT:
+
+* rebuild the application
+* replace the framework
+* install unnecessary packages
+* create duplicate matchmaking systems
+* redesign unrelated pages
+* modify authentication
+* modify payments/wallet
+* modify unrelated tournament functionality
+* create unnecessary backend services
+
+Reuse existing code wherever possible.
+
+---
+
+# 8. Exact goal
+
+The final result should feel like the original `ClashRen_Instant` prototype was integrated into the current ClashRen application.
+
+Not:
+
+```text
+Current ClashRen UI
++ random prototype-like elements
+```
+
+But:
+
+```text
+Current ClashRen application
++ prototype's correct Instant Matchmaking UI/logic
+```
+
+---
+
+# 9. Test with two users
+
+Use two separate sessions/accounts.
+
+### Player A
+
+Join Instant Matchmaking.
+
+### Player B
+
+Join Instant Matchmaking.
+
+Verify:
+
+* both detect the match
+* both see the correct opponent
+* both see the correct avatar
+* both see the correct game mode
+* both see the correct entry amount
+* both receive the same match ID
+* `You`/`Opponent` are correctly assigned
+* state transitions happen correctly
+* icons render correctly
+* no raw `svg` text appears
+* no broken image appears
+* no hardcoded player information appears
+
+Then test refreshing/reconnecting during the matchmaking flow.
+
+The player should recover the correct current match state rather than getting stuck.
+
+---
+
+# 10. Final validation
+
+Before finishing, compare the current implementation against:
+
+`https://github.com/lunexooryzeno/ClashRen_Instant`
+
+for both:
+
+**UI**
+and
+**logic**.
+
+If something already works in the current ClashRen project, do not replace it unnecessarily.
+
+If the prototype has the correct implementation, reuse/adapt it.
+
+At the end report:
+
+1. Root cause of the UI/logic mismatch.
+2. Files changed.
+3. What was reused from the prototype.
+4. What was fixed.
+5. How the state flow now works.
+6. Confirmation that raw SVG/icon issues are fixed.
+7. Confirmation that both players correctly see each other.
+8. Confirmation that unrelated features were untouched.
+
+**Most important: inspect first, then make the smallest possible changes. Do not blindly rewrite the matchmaking feature.**
