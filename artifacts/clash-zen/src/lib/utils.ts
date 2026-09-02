@@ -39,7 +39,7 @@ export function getTournamentTimeSlots(tournament: { matchSettings?: string | Re
   }
 }
 
-function getRegistrationCloseMinutes(tournament: { matchSettings?: string | Record<string, unknown> | null }): number {
+export function getRegistrationCloseMinutes(tournament: { matchSettings?: string | Record<string, unknown> | null }): number {
   let closeMin = 15;
   try {
     const ms = typeof tournament.matchSettings === "string"
@@ -50,19 +50,27 @@ function getRegistrationCloseMinutes(tournament: { matchSettings?: string | Reco
   return closeMin;
 }
 
+export function isTournamentSlotRegistrationClosed(
+  tournament: { status?: string; startTime?: string; matchSettings?: string | Record<string, unknown> | null },
+  slotIndex: number,
+  now = Date.now(),
+): boolean {
+  if (tournament.status !== "upcoming") return true;
+  const slots = getTournamentTimeSlots(tournament);
+  const slotStartTime = slots.length > 0 ? slots[slotIndex]?.startTime : tournament.startTime;
+  if (!slotStartTime) return true;
+  return now >= new Date(slotStartTime).getTime() - getRegistrationCloseMinutes(tournament) * 60 * 1000;
+}
+
 function isRegistrationClosed(tournament: { status?: string; startTime?: string; matchSettings?: string | Record<string, unknown> | null }): boolean {
   if (tournament.status !== "upcoming") return false;
-  const closeMs = getRegistrationCloseMinutes(tournament) * 60 * 1000;
-  const now = Date.now();
   const slots = getTournamentTimeSlots(tournament);
   if (slots.length > 0) {
     // A tournament remains discoverable while at least one session can still
     // be booked. The API applies the same cutoff to the selected slot.
-    return slots.every(slot => now >= new Date(slot.startTime).getTime() - closeMs);
+    return slots.every((_, index) => isTournamentSlotRegistrationClosed(tournament, index));
   }
-  const startTime = tournament.startTime;
-  if (!startTime) return false;
-  return now >= new Date(startTime).getTime() - closeMs;
+  return isTournamentSlotRegistrationClosed(tournament, 0);
 }
 
 export function isTournamentEnded(tournament: { status?: string; startTime?: string; matchSettings?: string | Record<string, unknown> | null }): boolean {

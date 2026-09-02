@@ -5,3 +5,4 @@
 - [Prize state machine](prize-state-machine.md) — quickmatch_prizes table drives idempotent prize payouts; all mutations must go through prize-state.ts helpers only.
 - [Worker type selection](worker-type-selection.md) — quickmatch_workers.worker_type ("room_creator"|"verifier") gates selectWorker(); verifier phones only handle screenshot OCR callbacks.
 - [Preview workflow startup](preview-workflow-startup.md) — when the bundled preview supervisor times out, the artifact Vite workflow can still validate the latest UI on its assigned port.
+- [Multi-slot availability](multi-slot-availability.md) — discovery stays open while any configured session remains bookable; cutoffs are evaluated per session.

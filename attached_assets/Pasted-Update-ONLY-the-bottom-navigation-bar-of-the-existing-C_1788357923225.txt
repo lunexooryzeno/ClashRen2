@@ -1,0 +1,138 @@
+Update **ONLY the bottom navigation bar** of the existing ClashRen app.
+
+### IMPORTANT — SCOPE RESTRICTION
+
+This task is ONLY for changing the bottom navigation bar.
+
+**DO NOT change:**
+
+* Any backend/API logic
+* Database/schema
+* Authentication
+* Matchmaking logic
+* Match creation
+* Solo/Duo/Squad logic
+* Tournament logic
+* Wallet/coins logic
+* Profile functionality
+* Rank functionality
+* Existing page content
+* Top navigation bar
+* Colors/theme of the rest of the app
+* Typography of existing pages
+* Existing components unrelated to the bottom navbar
+* Routing behavior except where necessary to connect the new navbar items to existing routes
+
+Do not redesign the entire application. Do not refactor unrelated code.
+
+---
+
+## NEW BOTTOM NAVIGATION
+
+Replace the current bottom navigation items:
+
+**Home / Profile / History / Rank / Matches**
+
+with:
+
+1. **Home**
+2. **Matches**
+3. **Quick Match**
+4. **Rank**
+5. **Profile**
+
+The order MUST be exactly:
+
+**Home → Matches → Quick Match → Rank → Profile**
+
+---
+
+## QUICK MATCH — CENTER BUTTON
+
+Quick Match must be the **center navigation item**.
+
+Make it visually more prominent than the other four items while still matching the existing ClashRen design.
+
+Use the existing icon system if one already exists.
+
+If appropriate, make the Quick Match button slightly larger or visually emphasized, but **do not introduce a completely new visual theme** in this task.
+
+Quick Match should navigate to the application's **existing Quick Match/matchmaking screen**.
+
+Do NOT implement or modify matchmaking functionality.
+
+---
+
+## ROUTING
+
+Connect each navigation item to the appropriate EXISTING page/route:
+
+* Home → existing Home page
+* Matches → existing Matches page
+* Quick Match → existing Quick Match/matchmaking page
+* Rank → existing Rank page
+* Profile → existing Profile page
+
+If one of these routes already exists under a different name, reuse the existing route rather than creating duplicate pages.
+
+---
+
+## HISTORY
+
+Remove **History** from the bottom navigation.
+
+Do NOT delete the History page or its functionality.
+
+The existing History functionality must remain accessible through its current location, such as Profile or another existing route.
+
+Only remove its bottom-navbar entry.
+
+---
+
+## ACTIVE STATE
+
+The currently selected page must have a clear active state.
+
+Example:
+
+Home selected:
+Home = active
+Matches = inactive
+Quick Match = inactive
+Rank = inactive
+Profile = inactive
+
+When navigating to another page, update the active state correctly.
+
+---
+
+## RESPONSIVE / MOBILE UI
+
+Keep the navbar optimized for the existing mobile-first ClashRen interface.
+
+Ensure:
+
+* All 5 items fit cleanly
+* Icons remain aligned
+* Labels don't overlap
+* Touch targets remain comfortable
+* Safe-area padding is preserved on devices with gesture navigation
+* Navbar does not cover page content
+* Existing scrolling behavior remains unchanged
+
+---
+
+## FINAL REQUIREMENT
+
+Before finishing:
+
+1. Inspect the existing navigation implementation.
+2. Make the smallest possible code changes required.
+3. Reuse existing components, icons, styling and routing where possible.
+4. Verify all 5 navigation buttons work.
+5. Verify active states work.
+6. Verify History is removed ONLY from the bottom navbar.
+7. Verify Quick Match is positioned in the center.
+8. Verify no unrelated files/features were modified.
+
+**This is a navigation-only change. Do not make any other UI or functional changes.**

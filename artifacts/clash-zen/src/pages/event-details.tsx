@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
-import { getTournamentTimeSlots, isTournamentEnded, isUserVisibleTournament, parseGameMode } from "@/lib/utils";
+import { getTournamentTimeSlots, isTournamentEnded, isTournamentSlotRegistrationClosed, isUserVisibleTournament, parseGameMode } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 function resolveImageUrl(url: string | null | undefined): string | null {
@@ -125,6 +125,7 @@ export default function EventDetails() {
 
   const isLoading = isSlug ? slugLoading : numLoading;
   const resolvedTournament: any = isSlug ? slugData : tournament;
+  const resolvedTimeSlots = getTournamentTimeSlots(resolvedTournament ?? {});
 
   useEffect(() => {
     if (resolvedTournament && !resolvedTournament.isJoined && !isUserVisibleTournament(resolvedTournament)) {
@@ -143,7 +144,13 @@ export default function EventDetails() {
   useEffect(() => {
     if (!resolvedTournament?.id) return;
     const stored = localStorage.getItem(`czsl_${resolvedTournament.id}`);
-    const slotIdx = stored !== null ? parseInt(stored, 10) : 0;
+    const storedIndex = stored !== null ? parseInt(stored, 10) : -1;
+    const firstOpenIndex = resolvedTimeSlots.findIndex((_, index) =>
+      !isTournamentSlotRegistrationClosed(resolvedTournament, index)
+    );
+    const slotIdx = resolvedTournament.isJoined || storedIndex < 0 || !isTournamentSlotRegistrationClosed(resolvedTournament, storedIndex)
+      ? (storedIndex >= 0 ? storedIndex : firstOpenIndex >= 0 ? firstOpenIndex : 0)
+      : (firstOpenIndex >= 0 ? firstOpenIndex : storedIndex);
     setSelectedSlotIndex(slotIdx);
 
     const booked = localStorage.getItem(`czbl_${resolvedTournament.id}`);
@@ -164,7 +171,7 @@ export default function EventDetails() {
       setSelectedSlotIndex(indices[0]);
       localStorage.setItem(`czsl_${resolvedTournament.id}`, String(indices[0]));
     }
-  }, [resolvedTournament?.id, resolvedTournament?.isJoined]);
+  }, [resolvedTournament?.id, resolvedTournament?.isJoined, resolvedTimeSlots.length]);
 
   // ── Live clock (1 s ticks — drives slot disabling + countdown) ──
   useEffect(() => {
@@ -175,7 +182,6 @@ export default function EventDetails() {
   const joinTournament = useJoinTournament();
 
   // ── Countdown hooks must be here (before any early returns) ──
-  const resolvedTimeSlots = getTournamentTimeSlots(resolvedTournament ?? {});
   const selectedTimeSlot = resolvedTimeSlots[selectedSlotIndex ?? 0];
   const _startTime = resolvedTournament?.status === "upcoming"
     ? (selectedTimeSlot?.startTime ?? (resolvedTournament as any).startTime)
@@ -253,20 +259,12 @@ export default function EventDetails() {
   );
   const nextAvailableTournament = useMemo(() => {
     if (!resolvedTournament || !allTournaments) return null;
-    const now = Date.now();
-    const getCloseMin = (t: any) => {
-      try {
-        const ms = typeof t.matchSettings === "string" ? JSON.parse(t.matchSettings) : (t.matchSettings ?? {});
-        return typeof ms.registrationCloseMinutes === "number" ? ms.registrationCloseMinutes : 15;
-      } catch { return 15; }
-    };
     return (allTournaments as any[])
       .filter(t =>
         t.id !== resolvedTournament.id &&
         ((t.gameMode ?? "") === (resolvedTournament as any).gameMode) &&
         t.status === "upcoming" &&
         isUserVisibleTournament(t) &&
-        new Date(t.startTime).getTime() - getCloseMin(t) * 60 * 1000 > now &&
         t.filledSlots < t.maxSlots
       )
       .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0] ?? null;
@@ -1520,7 +1518,7 @@ export default function EventDetails() {
                   const isLocked    = !!tm.isJoined;
                   const isBookedSlot = isLocked && bookedSlotIndices.includes(i);
                   const isPlayed    = isBookedSlot && slotPast;
-                   const isDisabled  = isBookedSlot || (slotCutoffPassed && !isSelected);
+                   const isDisabled  = isBookedSlot || slotCutoffPassed;
 
                   let statusVisuals = {
                      border: "border-white/5",
