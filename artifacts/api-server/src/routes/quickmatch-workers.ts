@@ -183,7 +183,10 @@ export function startJoinWindow(match: QuickMatch): void {
 }
 
 // ─── Worker callback (no user auth — validated by access token) ───────────────
-router.post("/quickmatch/worker/callback", async (req, res) => {
+// The public MacroDroid callback is /api/workers/host/status.
+// Keep the older path as an alias so already-configured worker macros continue
+// to work while new macros use the canonical host-status URL.
+router.post(["/workers/host/status", "/quickmatch/worker/callback"], async (req, res) => {
   const {
     access_token,
     phone_status,
