@@ -91,6 +91,10 @@ router.post("/auth/guest", (_req, res) => {
     sv: 0,
     guest: true,
   });
+  // Keep guest sessions consistent with normal auth sessions. The frontend
+  // also stores the token for preview environments where cookies may be
+  // blocked, but the cookie is required for regular same-origin requests.
+  setSessionCookie(res, token);
   res.json({
     token,
     isNewUser: false,

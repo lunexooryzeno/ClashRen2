@@ -15,6 +15,7 @@ import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
 import { sendOtpViaBrowser, verifyOtpViaBrowser } from "@/lib/antcloud";
+import { apiPost } from "@/lib/api";
 
 const WHATSAPP_NUMBER = "919999999999";
 
@@ -167,20 +168,15 @@ export default function GetStartedPage() {
     if (isStartingGuest) return;
     setIsStartingGuest(true);
     try {
-      const response = await fetch("/api/auth/guest", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) throw new Error("Unable to start guest session");
-      const data = await response.json() as { token: string };
+      const data = await apiPost<{ token?: string }>("/auth/guest");
+      if (!data.token) throw new Error("Guest session token was not returned");
       localStorage.setItem("clash_ren_token", data.token);
       await invalidateUser();
       setLocation("/");
-    } catch {
+    } catch (error) {
       toast({
         title: "Could not start guest mode",
-        description: "Please try again.",
+        description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
     } finally {
