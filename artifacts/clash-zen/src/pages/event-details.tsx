@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { Calendar, Users, Trophy, Swords, ShieldAlert, ArrowLeft, Key, CheckCircle, Clock, Swords as SwordsIcon, Copy, Lock, Unlock, Gamepad2, ShieldCheck, Zap, BadgeCheck, Bot, AlertTriangle, FileSearch, Wallet, Crosshair, ChevronDown, ListFilter, Check, Monitor, Video, Ban, Target, HeartPulse, Package, Plane, Car, PawPrint, BrickWall, Bomb } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { useAuth } from "@/lib/auth";
+import { GuestAccessPrompt } from "@/components/guest-access-prompt";
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { haptic } from "@/lib/haptics";
@@ -74,10 +75,11 @@ export default function EventDetails() {
   const isSlug = numericId === 0 && rawId.length > 0;
 
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [showShiftDialog, setShowShiftDialog] = useState(false);
   const [rulesAccepted, setRulesAccepted] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -326,6 +328,15 @@ export default function EventDetails() {
       haptic.error(); sound.error();
       toast({ title: "Failed to join", description: "Network error. Please try again.", variant: "destructive" });
     });
+  };
+
+  const openJoinDialog = () => {
+    if (isGuest) {
+      setShowGuestPrompt(true);
+      return;
+    }
+    setRulesAccepted(false);
+    setShowJoinDialog(true);
   };
 
   const handleReady = async () => {
@@ -1301,7 +1312,7 @@ export default function EventDetails() {
                 <Swords className="w-4 h-4" /> View in My Matches
               </Button>
             ) : tm.isJoined && !bookedSlotIndices.includes(selectedSlotIndex ?? -1) ? (
-              <Button className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[15px] shadow-[0_0_20px_hsl(var(--primary)/0.4)]" onClick={() => { setRulesAccepted(false); setShowJoinDialog(true); }} data-testid="button-join">Join Now</Button>
+              <Button className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[15px] shadow-[0_0_20px_hsl(var(--primary)/0.4)]" onClick={openJoinDialog} data-testid="button-join">Join Now</Button>
             ) : !isUpcoming ? (
               <Button disabled className="w-full h-14 rounded-2xl bg-white/5 text-zinc-500 font-bold border border-white/5">
                 Tournament Ended
@@ -1319,7 +1330,7 @@ export default function EventDetails() {
               </Button>
             ) : (
               <Button 
-                onClick={() => setShowJoinDialog(true)}
+                onClick={openJoinDialog}
                 className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[15px] shadow-[0_0_20px_rgba(var(--primary),0.4)]"
               >
                 Join Tournament
@@ -1330,6 +1341,18 @@ export default function EventDetails() {
       </div>
 
       {/* ── 15. Bottom Sheets / Dialogs ── */}
+
+      {showGuestPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-sm">
+            <GuestAccessPrompt
+              title="Ready to compete?"
+              description="Create your ClashRen account to enter tournaments and play your first match."
+              onContinue={() => setShowGuestPrompt(false)}
+            />
+          </div>
+        </div>
+      )}
       
       {/* ── Join Confirm Dialog ── */}
       {showJoinDialog && (

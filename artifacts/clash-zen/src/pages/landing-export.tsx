@@ -31,9 +31,9 @@ const features = [
 
 export default function LandingExport() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isGuest } = useAuth();
   const pwa = usePwaInstall();
-  const play = () => setLocation(isAuthenticated ? "/" : "/get-started");
+  const play = () => setLocation(isAuthenticated && !isGuest ? "/" : "/get-started");
   const download = () => pwa.state === "available" ? pwa.install() : play();
 
   return (

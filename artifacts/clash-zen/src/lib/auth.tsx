@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isGuest: boolean;
   isExplorer: boolean;
   invalidateUser: () => Promise<void>;
   logout: () => void;
@@ -225,7 +226,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { localStorage.removeItem("clash_ren_token"); } catch { /* ignore */ }
   };
 
-  const isExplorer = !!user && !user.isProfileComplete;
+  const isGuest = !!user && (user as User & { isGuest?: boolean }).isGuest === true;
+  const isExplorer = !!user && !isGuest && !user.isProfileComplete;
 
   return (
     <AuthContext.Provider
@@ -233,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         isLoading,
         isAuthenticated: !!user,
+        isGuest,
         isExplorer,
         invalidateUser,
         logout,

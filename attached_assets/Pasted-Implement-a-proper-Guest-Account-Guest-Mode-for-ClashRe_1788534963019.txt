@@ -1,0 +1,293 @@
+Implement a proper **Guest Account / Guest Mode** for ClashRen.
+
+### Goal
+
+Allow new visitors to enter ClashRen instantly as a guest so they can **explore the platform before creating an account**, while strictly preventing guests from accessing competitive and financial functionality.
+
+This must feel like a real ClashRen experience, not a restricted broken version of the app.
+
+### Guest User Experience
+
+When a user opens ClashRen without an authenticated account, provide two clear options:
+
+* **Continue as Guest**
+* **Sign In / Create Account**
+
+Guest mode should require no Google login, phone verification, Free Fire UID, wallet setup, or other registration.
+
+After choosing **Continue as Guest**, take the user into the normal ClashRen mobile-first UI.
+
+### What Guests CAN Do
+
+Guests should be able to:
+
+* View the ClashRen home screen.
+* Explore the available game modes.
+* View Lone Wolf 1v1 information.
+* View Clash Squad information if available.
+* View Battle Royale information if available.
+* Browse tournaments.
+* View tournament details.
+* View public rankings/leaderboards if implemented.
+* View public ClashRen information.
+* Explore the UI/navigation.
+* View example/public match information where appropriate.
+* See how matchmaking works.
+* See the general competitive experience.
+
+The objective is to let someone understand:
+
+**"What is ClashRen and why should I join?"**
+
+### What Guests CANNOT Do
+
+Guests must NOT be able to:
+
+* Enter matchmaking.
+* Join a competitive match.
+* Register for a paid/free competitive match.
+* Bind a Free Fire UID/identity as a competitive identity.
+* Spend coins.
+* Receive coins.
+* Receive rewards.
+* Withdraw funds.
+* Deposit funds.
+* Submit competitive match results.
+* Submit evidence for a match.
+* File disputes.
+* Access private match information.
+* Access another player's private information.
+* Access authenticated account data.
+
+Do NOT simply hide these features and assume that is enough.
+
+The backend must enforce guest restrictions as well.
+
+A malicious user must not be able to call an API directly and bypass the frontend.
+
+### Guest CTA Behavior
+
+Whenever a guest attempts a restricted action, show a clear conversion prompt.
+
+Examples:
+
+**Attempting matchmaking**
+
+> Ready to compete?
+> Create your ClashRen account to enter matchmaking and play your first match.
+
+Buttons:
+
+**Create Account**
+**Sign In**
+**Continue Exploring**
+
+---
+
+**Attempting to use wallet**
+
+> Your wallet is available after creating a ClashRen account.
+
+Buttons:
+
+**Create Account**
+**Sign In**
+
+---
+
+**Attempting to join a tournament**
+
+> Create your ClashRen account to participate in tournaments.
+
+Buttons:
+
+**Create Account**
+**Sign In**
+
+Do not show confusing errors such as "Unauthorized" or "403" to normal users.
+
+### Guest Session
+
+Implement guest access as a temporary session.
+
+Important:
+
+* Do NOT create a normal competitive player account for every guest.
+* Do NOT assign a guest a usable competitive wallet.
+* Do NOT create a fake Free Fire identity.
+* Do NOT allow guest sessions to become financially active.
+* Guest session data should be minimal.
+
+If the existing authentication architecture supports anonymous sessions, integrate with it instead of creating a second unrelated authentication system.
+
+### Converting Guest → Account
+
+If technically appropriate, allow a guest to select:
+
+**Create Account**
+
+and transition cleanly into the registration/authentication flow.
+
+After successful registration/login:
+
+* Guest restrictions disappear.
+* The user becomes an authenticated ClashRen player.
+* The normal profile setup flow can begin.
+* Free Fire identity binding can be requested before competitive participation.
+* Do not automatically invent or copy competitive identity data.
+
+Do not silently lose important non-sensitive user preferences/state during the transition if the existing architecture can safely preserve them.
+
+### Navigation
+
+Guests can see the normal mobile navigation where appropriate:
+
+* Home
+* Matches
+* Rank
+* History
+* Profile
+
+However, authenticated-only sections should clearly communicate that login is required.
+
+Do not make the guest UI feel like an entirely different application.
+
+### Guest Profile
+
+If the Profile screen is accessible to guests, show something similar to:
+
+**Guest**
+
+"Explore ClashRen and create an account when you're ready to compete."
+
+Include:
+
+* Create Account
+* Sign In
+
+Do NOT show fake:
+
+* Win rate
+* Earnings
+* Match history
+* Trust score
+* Free Fire UID
+* Wallet balance
+
+### Wallet UI
+
+Guests should not receive a fake balance such as `0 coins` if that could make them appear to have a real wallet.
+
+Instead, show an account-required state such as:
+
+**Wallet**
+`Sign in to access your ClashRen wallet.`
+
+If the existing design requires a balance component in the header, make it visually obvious that the guest has no wallet rather than displaying a misleading financial balance.
+
+### Security Requirements
+
+Guest restrictions must be enforced server-side.
+
+Every protected endpoint must distinguish between:
+
+* Guest/anonymous session
+* Authenticated player
+* Authorized admin/operator
+
+A guest must receive an appropriate authorization response when attempting protected operations.
+
+Especially protect:
+
+* Matchmaking
+* Match participation
+* Wallet
+* Transactions
+* Deposits
+* Withdrawals
+* Rewards
+* Evidence submission
+* Disputes
+* Private matches
+* Free Fire identity binding
+
+Never trust a client-provided value such as:
+
+```text
+isGuest: false
+```
+
+The server must determine authentication state from the authenticated session/token.
+
+### Preserve Existing Architecture
+
+Before making changes:
+
+1. Inspect the existing repository.
+2. Identify the current authentication implementation.
+3. Identify existing session/token handling.
+4. Identify protected routes.
+5. Identify frontend auth guards.
+6. Identify wallet/matchmaking authorization logic.
+7. Identify existing navigation and UI components.
+
+Do NOT rewrite the authentication system unnecessarily.
+
+Use the existing architecture wherever possible.
+
+### UI Requirements
+
+Maintain the existing ClashRen design:
+
+* Dark/black esports aesthetic.
+* Deep red accents.
+* CLASH white/silver.
+* REN red.
+* Mobile-first.
+* Strong visual hierarchy.
+* Fast interactions.
+* Competitive/esports feel.
+
+Guest mode should feel intentionally designed, not like an error state.
+
+### Important Product Principle
+
+Guest mode exists for **exploration and conversion**.
+
+The flow should be:
+
+**Landing → Continue as Guest → Explore ClashRen → Understand the product → Attempt competitive action → Sign Up/Login → Free Fire identity → Compete**
+
+Do not allow guests to enter the actual competitive loop.
+
+The master product definition explicitly treats Guest as an exploration mode rather than a competitive account.
+
+### Acceptance Criteria
+
+The implementation is complete only when:
+
+1. A new visitor can enter ClashRen as a guest.
+2. Guest users can explore the public product experience.
+3. Guests cannot enter matchmaking.
+4. Guests cannot participate in matches.
+5. Guests cannot access wallet functionality.
+6. Guests cannot deposit or withdraw.
+7. Guests cannot receive rewards.
+8. Guests cannot submit competitive evidence/results.
+9. Guests cannot file disputes.
+10. Backend APIs enforce these restrictions.
+11. Restricted actions produce useful Sign In/Create Account prompts.
+12. Guest → authenticated account conversion works correctly.
+13. Existing authenticated users continue working normally.
+14. Existing routes and functionality are not unnecessarily broken or renamed.
+15. No fake financial balance or fake competitive statistics are created for guests.
+16. The implementation works properly on mobile/PWA layouts.
+17. Authorization is based on server-side authentication state, not frontend flags.
+
+### Final instruction
+
+Do not build this as a superficial frontend-only "Guest Mode."
+
+Implement it as a proper **anonymous exploration state integrated into ClashRen's existing authentication and authorization architecture**, while keeping the core competitive, wallet, and reward systems strictly authenticated.
+
+Before changing code, inspect the existing implementation and adapt the solution to what is already there.

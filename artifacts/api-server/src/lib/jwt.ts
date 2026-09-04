@@ -21,10 +21,12 @@ export interface JWTPayload {
   phone?: string | null;
   isAdmin: boolean;
   sv: number;
+  /** Anonymous exploration session. Guest tokens never map to a database user. */
+  guest?: boolean;
 }
 
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: payload.guest ? "24h" : "30d" });
 }
 
 export function verifyToken(token: string): JWTPayload | null {

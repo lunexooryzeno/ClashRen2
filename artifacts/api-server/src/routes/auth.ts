@@ -84,6 +84,39 @@ const COOKIE_NAME = "clash_zen_session";
 const COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const OTP_EXPIRY_MINUTES = 10;
 
+router.post("/auth/guest", (_req, res) => {
+  const token = signToken({
+    userId: 0,
+    isAdmin: false,
+    sv: 0,
+    guest: true,
+  });
+  res.json({
+    token,
+    isNewUser: false,
+    user: {
+      id: 0,
+      phone: null,
+      googleId: null,
+      email: null,
+      displayName: "Guest",
+      avatarUrl: null,
+      isProfileComplete: false,
+      inGameName: null,
+      uid: null,
+      profilePicture: null,
+      diamondBalance: 0,
+      isAdmin: false,
+      isGuest: true,
+      createdAt: new Date().toISOString(),
+      allowDepositWithdrawal: false,
+      minWithdrawal: null,
+      minTopup: null,
+      platformId: null,
+    },
+  });
+});
+
 function setSessionCookie(res: Response, token: string) {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,

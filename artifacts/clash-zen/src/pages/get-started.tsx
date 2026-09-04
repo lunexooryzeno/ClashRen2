@@ -110,7 +110,7 @@ const phoneSchema = z.object({
 type Step = "phone" | "otp" | "2fa" | "suspended";
 
 export default function GetStartedPage() {
-  const { isAuthenticated, isLoading, invalidateUser, user } = useAuth();
+  const { isAuthenticated, isLoading, invalidateUser, user, isGuest, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("phone");
   const [suspendedData, setSuspendedData] = useState<SuspendedData | null>(null);
@@ -125,6 +125,7 @@ export default function GetStartedPage() {
   const [twoFaCode, setTwoFaCode] = useState("");
   const [twoFaError, setTwoFaError] = useState("");
   const [isVerifying2fa, setIsVerifying2fa] = useState(false);
+  const [isStartingGuest, setIsStartingGuest] = useState(false);
 
   const phoneRef = useRef(phone);
   const honeypotRef = useRef("");
@@ -162,13 +163,41 @@ export default function GetStartedPage() {
     return `${digits.slice(0, 5)} ${digits.slice(5)}`;
   };
 
+  const continueAsGuest = async () => {
+    if (isStartingGuest) return;
+    setIsStartingGuest(true);
+    try {
+      const response = await fetch("/api/auth/guest", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Unable to start guest session");
+      const data = await response.json() as { token: string };
+      localStorage.setItem("clash_ren_token", data.token);
+      await invalidateUser();
+      setLocation("/");
+    } catch {
+      toast({
+        title: "Could not start guest mode",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingGuest(false);
+    }
+  };
+
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      // New users (no uid or in-game name) must complete profile setup first
-      if (!user.uid || !user.inGameName) {
+      // New users (no uid or in-game name) must complete profile setup first.
+      // Keep the auth screen available if a guest reaches it directly so they
+      // can convert instead of being sent back into guest exploration.
+      if (!isGuest && (!user.uid || !user.inGameName)) {
         setLocation("/setup-profile");
         return;
       }
+      if (isGuest) return;
       const redirect = sessionStorage.getItem("redirectAfterLogin");
       sessionStorage.removeItem("redirectAfterLogin");
       if (
@@ -182,7 +211,7 @@ export default function GetStartedPage() {
         setLocation("/");
       }
     }
-  }, [isAuthenticated, isLoading, user, setLocation]);
+  }, [isAuthenticated, isLoading, user, isGuest, setLocation]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -559,10 +588,15 @@ export default function GetStartedPage() {
                   </div>
                 </div>
 
-                {/* Google sign-in — coming soon */}
-                <div
-                  className="relative w-full flex items-center gap-3 rounded-2xl cursor-not-allowed select-none overflow-hidden"
-                  style={{ height: 50, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                 {/* Google sign-in uses the server's existing OAuth flow. */}
+                 <button
+                   type="button"
+                   onClick={() => {
+                     if (isGuest) logout();
+                     window.location.href = "/api/auth/google?redirect=/";
+                   }}
+                   className="relative w-full flex items-center gap-3 rounded-2xl cursor-pointer select-none overflow-hidden transition hover:bg-white/[0.08] active:scale-[0.99]"
+                   style={{ height: 50, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
                 >
                   <div className="absolute inset-0 pointer-events-none" style={{ background: "repeating-linear-gradient(135deg, transparent, transparent 8px, rgba(255,255,255,0.012) 8px, rgba(255,255,255,0.012) 16px)" }} />
                   <div className="relative flex items-center gap-3 w-full px-4">
@@ -572,10 +606,9 @@ export default function GetStartedPage() {
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    <span className="text-[13px] font-medium text-zinc-600">Continue with Google</span>
-                    <span className="ml-auto text-[9px] font-bold tracking-widest px-2 py-0.5 rounded-md" style={{ background: "rgba(251,191,36,0.1)", color: "rgba(251,191,36,0.6)", border: "1px solid rgba(251,191,36,0.15)" }}>COMING SOON</span>
+                     <span className="text-[13px] font-medium text-zinc-300">Continue with Google</span>
                   </div>
-                </div>
+                 </button>
 
                 {/* Divider */}
                 <div className="flex items-center gap-3">
@@ -640,13 +673,14 @@ export default function GetStartedPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
+                  onClick={() => { haptic.mediumTap(); void continueAsGuest(); }}
+                  disabled={isStartingGuest}
                   className="w-full rounded-2xl border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/[0.07] hover:text-white font-heading tracking-wide transition-all active:scale-[0.98]"
                   style={{ height: 50 }}
                   data-testid="btn-continue-as-guest"
                 >
                   <Eye className="w-4 h-4 mr-2 text-zinc-500" />
-                  Continue as Guest
+                  {isStartingGuest ? "Starting Guest Mode…" : "Continue as Guest"}
                 </Button>
 
                 {/* Trust row */}

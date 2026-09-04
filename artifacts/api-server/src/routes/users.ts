@@ -25,6 +25,33 @@ const ONLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
 const router: IRouter = Router();
 
 router.get("/users/me", requireAuth, async (req, res) => {
+  if (req.user?.isGuest) {
+    res.json({
+      id: 0,
+      phone: null,
+      googleId: null,
+      email: null,
+      displayName: "Guest",
+      avatarUrl: null,
+      isProfileComplete: false,
+      inGameName: null,
+      uid: null,
+      profilePicture: null,
+      diamondBalance: 0,
+      isAdmin: false,
+      isGuest: true,
+      createdAt: new Date().toISOString(),
+      allowDepositWithdrawal: false,
+      minWithdrawal: null,
+      minTopup: null,
+      nameChangedAt: null,
+      nameChangeAllowed: false,
+      twoFaResetAt: null,
+      twoFaWithdrawalBypass: false,
+      platformId: null,
+    });
+    return;
+  }
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, req.user!.userId) });
   if (!user) {
     res.status(404).json({ error: "User not found" });

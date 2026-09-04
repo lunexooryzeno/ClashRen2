@@ -43,7 +43,7 @@ function getDirection(from: string, to: string): "from-right" | "from-left" {
 }
 
 export const TopBar = memo(function TopBar() {
-  const { user } = useAuth();
+  const { user, isGuest, logout } = useAuth();
   const [unread, setUnread] = useState(0);
   const prevBalanceRef = useRef<number | null>(null);
   const [walletFlash, setWalletFlash] = useState(false);
@@ -51,10 +51,14 @@ export const TopBar = memo(function TopBar() {
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (isGuest) {
+      setUnread(0);
+      return;
+    }
     getUnreadCount().then(setUnread);
     const interval = setInterval(() => getUnreadCount().then(setUnread), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => {
     const balance = user?.diamondBalance ?? 0;
@@ -154,64 +158,70 @@ export const TopBar = memo(function TopBar() {
             </Link>
           )}
 
-          {/* Combined balance + add pill */}
-          <Link href="/top-up">
-            <div
-              className="flex items-center cursor-pointer active:scale-95 transition-transform overflow-hidden"
-              style={{
-                borderRadius: 999,
-                background: walletFlash
-                  ? "rgba(30,50,90,0.95)"
-                  : "rgba(14,20,40,0.9)",
-                border: walletFlash
-                  ? "1px solid rgba(96,165,250,0.5)"
-                  : "1px solid rgba(96,165,250,0.22)",
-                boxShadow: walletFlash
-                  ? "0 0 18px rgba(96,165,250,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
-                  : "inset 0 1px 0 rgba(255,255,255,0.06)",
-                transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
-                position: "relative",
-              }}
-              data-testid="display-coin-balance"
-            >
-              {/* Coin + number */}
-              <div className="flex items-center gap-1 px-3 py-1.5">
-                <CoinIcon size={20} flash={walletFlash} />
-                <span
-                  className="text-[14px] font-extrabold text-white tabular-nums"
-                  style={walletFlash ? { animation: "wallet-num-pop 0.65s ease-out both" } : undefined}
-                >
-                  {user?.diamondBalance ?? 0}
-                </span>
-              </div>
-
-              {/* Orange circle + button */}
-              <div className="flex items-center pr-1.5 pl-1">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                  style={{
-                    background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
-                    boxShadow: "0 2px 10px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.2)",
-                  }}
-                >
-                  <Plus className="w-3.5 h-3.5 text-white" strokeWidth={2.8} />
+          {isGuest ? (
+            <Link href="/get-started" onClick={logout}>
+              <button
+                className="rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/20 active:scale-95"
+                data-testid="guest-sign-in"
+              >
+                Sign in to compete
+              </button>
+            </Link>
+          ) : (
+            /* Combined balance + add pill */
+            <Link href="/top-up">
+              <div
+                className="flex items-center cursor-pointer active:scale-95 transition-transform overflow-hidden"
+                style={{
+                  borderRadius: 999,
+                  background: walletFlash
+                    ? "rgba(30,50,90,0.95)"
+                    : "rgba(14,20,40,0.9)",
+                  border: walletFlash
+                    ? "1px solid rgba(96,165,250,0.5)"
+                    : "1px solid rgba(96,165,250,0.22)",
+                  boxShadow: walletFlash
+                    ? "0 0 18px rgba(96,165,250,0.4), inset 0 1px 0 rgba(255,255,255,0.08)"
+                    : "inset 0 1px 0 rgba(255,255,255,0.06)",
+                  transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
+                  position: "relative",
+                }}
+                data-testid="display-coin-balance"
+              >
+                <div className="flex items-center gap-1 px-3 py-1.5">
+                  <CoinIcon size={20} flash={walletFlash} />
+                  <span
+                    className="text-[14px] font-extrabold text-white tabular-nums"
+                    style={walletFlash ? { animation: "wallet-num-pop 0.65s ease-out both" } : undefined}
+                  >
+                    {user?.diamondBalance ?? 0}
+                  </span>
                 </div>
+                <div className="flex items-center pr-1.5 pl-1">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                    style={{
+                      background: "linear-gradient(135deg,#f97316 0%,#ea580c 100%)",
+                      boxShadow: "0 2px 10px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5 text-white" strokeWidth={2.8} />
+                  </div>
+                </div>
+                {walletDelta !== null && (
+                  <span
+                    className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-300 whitespace-nowrap pointer-events-none"
+                    style={{
+                      animation: "wallet-delta-up 0.85s ease-out both",
+                      textShadow: "0 0 8px rgba(96,165,250,0.8)",
+                    }}
+                  >
+                    +{walletDelta}
+                  </span>
+                )}
               </div>
-
-              {/* Floating delta */}
-              {walletDelta !== null && (
-                <span
-                  className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-300 whitespace-nowrap pointer-events-none"
-                  style={{
-                    animation: "wallet-delta-up 0.85s ease-out both",
-                    textShadow: "0 0 8px rgba(96,165,250,0.8)",
-                  }}
-                >
-                  +{walletDelta}
-                </span>
-              )}
-            </div>
-          </Link>
+            </Link>
+          )}
 
           {/* Bell */}
           <Link href="/notifications">

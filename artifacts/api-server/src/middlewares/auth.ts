@@ -12,6 +12,7 @@ declare global {
         userId: number;
         isAdmin: boolean;
         adminRole?: string | null;
+      isGuest?: boolean;
       };
     }
   }
@@ -50,6 +51,50 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+
+  // Guest tokens are deliberately short-lived anonymous sessions. They may
+  // read only public product data; no write or private endpoint can use one.
+  if (payload.guest) {
+    const path = req.path;
+    const blockedGuestReads = [
+      "/users/",
+      "/history",
+      "/wallet",
+      "/topup",
+      "/withdrawals",
+      "/notifications",
+      "/quickmatch",
+      "/slots",
+      "/my-matches",
+      "/squads",
+      "/reports",
+      "/feedback",
+      "/support",
+      "/freefire",
+      "/push",
+      "/storage",
+      "/payment-sessions",
+    ];
+    const isBlockedRead = blockedGuestReads.some(prefix => path.startsWith(prefix));
+    if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
+      res.status(403).json({
+        error: "Create an account to use competitive features.",
+        code: "GUEST_RESTRICTED",
+      });
+      return;
+    }
+    if (isBlockedRead && path !== "/users/me") {
+      res.status(403).json({
+        error: "Create an account to access this feature.",
+        code: "GUEST_RESTRICTED",
+      });
+      return;
+    }
+    req.user = { userId: 0, isAdmin: false, adminRole: null, isGuest: true };
+    next();
+    return;
+  }
+
   db.query.usersTable.findFirst({
     where: eq(usersTable.id, payload.userId),
     columns: { id: true, status: true, isAdmin: true, sessionVersion: true, adminRole: true, blockedReason: true, blockedUntil: true, deleteReason: true },
@@ -83,7 +128,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
         res.status(401).json({ error: "Session expired. You have been logged in on another device.", code: "SESSION_SUPERSEDED" });
         return;
       }
-      req.user = { userId: user.id, isAdmin: user.isAdmin, adminRole: user.adminRole };
+      req.user = { userId: user.id, isAdmin: user.isAdmin, adminRole: user.adminRole, isGuest: false };
       next();
     })
     .catch(() => {
@@ -99,6 +144,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 export function requireFullProfile(req: Request, res: Response, next: NextFunction): void {
   if (!req.user) {
     res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (req.user.isGuest) {
+    res.status(403).json({
+      error: "Create an account to participate in ClashRen matches.",
+      code: "GUEST_RESTRICTED",
+    });
     return;
   }
   db.query.usersTable.findFirst({

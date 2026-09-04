@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { useEffect } from "react";
 import SetupProfileScreen from "@/pages/setup-profile";
 import { AppLayout } from "./app-layout";
+import { GuestAccessPrompt } from "@/components/guest-access-prompt";
 
 export function ProtectedRoute({ component: Component, ...props }: { component: React.ElementType, path?: string }) {
-  const { user, isAuthenticated, isLoading, isExplorer } = useAuth();
+  const { user, isAuthenticated, isLoading, isGuest, isExplorer } = useAuth();
   const [location, setLocation] = useLocation();
 
   const SKIP_SAVE_REDIRECT = ["/setup-profile", "/landing", "/get-started", "/onboarding"];
@@ -53,6 +54,10 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
     );
   }
 
+  if (isGuest && !isGuestPublicRoute(location)) {
+    return <GuestAccessPrompt />;
+  }
+
   if (!isExplorer && (!user?.inGameName || !user?.uid)) {
     return <SetupProfileScreen />;
   }
@@ -71,4 +76,10 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
       <Component {...props} />
     </AppLayout>
   );
+}
+
+function isGuestPublicRoute(path: string): boolean {
+  if (path === "/" || path === "/matches" || path === "/leaderboard" || path === "/about") return true;
+  if (!path.startsWith("/matches/")) return false;
+  return !path.startsWith("/matches/my_matches");
 }
