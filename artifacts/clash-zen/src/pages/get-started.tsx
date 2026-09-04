@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, MessageSquare, Phone } from "lucide-react";
+import { ArrowLeft, Ban, Trash2, ChevronRight, ShieldX, Shield, MessageSquare, Phone, Eye } from "lucide-react";
 import { collectFingerprint } from "@/lib/fingerprint";
 import { haptic } from "@/lib/haptics";
 import { sound } from "@/lib/sounds";
@@ -636,6 +636,18 @@ export default function GetStartedPage() {
                     />
                   </form>
                 </Form>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { haptic.mediumTap(); setLocation("/landing"); }}
+                  className="w-full rounded-2xl border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/[0.07] hover:text-white font-heading tracking-wide transition-all active:scale-[0.98]"
+                  style={{ height: 50 }}
+                  data-testid="btn-continue-as-guest"
+                >
+                  <Eye className="w-4 h-4 mr-2 text-zinc-500" />
+                  Continue as Guest
+                </Button>
 
                 {/* Trust row */}
                 <div className="flex items-center justify-center gap-5 pt-1">
