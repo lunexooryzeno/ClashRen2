@@ -18,6 +18,10 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
           sessionStorage.setItem("redirectAfterLogin", location);
         }
         setLocation("/landing");
+      } else if (isGuest) {
+        if (location === "/setup-profile" || location === "/onboarding") {
+          setLocation("/");
+        }
       } else if (!isExplorer && user && (!user.inGameName || !user.uid)) {
         if (location !== "/setup-profile") {
           setLocation("/setup-profile");
@@ -52,6 +56,10 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  if (isGuest && (location === "/setup-profile" || location === "/onboarding")) {
+    return null;
   }
 
   if (isGuest && !isGuestPublicRoute(location)) {
