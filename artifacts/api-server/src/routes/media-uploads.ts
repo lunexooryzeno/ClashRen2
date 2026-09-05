@@ -7,6 +7,7 @@
  */
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getMediaUpload } from "../lib/mediaDb.js";
+import { getTokenPayload } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 
@@ -26,9 +27,28 @@ router.get("/uploads/:id", async (req: Request, res: Response) => {
       return;
     }
 
+    const payload = getTokenPayload(req);
+    const canRead = record.accessScope === "public"
+      || (payload && !payload.guest && (
+        payload.isAdmin
+        || record.ownerUserId === payload.userId
+      ));
+    if (!canRead) {
+      res.status(payload ? 403 : 401).json({
+        error: payload ? "Forbidden" : "Unauthorized",
+        ...(payload?.guest ? { code: "GUEST_RESTRICTED" } : {}),
+      });
+      return;
+    }
+
     res.setHeader("Content-Type", record.mimeType);
     res.setHeader("Content-Length", record.data.length);
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader(
+      "Cache-Control",
+      record.accessScope === "public"
+        ? "public, max-age=31536000, immutable"
+        : "private, no-store",
+    );
     res.end(record.data);
   } catch (err) {
     req.log.error({ err }, "Failed to serve media upload");

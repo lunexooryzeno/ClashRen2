@@ -144,6 +144,8 @@ router.post("/quickmatch/submit-screenshot", requireAuth, async (req, res) => {
     data: imageBuffer,
     temp: true,
     expiresAt,
+    accessScope: "private",
+    ownerUserId: userId,
   });
 
   // Transition match to VERIFYING_SCREENSHOT

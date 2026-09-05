@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Crown, Trophy, Zap, Info, X, Copy, Check, User, Gamepad2, TrendingUp, Star } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/lib/auth";
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -722,6 +723,7 @@ const STAT_INFO: Record<InfoStat, { label: string; icon: React.ReactNode; color:
 };
 
 export default function Leaderboard() {
+  const { isGuest } = useAuth();
   const [tab,      setTab]      = useState<Tab>("weekly");
   const [gameMode, setGameMode] = useState<GameMode>("clash_squad");
   const [infoStat, setInfoStat] = useState<InfoStat | null>(null);
@@ -733,7 +735,7 @@ export default function Leaderboard() {
     mode: gameMode,
   });
   const { data: me }      = useGetMe();
-  const { data: myStats } = useGetMyStats();
+  const { data: myStats } = useGetMyStats({ query: { enabled: !isGuest } });
 
   const leaderboard: LeaderboardEntry[] = rawLeaderboard ?? [];
   const top3 = leaderboard.slice(0, 3);

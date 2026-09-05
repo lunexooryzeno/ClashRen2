@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
-import { requireAuth } from "../middlewares/auth.js";
+import { getTokenPayload, requireAuth } from "../middlewares/auth.js";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -119,31 +119,35 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
  */
 router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {
+    const payload = getTokenPayload(req);
+    if (!payload) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
 
-    // --- Protected route example (uncomment when using replit-auth) ---
-    // if (!req.isAuthenticated()) {
-    //   res.status(401).json({ error: "Unauthorized" });
-    //   return;
-    // }
-    // const canAccess = await objectStorageService.canAccessObjectEntity({
-    //   userId: req.user.id,
-    //   objectFile,
-    //   requestedPermission: ObjectPermission.READ,
-    // });
-    // if (!canAccess) {
-    //   res.status(403).json({ error: "Forbidden" });
-    //   return;
-    // }
+    const canAccess = await objectStorageService.canAccessObjectEntity({
+      userId: payload.guest ? undefined : String(payload.userId),
+      objectFile,
+      requestedPermission: ObjectPermission.READ,
+    });
+    if (!canAccess) {
+      res.status(403).json({
+        error: payload.guest ? "Create an account to access this private asset." : "Forbidden",
+        ...(payload.guest ? { code: "GUEST_RESTRICTED" } : {}),
+      });
+      return;
+    }
 
     const response = await objectStorageService.downloadObject(objectFile);
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
-    res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    res.setHeader("Cache-Control", "private, no-store");
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
@@ -154,6 +158,11 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   } catch (error) {
     if (error instanceof ObjectNotFoundError) {
       req.log.warn({ err: error }, "Object not found");
+      res.status(404).json({ error: "Object not found" });
+      return;
+    }
+    if (error instanceof Error && error.message.includes("PRIVATE_OBJECT_DIR")) {
+      req.log.warn({ err: error }, "Private object storage is not configured");
       res.status(404).json({ error: "Object not found" });
       return;
     }

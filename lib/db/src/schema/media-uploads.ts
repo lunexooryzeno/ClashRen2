@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, customType } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, customType } from "drizzle-orm/pg-core";
 
 // Store raw image bytes directly in Postgres so uploads survive across
 // every environment (dev, Replit published, Hostinger) without any
@@ -22,6 +22,8 @@ export const mediaUploadsTable = pgTable("media_uploads", {
   id:        text("id").primaryKey(), // UUID assigned by the upload handler
   mimeType:  text("mime_type").notNull(),
   data:      bytea("data").notNull(),
+  accessScope: text("access_scope").notNull().default("public"),
+  ownerUserId: integer("owner_user_id"),
   /** True for screenshots that should be deleted after verification */
   temp:      boolean("temp").notNull().default(false),
   /** When set, the row is eligible for cleanup */

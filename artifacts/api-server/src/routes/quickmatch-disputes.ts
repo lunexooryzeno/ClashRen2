@@ -146,6 +146,8 @@ router.post("/quickmatch/dispute", requireAuth, requireRegisteredPlayer, async (
       mimeType: file.mimeType,
       data: buffer,
       temp: false,
+      accessScope: "private",
+      ownerUserId: userId,
     });
     evidenceMediaIds.push(mediaId);
   }

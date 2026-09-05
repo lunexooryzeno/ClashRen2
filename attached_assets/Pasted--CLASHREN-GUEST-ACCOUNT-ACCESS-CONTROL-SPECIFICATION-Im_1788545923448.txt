@@ -1,0 +1,809 @@
+# CLASHREN GUEST ACCOUNT — ACCESS CONTROL SPECIFICATION
+
+Implement/correct the ClashRen Guest Account system according to the rules below.
+
+**IMPORTANT:** Inspect the existing codebase first. Do not rebuild unrelated systems. Preserve all existing registered-player functionality.
+
+The fundamental rule is:
+
+> **GUEST = EXPLORE**
+>
+> **REGISTERED PLAYER = COMPETE**
+
+A guest is a temporary exploration session, NOT a free competitive player account.
+
+---
+
+# 1. WHAT A GUEST CAN ACCESS
+
+A guest should be able to explore ClashRen and understand how the platform works.
+
+## HOME
+
+Guest CAN:
+
+* Open the ClashRen home page.
+* Browse the main dashboard.
+* View game modes.
+* View featured matches/content where the information is public.
+* View tournament previews.
+* View public announcements.
+* View public promotional content.
+* Explore ClashRen's competitive features.
+
+Guest should see a real ClashRen experience, not an empty page.
+
+---
+
+# 2. GAME MODES
+
+Guest CAN:
+
+* Open the game-mode section.
+* View available modes such as:
+
+  * Lone Wolf
+  * Clash Squad
+  * Battle Royale
+* View mode descriptions.
+* View entry-fee information where applicable.
+* View prize information where applicable.
+* Understand how the mode works.
+
+Guest CANNOT:
+
+* Join matchmaking.
+* Enter the matchmaking queue.
+* create a competitive match.
+* accept a real match.
+* participate in a real competitive match.
+
+If the guest presses something like:
+
+`Find Match`
+
+show the authentication gate:
+
+```text
+Ready to compete?
+
+Create an account or sign in to play competitive matches.
+
+[ Create Account ]
+[ Sign In ]
+[ Continue Exploring ]
+```
+
+Do not silently fail.
+
+---
+
+# 3. TOURNAMENTS
+
+Guest CAN:
+
+* Browse public tournaments.
+* View tournament names.
+* View tournament descriptions.
+* View game mode.
+* View start date/time.
+* View registration deadline.
+* View prize information.
+* View rules that are publicly available.
+* View tournament status.
+* View available/public information about slots.
+
+Guest CANNOT:
+
+* Register for a tournament.
+* Reserve a tournament slot.
+* Join a tournament.
+* Enter a tournament match.
+* Submit tournament results.
+* Claim tournament rewards.
+
+When a guest clicks:
+
+`Register`
+
+show the authentication gate.
+
+---
+
+# 4. PUBLIC RANKINGS
+
+Guest CAN view public ranking information if the current ClashRen implementation exposes it publicly.
+
+For example:
+
+* Global leaderboard
+* Weekly leaderboard
+* Monthly leaderboard
+* Seasonal leaderboard
+* Mode-specific leaderboard
+
+Only expose information that is intentionally public.
+
+Guest CANNOT:
+
+* Modify rankings.
+* Submit ranking data.
+* Manipulate ranking statistics.
+* Access private player information.
+* Access private account information.
+
+Do not expose sensitive/private user data simply because a ranking page exists.
+
+---
+
+# 5. MATCH INFORMATION
+
+Guest CAN view public/preview match information where the existing product allows it.
+
+Guest can understand:
+
+* Match type
+* Game mode
+* General match status
+* Public match information
+* How ClashRen matches work
+
+Guest CANNOT:
+
+* Join a real match.
+* Enter a room.
+* Receive private Room ID/password credentials.
+* Access another player's private match information.
+* Change match state.
+* Submit results.
+* Confirm results.
+* Dispute a real match.
+
+---
+
+# 6. PROFILE
+
+Guest CAN access a temporary guest profile/exploration profile.
+
+Example:
+
+```text
+Guest Explorer
+
+You're exploring ClashRen as a guest.
+
+Create an account to unlock:
+
+• ClashRen Player ID
+• Free Fire identity
+• Match history
+• Trust score
+• Rankings
+• Wallet
+• Rewards
+• Competitive matches
+
+[ Create Account ]
+[ Sign In ]
+```
+
+Guest CANNOT:
+
+* Create a permanent competitive profile without authentication.
+* Change another user's profile.
+* Access another user's private profile information.
+* Obtain a permanent competitive identity.
+
+---
+
+# 7. FREE FIRE IDENTITY
+
+Guest CANNOT bind or register a Free Fire UID as a competitive identity.
+
+Correct flow:
+
+```text
+Guest
+ ↓
+Create Account / Sign In
+ ↓
+Player Profile
+ ↓
+Bind Free Fire UID + IGN
+ ↓
+Eligibility
+ ↓
+Competitive Matchmaking
+```
+
+Do not allow guests to bypass account creation.
+
+---
+
+# 8. MATCH HISTORY
+
+Guest CAN see an explanation/preview of the Match History feature.
+
+Guest MAY see empty state UI such as:
+
+```text
+No match history yet.
+
+Create a ClashRen account and start competing.
+```
+
+Guest CANNOT:
+
+* Have real competitive match history.
+* Create fake match history.
+* Submit match history.
+* Modify match history.
+* Claim rewards based on guest activity.
+
+Do not generate fake competitive statistics and present them as real.
+
+---
+
+# 9. WALLET / COINS
+
+This is a strict restriction.
+
+Guest CANNOT use the real ClashRen wallet.
+
+Guest CANNOT:
+
+* Deposit money.
+* Purchase coins for competitive use.
+* Spend coins.
+* Enter paid matches.
+* Receive match rewards.
+* Withdraw coins/money.
+* Request withdrawals.
+* Modify balances.
+* Access another user's wallet.
+* Claim financial rewards.
+
+If the UI needs to show how the wallet works, use clearly marked informational/preview UI.
+
+Do NOT create a real financial wallet for guests just to make the UI look complete.
+
+---
+
+# 10. REWARDS
+
+Guest CAN:
+
+* View information explaining ClashRen rewards.
+* See public promotional/reward information where appropriate.
+
+Guest CANNOT:
+
+* Claim competitive rewards.
+* Receive match winnings.
+* Receive tournament winnings.
+* Receive withdrawal-eligible funds.
+* Exploit guest sessions to farm rewards.
+* Convert guest activity into rewards after account creation.
+
+Critical rule:
+
+```text
+Guest activity
+       ↓
+NO COMPETITIVE REWARD
+```
+
+Do not allow:
+
+```text
+Guest plays something
+       ↓
+Guest creates account
+       ↓
+Guest claims previous activity reward
+```
+
+That must never happen.
+
+---
+
+# 11. MATCHMAKING
+
+Guest CANNOT use real matchmaking.
+
+The following must require a registered/authorized player:
+
+```text
+Join Queue
+Leave Queue
+Matchmaking Status
+Accept Match
+Confirm Match
+Enter Match
+```
+
+A guest may VIEW/UNDERSTAND the matchmaking interface, but cannot actually enter the queue.
+
+Example:
+
+```text
+Lone Wolf 1v1
+
+Entry: 20 Coins
+Players: 2
+
+[ Sign in to Play ]
+```
+
+---
+
+# 12. DISPUTES
+
+Guest CANNOT:
+
+* Create a real dispute.
+* Submit evidence for a real match.
+* Challenge another player's result.
+* Receive dispute compensation.
+* Submit a dispute stake.
+* Manipulate verification.
+
+Guest may only view an explanation of how the dispute system works if that information is public.
+
+---
+
+# 13. RESULT SUBMISSION
+
+Guest CANNOT:
+
+* Submit match results.
+* Upload competitive evidence.
+* Confirm a competitive result.
+* Change a result.
+* Trigger reward distribution.
+
+Only authorized participants and authorized backend/admin workflows may perform these operations.
+
+---
+
+# 14. NOTIFICATIONS
+
+Guest MAY receive temporary product/onboarding notifications such as:
+
+* Welcome to ClashRen.
+* Explore game modes.
+* Create an account to compete.
+* Tournament announcements that are intentionally public.
+
+Guest MUST NOT receive private competitive notifications belonging to another account.
+
+Guest should not receive:
+
+* Another player's match-found notification.
+* Another player's room credentials.
+* Another player's reward notification.
+* Another player's withdrawal notification.
+* Private account notifications.
+
+---
+
+# 15. CHAT / OPPONENT COMMUNICATION
+
+Guest CANNOT enter private opponent communication because a guest cannot have a real competitive opponent.
+
+Guest MAY see a preview/explanation of the chat feature if appropriate.
+
+Do not create fake opponent conversations and present them as real.
+
+---
+
+# 16. TRUST SCORE / REPUTATION
+
+Guest CANNOT have a real competitive trust score.
+
+Trust/reputation begins with a registered competitive account.
+
+Guest can view an explanation of what the trust system means.
+
+Guest cannot:
+
+* Increase trust score.
+* Decrease trust score.
+* Manipulate reputation.
+* Claim competitive reputation.
+
+---
+
+# 17. STREAKS / COMPETITIVE STATS
+
+Guest CANNOT accumulate real:
+
+* Wins
+* Losses
+* Win rate
+* ELO/MMR
+* Streaks
+* Kills
+* Earnings
+* Competitive statistics
+
+These require a registered competitive identity.
+
+Guest may see an empty state or feature preview.
+
+---
+
+# 18. REVENGE / REMATCH
+
+Guest CANNOT use real:
+
+* Revenge Match
+* Rematch
+* Opponent rematch
+* Competitive replay/rematch functionality
+
+because the guest cannot participate in the original competitive match.
+
+The UI can explain the feature.
+
+---
+
+# 19. ADMIN
+
+Guest has ZERO admin access.
+
+Guest CANNOT access:
+
+* Admin dashboard
+* Super Admin
+* Tournament administration
+* Match operations
+* Wallet administration
+* Dispute administration
+* Reward administration
+* Host management
+* Worker-phone controls
+* Analytics requiring private data
+* User management
+* System settings
+
+Do not rely on hiding the admin button. Backend authorization must reject guest access.
+
+---
+
+# 20. HOST / WORKER SYSTEM
+
+Guest has ZERO access to the host infrastructure.
+
+Guest CANNOT:
+
+* Create host jobs.
+* Control Android host phones.
+* Create Free Fire rooms through backend APIs.
+* Receive host credentials.
+* Send host commands.
+* View private host status.
+* Trigger room creation.
+
+The host system is an internal trusted infrastructure.
+
+---
+
+# 21. SECURITY RULE
+
+Do NOT implement guest restrictions only in the frontend.
+
+This is WRONG:
+
+```typescript
+if (isGuest) {
+    disableButton();
+}
+```
+
+That only protects the UI.
+
+A malicious user can call APIs directly.
+
+The backend must enforce authorization.
+
+Conceptually:
+
+```text
+GUEST
+ ↓
+PUBLIC / EXPLORATION PERMISSIONS
+
+REGISTERED PLAYER
+ ↓
+PLAYER / COMPETITIVE PERMISSIONS
+
+ADMIN
+ ↓
+ADMIN PERMISSIONS
+```
+
+Every protected API must validate the authenticated user's permissions.
+
+---
+
+# 22. GUEST API RESTRICTIONS
+
+Review all existing APIs and identify operations that require a registered player.
+
+At minimum, guests must not be able to execute protected operations such as:
+
+```text
+POST /matchmaking/join
+POST /matchmaking/leave
+POST /matches/*
+POST /wallet/*
+POST /withdraw/*
+POST /tournaments/*/register
+POST /matches/*/dispute
+POST /matches/*/result
+POST /matches/*/evidence
+POST /profile/free-fire
+```
+
+Do not blindly rename existing APIs.
+
+Use the actual routes present in the repository.
+
+If the existing API architecture uses different paths, apply the same authorization principle to the actual routes.
+
+---
+
+# 23. ACCESS MATRIX
+
+Implement the following logical permission model:
+
+| Feature                  | Guest | Registered Player              |
+| ------------------------ | ----- | ------------------------------ |
+| Home                     | ✅     | ✅                              |
+| Browse Game Modes        | ✅     | ✅                              |
+| View Tournament Info     | ✅     | ✅                              |
+| View Public Rankings     | ✅     | ✅                              |
+| Explore Matchmaking UI   | ✅     | ✅                              |
+| Join Matchmaking         | ❌     | ✅ if eligible                  |
+| Real Competitive Match   | ❌     | ✅ if eligible                  |
+| Free Competitive Match   | ❌     | ✅ if eligible                  |
+| Paid Match               | ❌     | ✅ if eligible                  |
+| Bind Free Fire ID        | ❌     | ✅                              |
+| Real Match History       | ❌     | ✅                              |
+| Real Wallet              | ❌     | ✅                              |
+| Deposit                  | ❌     | ✅                              |
+| Withdrawal               | ❌     | ✅ if eligible                  |
+| Match Reward             | ❌     | ✅                              |
+| Tournament Registration  | ❌     | ✅                              |
+| Tournament Participation | ❌     | ✅                              |
+| Submit Result            | ❌     | ✅                              |
+| Submit Evidence          | ❌     | ✅                              |
+| Dispute                  | ❌     | ✅ where applicable             |
+| Trust Score              | ❌     | ✅                              |
+| ELO/MMR                  | ❌     | ✅                              |
+| Competitive Streak       | ❌     | ✅                              |
+| Revenge Match            | ❌     | ✅ where applicable             |
+| Private Opponent Chat    | ❌     | ✅                              |
+| Admin Panel              | ❌     | ❌ unless separately authorized |
+| Host Controls            | ❌     | ❌ unless separately authorized |
+
+---
+
+# 24. IMPORTANT DISTINCTION
+
+Do not confuse:
+
+**VIEWING A FEATURE**
+
+with
+
+**USING A FEATURE**
+
+Example:
+
+Guest:
+
+```text
+Can see:
+"Lone Wolf — 20 Coins — Win 36 Coins"
+
+Cannot do:
+"Join Match"
+```
+
+Guest:
+
+```text
+Can see:
+"Tournament — ₹X Prize Pool"
+
+Cannot do:
+"Register"
+```
+
+Guest:
+
+```text
+Can see:
+"Wallet"
+
+Cannot do:
+"Deposit / Spend / Withdraw"
+```
+
+Guest:
+
+```text
+Can see:
+"Trust Score"
+
+Cannot do:
+"Earn competitive trust score"
+```
+
+This is the correct ClashRen guest experience.
+
+---
+
+# 25. AUTHENTICATION CONVERSION
+
+Whenever a guest attempts a restricted action, provide a clear path:
+
+```text
+Guest
+ ↓
+Restricted Action
+ ↓
+Authentication Prompt
+ ↓
+Create Account / Sign In
+ ↓
+Registered Player
+ ↓
+Continue Intended Flow
+```
+
+Where technically safe, preserve the user's intended destination instead of dumping them back to Home.
+
+Example:
+
+```text
+Guest opens Lone Wolf
+ ↓
+Clicks Find Match
+ ↓
+Create Account
+ ↓
+Successful authentication
+ ↓
+Return to Lone Wolf
+ ↓
+Continue player setup
+```
+
+---
+
+# 26. DO NOT OVER-RESTRICT THE GUEST
+
+Do NOT turn ClashRen into:
+
+```text
+Guest:
+Everything locked.
+Register immediately.
+```
+
+That defeats the purpose of guest exploration.
+
+The guest should be able to understand the product deeply before registering.
+
+The correct philosophy is:
+
+```text
+EXPLORE FREELY
+       ↓
+UNDERSTAND CLASHREN
+       ↓
+WANT TO COMPETE
+       ↓
+CREATE ACCOUNT
+       ↓
+BECOME PLAYER
+```
+
+---
+
+# 27. DO NOT GIVE GUESTS FAKE DATA
+
+Do not generate fake:
+
+* winnings
+* matches
+* victories
+* rankings
+* trust scores
+* wallet balances
+* competitive streaks
+
+If demonstration data is required for UI purposes, clearly separate it from real user data and make sure it cannot enter the production financial/competitive system.
+
+---
+
+# 28. TESTING REQUIREMENTS
+
+Test the guest both through the UI and by directly calling protected APIs.
+
+### Guest should succeed:
+
+```text
+Open app
+Open Home
+Browse game modes
+Browse tournaments
+View public rankings
+Explore feature pages
+View authentication prompts
+```
+
+### Guest should fail:
+
+```text
+Join matchmaking
+Create competitive match
+Enter real match
+Bind Free Fire ID
+Register tournament
+Submit result
+Submit evidence
+Create dispute
+Access wallet
+Deposit
+Withdraw
+Claim competitive reward
+Access admin
+Access host controls
+Access private player data
+```
+
+For API failures, return the project's standard authentication/authorization response.
+
+Do not expose sensitive internal information in the error response.
+
+---
+
+# FINAL RULE
+
+The implementation must follow this exact product principle:
+
+## GUEST = EXPLORATION
+
+Guests can **see and understand** ClashRen.
+
+## REGISTERED PLAYER = COMPETITION
+
+Registered users can **participate**, subject to eligibility and the existing ClashRen rules.
+
+Do not make Guest an alternate free-player account.
+
+Do not give Guest competitive identity.
+
+Do not give Guest financial capability.
+
+Do not give Guest competitive history.
+
+Do not allow Guest activity to become reward-eligible.
+
+And most importantly:
+
+**Enforce all restrictions server-side, not just through the frontend UI.**
+
+After implementation, report:
+
+1. Existing guest behavior.
+2. Problems found.
+3. Files/routes/components changed.
+4. Guest permissions implemented.
+5. Backend authorization implemented.
+6. Tests performed.
+7. Any remaining issues.

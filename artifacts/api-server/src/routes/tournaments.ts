@@ -27,7 +27,35 @@ function formatTournament(
   isJoined: boolean,
   isAdmin = false,
   participant?: typeof tournamentParticipantsTable.$inferSelect | null,
+  publicView = false,
 ) {
+  if (publicView) {
+    return {
+      id: t.id,
+      title: t.title,
+      gameMode: t.gameMode,
+      entryFeeDiamonds: t.entryFeeDiamonds,
+      prizePoolDiamonds: t.prizePoolDiamonds,
+      maxSlots: t.maxSlots,
+      filledSlots: t.filledSlots,
+      startTime: t.startTime.toISOString(),
+      status: t.status,
+      isJoined: false,
+      createdAt: t.createdAt.toISOString(),
+      perKillDiamonds: t.perKillDiamonds,
+      matchSlug: t.matchSlug ?? null,
+      imageUrl: t.imageUrl ?? null,
+      rules: t.rules ?? null,
+      description: t.description ?? null,
+      map: t.map ?? null,
+      region: t.region ?? null,
+      shortTitle: t.shortTitle ?? null,
+      statusLabel: t.statusLabel ?? null,
+      statusColor: t.statusColor ?? null,
+      estimatedDuration: t.estimatedDuration ?? null,
+    };
+  }
+
   const canSeeRoomCreds = isJoined || isAdmin;
   return {
     id: t.id,
@@ -115,7 +143,13 @@ router.get("/tournaments", async (req, res) => {
   } else {
     res.set("Cache-Control", "private, max-age=30, stale-while-revalidate=15");
   }
-  res.json(tournaments.map(t => formatTournament(t, joinedIds.has(t.id), isAdmin, participationMap.get(t.id))));
+  res.json(tournaments.map(t => formatTournament(
+    t,
+    joinedIds.has(t.id),
+    isAdmin,
+    participationMap.get(t.id),
+    !userId || !!payload?.guest,
+  )));
 });
 
 router.get("/tournaments/featured", async (req, res) => {
@@ -140,7 +174,13 @@ router.get("/tournaments/featured", async (req, res) => {
     joinedIds = new Set(participations.map(p => p.tournamentId));
   }
 
-  res.json(featured.map(t => formatTournament(t, joinedIds.has(t.id), isAdmin)));
+  res.json(featured.map(t => formatTournament(
+    t,
+    joinedIds.has(t.id),
+    isAdmin,
+    undefined,
+    !userId || !!payload?.guest,
+  )));
 });
 
 router.get("/tournaments/s/:slug", async (req, res) => {
@@ -151,6 +191,10 @@ router.get("/tournaments/s/:slug", async (req, res) => {
   const payload = getTokenPayload(req);
   const userId = payload?.userId ?? null;
   const isAdmin = payload?.isAdmin ?? false;
+  if (tournament.status === "admin_hidden" && !isAdmin) {
+    res.status(404).json({ error: "Tournament not found" });
+    return;
+  }
   let isJoined = false;
   let participant: typeof tournamentParticipantsTable.$inferSelect | null = null;
   if (userId) {
@@ -160,7 +204,13 @@ router.get("/tournaments/s/:slug", async (req, res) => {
     isJoined = !!p;
     participant = p ?? null;
   }
-  res.json(formatTournament(tournament, isJoined, isAdmin, participant));
+  res.json(formatTournament(
+    tournament,
+    isJoined,
+    isAdmin,
+    participant,
+    !userId || !!payload?.guest,
+  ));
 });
 
 router.get("/tournaments/:id", async (req, res) => {
@@ -172,6 +222,10 @@ router.get("/tournaments/:id", async (req, res) => {
   const payload = getTokenPayload(req);
   const userId = payload?.userId ?? null;
   const isAdmin = payload?.isAdmin ?? false;
+  if (tournament.status === "admin_hidden" && !isAdmin) {
+    res.status(404).json({ error: "Tournament not found" });
+    return;
+  }
   let isJoined = false;
   let participant: typeof tournamentParticipantsTable.$inferSelect | null = null;
   if (userId) {
@@ -181,7 +235,13 @@ router.get("/tournaments/:id", async (req, res) => {
     isJoined = !!p;
     participant = p ?? null;
   }
-  res.json(formatTournament(tournament, isJoined, isAdmin, participant));
+  res.json(formatTournament(
+    tournament,
+    isJoined,
+    isAdmin,
+    participant,
+    !userId || !!payload?.guest,
+  ));
 });
 
 router.post("/tournaments/:id/join", requireAuth, requireFullProfile, tournamentJoinLimiter, async (req, res) => {

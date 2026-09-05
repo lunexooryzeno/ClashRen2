@@ -15,8 +15,15 @@ export async function ensureMediaUploadsTable(): Promise<void> {
       id         TEXT        PRIMARY KEY,
       mime_type  TEXT        NOT NULL,
       data       BYTEA       NOT NULL,
+      access_scope TEXT     NOT NULL DEFAULT 'public',
+      owner_user_id INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+  await pool.query(`
+    ALTER TABLE media_uploads
+      ADD COLUMN IF NOT EXISTS access_scope TEXT NOT NULL DEFAULT 'public',
+      ADD COLUMN IF NOT EXISTS owner_user_id INTEGER
   `);
 }
 
@@ -27,11 +34,12 @@ export async function ensureMediaUploadsTable(): Promise<void> {
 export async function saveMediaUpload(
   mimeType: string,
   data: Buffer,
+  options: { accessScope?: "public" | "private"; ownerUserId?: number | null } = {},
 ): Promise<string> {
   const id = randomUUID();
   await pool.query(
-    "INSERT INTO media_uploads (id, mime_type, data) VALUES ($1, $2, $3)",
-    [id, mimeType, data],
+    "INSERT INTO media_uploads (id, mime_type, data, access_scope, owner_user_id) VALUES ($1, $2, $3, $4, $5)",
+    [id, mimeType, data, options.accessScope ?? "public", options.ownerUserId ?? null],
   );
   return id;
 }
@@ -50,12 +58,22 @@ export async function deleteMediaUpload(id: string): Promise<void> {
  */
 export async function getMediaUpload(
   id: string,
-): Promise<{ mimeType: string; data: Buffer } | null> {
-  const result = await pool.query<{ mime_type: string; data: Buffer }>(
-    "SELECT mime_type, data FROM media_uploads WHERE id = $1",
+): Promise<{ mimeType: string; data: Buffer; accessScope: "public" | "private"; ownerUserId: number | null } | null> {
+  const result = await pool.query<{
+    mime_type: string;
+    data: Buffer;
+    access_scope: "public" | "private";
+    owner_user_id: number | null;
+  }>(
+    "SELECT mime_type, data, access_scope, owner_user_id FROM media_uploads WHERE id = $1",
     [id],
   );
   if (result.rowCount === 0) return null;
   const row = result.rows[0];
-  return { mimeType: row.mime_type, data: row.data };
+  return {
+    mimeType: row.mime_type,
+    data: row.data,
+    accessScope: row.access_scope,
+    ownerUserId: row.owner_user_id,
+  };
 }

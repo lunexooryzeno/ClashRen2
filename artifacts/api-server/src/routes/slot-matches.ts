@@ -1906,7 +1906,10 @@ router.post("/slots/:id/dispute/screenshot", requireAuth, requireRegisteredPlaye
     try {
       const buf = Buffer.concat(chunks);
       const { saveMediaUpload } = await import("../lib/mediaDb.js");
-      const id = await saveMediaUpload(ct, buf);
+      const id = await saveMediaUpload(ct, buf, {
+        accessScope: "private",
+        ownerUserId: req.user!.userId,
+      });
       res.json({ url: `/api/uploads/${id}` });
     } catch {
       res.status(500).json({ error: "Failed to save screenshot" });

@@ -286,36 +286,36 @@ function Router() {
           <ProtectedRoute component={NotificationsPage} />
         </Route>
         <Route path="/admin">
-          <ProtectedRoute component={AdminPanel} />
+          <ProtectedRoute adminOnly component={AdminPanel} />
         </Route>
         <Route path="/admin/fraud">
-          <ProtectedRoute component={AdminFraudPage} />
+          <ProtectedRoute adminOnly component={AdminFraudPage} />
         </Route>
         <Route path="/admin/feedback">
-          <ProtectedRoute component={AdminFeedbackPage} />
+          <ProtectedRoute adminOnly component={AdminFeedbackPage} />
         </Route>
         <Route path="/account-suspended" component={AccountSuspendedPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c" component={SuperAdminPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/feedback" component={AdminFeedbackPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/payments" component={PaymentAdminPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid/ff-stats" component={AdminFFStatsPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid/topup-history" component={lazy(() => import("@/pages/admin-user-topup-history"))} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid" component={AdminUserDetailPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management" component={AdminUsersPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/banner_management" component={BannerManagementPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId/slot/:slotIndex/make_matches" component={AdminMakeMatchesPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId/all-matches" component={AdminAllMatchesPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId/slot-match/:slotMatchId" component={AdminSlotMatchDetailPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId" component={AdminMatchPlayersPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/knockout/new" component={lazy(() => import("@/pages/admin-knockout-new"))} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/knockout/edit/:id" component={lazy(() => import("@/pages/admin-knockout-edit"))} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management" component={MatchesManagementPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/manage-keys" component={ApiKeysAdminPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/utr-transactions" component={UtrTransactionsPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/phone-host" component={PhoneHostAdminPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/join-settings" component={lazy(() => import("@/pages/admin-join-settings"))} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/worker-phones" component={AdminWorkersPage} />
-        <Route path="/286c81443d1fb388d1b9a8e3b280824c/quickmatch-disputes" component={AdminQuickmatchDisputesPage} />
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c"><ProtectedRoute adminOnly component={SuperAdminPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/feedback"><ProtectedRoute adminOnly component={AdminFeedbackPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/payments"><ProtectedRoute adminOnly component={PaymentAdminPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid/ff-stats"><ProtectedRoute adminOnly component={AdminFFStatsPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid/topup-history"><ProtectedRoute adminOnly component={lazy(() => import("@/pages/admin-user-topup-history"))} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management/:phone/:uid"><ProtectedRoute adminOnly component={AdminUserDetailPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/user_management"><ProtectedRoute adminOnly component={AdminUsersPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/banner_management"><ProtectedRoute adminOnly component={BannerManagementPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId/slot/:slotIndex/make_matches"><ProtectedRoute adminOnly component={AdminMakeMatchesPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId/all-matches"><ProtectedRoute adminOnly component={AdminAllMatchesPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId/slot-match/:slotMatchId"><ProtectedRoute adminOnly component={AdminSlotMatchDetailPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/joined_players/matches/:matchId"><ProtectedRoute adminOnly component={AdminMatchPlayersPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/knockout/new"><ProtectedRoute adminOnly component={lazy(() => import("@/pages/admin-knockout-new"))} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management/knockout/edit/:id"><ProtectedRoute adminOnly component={lazy(() => import("@/pages/admin-knockout-edit"))} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/matches_management"><ProtectedRoute adminOnly component={MatchesManagementPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/manage-keys"><ProtectedRoute adminOnly component={ApiKeysAdminPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/utr-transactions"><ProtectedRoute adminOnly component={UtrTransactionsPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/phone-host"><ProtectedRoute adminOnly component={PhoneHostAdminPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/join-settings"><ProtectedRoute adminOnly component={lazy(() => import("@/pages/admin-join-settings"))} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/worker-phones"><ProtectedRoute adminOnly component={AdminWorkersPage} /></Route>
+        <Route path="/286c81443d1fb388d1b9a8e3b280824c/quickmatch-disputes"><ProtectedRoute adminOnly component={AdminQuickmatchDisputesPage} /></Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

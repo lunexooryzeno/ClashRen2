@@ -1,6 +1,6 @@
 import { Router } from "express";
 import crypto from "crypto";
-import { requireSuperAdmin } from "../middlewares/auth.js";
+import { requireAuth, requireRegisteredPlayer, requireSuperAdmin } from "../middlewares/auth.js";
 import { attachCredentials } from "../lib/quickmatch-matches.js";
 import {
   fetchAndStorePreSnapshots,
@@ -156,7 +156,7 @@ router.post("/super-admin/phone-host/trigger", requireSuperAdmin, async (req, re
 // ─── Public: poll current session credentials (for queue page) ───────────────
 // Returns { status, roomId, password } only when credentials_ready
 // Requires requireAuth so random users can't spam it
-router.get("/phone-host/room", (req, res) => {
+router.get("/phone-host/room", requireAuth, requireRegisteredPlayer, (req, res) => {
   maybeExpire();
   if (!currentSession) {
     res.json({ status: "none" });

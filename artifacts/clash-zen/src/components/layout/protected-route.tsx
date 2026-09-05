@@ -5,7 +5,11 @@ import SetupProfileScreen from "@/pages/setup-profile";
 import { AppLayout } from "./app-layout";
 import { GuestAccessPrompt, saveGuestRedirect } from "@/components/guest-access-prompt";
 
-export function ProtectedRoute({ component: Component, ...props }: { component: React.ElementType, path?: string }) {
+export function ProtectedRoute({
+  component: Component,
+  adminOnly = false,
+  ...props
+}: { component: React.ElementType, path?: string; adminOnly?: boolean }) {
   const { user, isAuthenticated, isLoading, isGuest, isExplorer } = useAuth();
   const [location, setLocation] = useLocation();
 
@@ -62,6 +66,32 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
     return null;
   }
 
+  if (adminOnly && !user?.isAdmin) {
+    if (isGuest) {
+      saveGuestRedirect(location);
+      return (
+        <GuestAccessPrompt
+          title="Admin access required"
+          description="This area is reserved for authorized ClashRen administrators."
+          redirectPath={location}
+        />
+      );
+    }
+    return (
+      <AppLayout>
+        <div className="flex min-h-full items-center justify-center px-6 py-12">
+          <div className="max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-red-400">Access denied</p>
+            <h1 className="mt-3 font-heading text-2xl font-bold text-white">Administrator access required</h1>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              This area is restricted to authorized ClashRen administrators.
+            </p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (isGuest && !isGuestPublicRoute(location)) {
     saveGuestRedirect(location);
     return (
@@ -100,6 +130,30 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
     );
   }
 
+  if (isGuest && location === "/history") {
+    return (
+      <AppLayout>
+        <div className="flex-1 overflow-y-auto px-5 py-8">
+          <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-400">Feature preview</p>
+            <h1 className="mt-2 font-heading text-2xl font-bold text-white">Match history</h1>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              No match history yet. Create a ClashRen account and start competing to record real matches, results, and rewards.
+            </p>
+            <div className="mt-6">
+              <GuestAccessPrompt
+                title="Ready to start competing?"
+                description="Create an account or sign in to unlock your real match history."
+                redirectPath="/history"
+                onContinue={() => setLocation("/")}
+              />
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (!isGuest && !isExplorer && (!user?.inGameName || !user?.uid)) {
     return <SetupProfileScreen />;
   }
@@ -121,7 +175,7 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
 }
 
 function isGuestPublicRoute(path: string): boolean {
-  if (path === "/" || path === "/matches" || path === "/leaderboard" || path === "/about") return true;
+  if (path === "/" || path === "/matches" || path === "/leaderboard" || path === "/about" || path === "/history") return true;
   if (path.startsWith("/quickmatch")) return path === "/quickmatch";
   if (path === "/profile") return true;
   if (!path.startsWith("/matches/")) return false;
