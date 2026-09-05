@@ -79,7 +79,7 @@ function rankColor(rank: number): string {
 
 export default function SetupProfileScreen() {
   const { theme: currentTheme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -101,6 +101,12 @@ export default function SetupProfileScreen() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [pickedTheme, setPickedTheme] = useState(currentTheme ?? "molten");
   const pendingRedirect = sessionStorage.getItem(POST_WELCOME_REDIRECT_KEY) ?? "/";
+
+  useEffect(() => {
+    if (isGuest) setLocation("/");
+  }, [isGuest, setLocation]);
+
+  if (isGuest) return null;
 
   const trimmedUid = uid.trim();
   const uidValid = /^\d{8,14}$/.test(trimmedUid);
