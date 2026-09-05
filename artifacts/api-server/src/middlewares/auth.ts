@@ -172,6 +172,23 @@ export function requireFullProfile(req: Request, res: Response, next: NextFuncti
     });
 }
 
+/** Rejects anonymous guest sessions while allowing registered players who are
+ * still completing their profile to reach the profile-completion flow. */
+export function requireRegisteredPlayer(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (req.user.isGuest) {
+    res.status(403).json({
+      error: "Create an account to use this feature.",
+      code: "GUEST_RESTRICTED",
+    });
+    return;
+  }
+  next();
+}
+
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   const superToken = req.headers["x-super-admin-token"];
   if (superToken && typeof superToken === "string" && verifySuperAdminToken(superToken)) {

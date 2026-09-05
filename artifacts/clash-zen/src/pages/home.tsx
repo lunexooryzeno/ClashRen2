@@ -21,6 +21,7 @@ import { CoinIcon } from "@/components/CoinIcon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 import { isUserVisibleTournament } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 interface ApiBanner {
   id: number;
@@ -271,6 +272,7 @@ function PlaceBadge({ placement }: { placement: number | null | undefined }) {
 /* ── Page ─────────────────────────────────────────────────────────────────── */
 
 export default function Home() {
+  const { isGuest } = useAuth();
   // staleTime: 2 min for mostly-static data → re-navigation is instant from cache.
   // refetchInterval: only live matches need a short poll; schedule/leaderboard can be slower.
   const { data: upcoming, isLoading: upcomingLoading } = useListTournaments(
@@ -287,10 +289,10 @@ export default function Home() {
     { query: { staleTime: 5 * 60 * 1000 } },
   );
   const { data: me } = useGetMe();
-  const { data: myStats } = useGetMyStats();
+  const { data: myStats } = useGetMyStats({ query: { enabled: !isGuest } });
   // History rarely changes while browsing home — 2 min stale is fine.
   const { data: myHistory, isLoading: historyLoading } = useGetMyHistory(
-    { query: { staleTime: 2 * 60 * 1000 } },
+    { query: { staleTime: 2 * 60 * 1000, enabled: !isGuest } },
   );
   const [tipIdx, setTipIdx] = useState(0);
   const tipTouchX = useRef<number | null>(null);
@@ -306,6 +308,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (isGuest) return;
     const token = localStorage.getItem("clash_ren_token");
     if (!token) return;
     fetch("/api/quickmatch/match", {
@@ -319,7 +322,7 @@ export default function Home() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => {
     fetch("/api/banners")

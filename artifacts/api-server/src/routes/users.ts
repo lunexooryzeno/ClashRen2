@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { usersTable, tournamentParticipantsTable, tournamentsTable, adminLogsTable, deviceSessionsTable, achievementsTable } from "@workspace/db";
 import { eq, or, ilike, and } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireRegisteredPlayer } from "../middlewares/auth.js";
 import bcrypt from "bcryptjs";
 import { checkUIDUniqueness, checkFingerprintMultiAccount, checkIPCluster } from "../middleware/anti-multiaccount.js";
 import { checkEmulatorUsage } from "../middleware/suspicious-activity.js";
@@ -82,7 +82,7 @@ router.get("/users/me", requireAuth, async (req, res) => {
   });
 });
 
-router.patch("/users/me", requireAuth, async (req, res) => {
+router.patch("/users/me", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const { uid, inGameName, profilePicture } = req.body as {
     uid?: string;
     inGameName?: string;
@@ -146,7 +146,7 @@ router.patch("/users/me", requireAuth, async (req, res) => {
 
 const NAME_CHANGE_COOLDOWN_MS = 12 * 24 * 60 * 60 * 1000; // 12 days
 
-router.post("/users/me/fetch-name", requireAuth, async (req, res) => {
+router.post("/users/me/fetch-name", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId = req.user!.userId;
   const { uid: bodyUid } = req.body as { uid?: string };
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
@@ -523,7 +523,7 @@ function setCompleteCookie(res: import("express").Response, token: string) {
   });
 }
 
-router.patch("/users/complete-profile", requireAuth, async (req, res) => {
+router.patch("/users/complete-profile", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId = req.user!.userId;
   const { phone, browserToken } = req.body as { phone?: string; browserToken?: string };
 

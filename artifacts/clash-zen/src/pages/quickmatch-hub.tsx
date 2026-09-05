@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { CoinIcon } from "@/components/CoinIcon";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { saveGuestRedirect } from "@/components/guest-access-prompt";
 
 const PRIZE_POOLS = [
   { entry: 12, prize: 20 },
@@ -23,8 +24,8 @@ const GAME_TYPES = [
 ];
 
 export default function QuickMatchHub() {
-  const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const [location, navigate] = useLocation();
+  const { user, isGuest } = useAuth();
   const [gameType, setGameType] = useState("cs");
   const [teamSize, setTeamSize] = useState("Solo");
   const [modeId, setModeId] = useState("duel");
@@ -40,6 +41,7 @@ export default function QuickMatchHub() {
   }, []);
 
   useEffect(() => {
+    if (isGuest) return;
     apiFetch<{ status: string; matchId?: string; gameType?: string; modeId?: string }>("/quickmatch/match")
       .then(data => {
         if (data.status !== "none" && data.matchId) {
@@ -47,15 +49,15 @@ export default function QuickMatchHub() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isGuest]);
 
   const pool = PRIZE_POOLS[poolIndex];
   const currentMode = MODES.find(mode => mode.id === modeId) ?? MODES[0];
-  const displayName = user?.inGameName || user?.username || "Player";
-  const userId = String(user?.id ?? user?.uid ?? "—");
+  const displayName = isGuest ? "Guest Explorer" : (user?.inGameName || user?.username || "Player");
+  const userId = isGuest ? "Temporary session" : String(user?.id ?? user?.uid ?? "—");
 
   const copyUserId = async () => {
-    if (userId === "—") return;
+    if (isGuest || userId === "—") return;
     try {
       await navigator.clipboard.writeText(userId);
       setCopied(true);
@@ -72,6 +74,11 @@ export default function QuickMatchHub() {
 
   const handleJoin = () => {
     setBalanceError(null);
+    if (isGuest) {
+      saveGuestRedirect(location);
+      navigate("/get-started");
+      return;
+    }
     if (activeMatch) {
       navigate(`/quickmatch/${activeMatch.gameType}/${activeMatch.modeId}`);
       return;
@@ -128,12 +135,12 @@ export default function QuickMatchHub() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="truncate text-base font-bold text-white">{displayName}</h2>
-                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400">PLAYER</span>
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${isGuest ? "border border-amber-500/20 bg-amber-500/10 text-amber-400" : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-400"}`}>{isGuest ? "EXPLORE MODE" : "PLAYER"}</span>
               </div>
               <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">ID: {userId}</p>
             </div>
           </div>
-          <button onClick={copyUserId} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-2 text-[10px] font-semibold text-slate-300 transition hover:bg-slate-700 sm:px-3 sm:text-xs">
+          <button onClick={copyUserId} disabled={isGuest} className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-2 text-[10px] font-semibold text-slate-300 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-xs">
             {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" /> <span className="text-emerald-400">Copied</span></> : <><Copy className="h-3.5 w-3.5 text-amber-400" /> Copy ID</>}
           </button>
         </section>
@@ -183,16 +190,16 @@ export default function QuickMatchHub() {
           </div>
         </section>
 
-        <section className="flex items-center justify-between rounded-2xl border border-yellow-500/20 bg-yellow-500/[.07] px-4 py-3">
-          <div className="flex items-center gap-2"><CoinIcon width={17} /><span className="text-xs font-bold text-yellow-300">Your Balance</span></div>
-          <span className="text-sm font-black tabular-nums text-white">{(user?.diamondBalance ?? 0).toLocaleString()} coins</span>
+         <section className="flex items-center justify-between rounded-2xl border border-yellow-500/20 bg-yellow-500/[.07] px-4 py-3">
+           <div className="flex items-center gap-2"><CoinIcon width={17} /><span className="text-xs font-bold text-yellow-300">{isGuest ? "Competitive wallet" : "Your Balance"}</span></div>
+           <span className="text-right text-sm font-black tabular-nums text-white">{isGuest ? "Available after sign-in" : `${(user?.diamondBalance ?? 0).toLocaleString()} coins`}</span>
         </section>
 
         {balanceError && <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">{balanceError}</div>}
 
         <button onClick={handleJoin} className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 text-slate-950 shadow-xl shadow-orange-600/20 transition hover:from-amber-400 hover:to-orange-500 active:scale-[.98]">
           <div className="qm-shimmer pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          <span className="relative flex items-center justify-center gap-2.5 text-sm font-black uppercase tracking-wide sm:text-base"><Zap className="h-5 w-5 fill-slate-950" /> {activeMatch ? "Resume Active Match" : `Find Opponent (${pool.entry} Coins)`}</span>
+           <span className="relative flex items-center justify-center gap-2.5 text-sm font-black uppercase tracking-wide sm:text-base"><Zap className="h-5 w-5 fill-slate-950" /> {isGuest ? "Create Account to Compete" : activeMatch ? "Resume Active Match" : `Find Opponent (${pool.entry} Coins)`}</span>
         </button>
 
         <div className="flex items-center justify-center gap-5 pt-1 text-[10px] text-slate-600"><span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Fair play verified</span><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-amber-500" /> Server-matched</span></div>

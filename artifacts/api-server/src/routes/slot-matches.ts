@@ -15,7 +15,7 @@ import {
   reportsTable,
 } from "@workspace/db";
 import { eq, and, or, asc, desc, isNull, isNotNull, sql } from "drizzle-orm";
-import { requireAuth, requireAdmin, getTokenPayload, getSuperSecret } from "../middlewares/auth.js";
+import { requireAuth, requireRegisteredPlayer, requireAdmin, getTokenPayload, getSuperSecret } from "../middlewares/auth.js";
 import { notify } from "../lib/push.js";
 import { pushToMatchAdmins, subscribeMatchAdmin, unsubscribeMatchAdmin, pushToUser } from "../lib/sse-manager.js";
 import jwt from "jsonwebtoken";
@@ -457,7 +457,7 @@ router.post("/admin/slot-matches/:mid/force-expire", requireAdmin, async (req, r
 });
 
 // ── User: player engagement tracking ─────────────────────────────────────────
-router.patch("/slot-matches/:mid/engagement", requireAuth, async (req, res) => {
+router.patch("/slot-matches/:mid/engagement", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const mid = await resolveSlotMatchId(String(req.params.mid));
   if (!mid) { res.status(404).json({ error: "Match not found" }); return; }
 
@@ -1073,7 +1073,7 @@ router.delete("/admin/slot-matches/:mid", requireAdmin, async (req, res) => {
 // joined and fires autoVerifyMatch() in the background for any match that
 // is still in pre_snapshot_stored state. Returns immediately so the UI
 // is never blocked.
-router.post("/my-matches/auto-verify-pending", requireAuth, async (req, res) => {
+router.post("/my-matches/auto-verify-pending", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const payload = getTokenPayload(req);
   const userId = payload?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -1113,7 +1113,7 @@ router.post("/my-matches/auto-verify-pending", requireAuth, async (req, res) => 
 });
 
 // ── User: get my match for a slot ─────────────────────────────────────────
-router.get("/slots/:id/my-match", requireAuth, async (req, res) => {
+router.get("/slots/:id/my-match", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const slotId = parseInt(String(req.params.id));
   if (isNaN(slotId)) { res.status(400).json({ error: "Invalid slot ID" }); return; }
 
@@ -1884,7 +1884,7 @@ const DISPUTE_ALLOWED_MIME: Record<string, string> = {
   "image/png": ".png", "image/webp": ".webp",
 };
 
-router.post("/slots/:id/dispute/screenshot", requireAuth, (req, res) => {
+router.post("/slots/:id/dispute/screenshot", requireAuth, requireRegisteredPlayer, (req, res) => {
   const ct = (req.headers["content-type"] ?? "").split(";")[0].trim();
   if (!DISPUTE_ALLOWED_MIME[ct]) {
     res.status(400).json({ error: "Only JPEG, PNG, WebP images allowed" }); return;
@@ -1916,7 +1916,7 @@ router.post("/slots/:id/dispute/screenshot", requireAuth, (req, res) => {
 });
 
 // ── Player: Submit dispute ────────────────────────────────────────────────────
-router.post("/slots/:id/dispute", requireAuth, async (req, res) => {
+router.post("/slots/:id/dispute", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const slotId = parseInt(req.params.id);
   const userId = req.user!.userId;
 

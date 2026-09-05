@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useEffect } from "react";
 import SetupProfileScreen from "@/pages/setup-profile";
 import { AppLayout } from "./app-layout";
-import { GuestAccessPrompt } from "@/components/guest-access-prompt";
+import { GuestAccessPrompt, saveGuestRedirect } from "@/components/guest-access-prompt";
 
 export function ProtectedRoute({ component: Component, ...props }: { component: React.ElementType, path?: string }) {
   const { user, isAuthenticated, isLoading, isGuest, isExplorer } = useAuth();
@@ -55,7 +55,41 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
   }
 
   if (isGuest && !isGuestPublicRoute(location)) {
-    return <GuestAccessPrompt />;
+    saveGuestRedirect(location);
+    return (
+      <GuestAccessPrompt
+        title="Create an account to compete"
+        description="Guests can explore ClashRen, but a registered account is required to join matchmaking, enter tournaments, bind a Free Fire ID, keep match history, and receive rewards."
+        redirectPath={location}
+      />
+    );
+  }
+
+  if (isGuest && location === "/profile") {
+    return (
+      <AppLayout>
+        <div className="flex-1 overflow-y-auto px-5 py-8">
+          <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-orange-500/25 bg-orange-500/10 text-2xl">
+              ?
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-orange-400">Temporary guest profile</p>
+            <h1 className="mt-2 font-heading text-2xl font-bold text-white">Explore before you compete</h1>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Guest sessions do not have a Free Fire identity, wallet, rank, match history, or rewards. Create an account when you are ready to make your progress official.
+            </p>
+            <div className="mt-6">
+              <GuestAccessPrompt
+                title="Ready to make it official?"
+                description="Register to bind your Free Fire ID, join matches, track results, and receive rewards."
+                redirectPath="/profile"
+                onContinue={() => setLocation("/")}
+              />
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   if (!isExplorer && (!user?.inGameName || !user?.uid)) {
@@ -80,6 +114,8 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
 
 function isGuestPublicRoute(path: string): boolean {
   if (path === "/" || path === "/matches" || path === "/leaderboard" || path === "/about") return true;
+  if (path.startsWith("/quickmatch")) return path === "/quickmatch";
+  if (path === "/profile") return true;
   if (!path.startsWith("/matches/")) return false;
-  return !path.startsWith("/matches/my_matches");
+  return !path.startsWith("/matches/my_matches") && !path.startsWith("/matches/history");
 }

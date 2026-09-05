@@ -11,7 +11,7 @@ import {
   tournamentCredentialViewsTable,
 } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { requireAuth, requireFullProfile, getTokenPayload } from "../middlewares/auth.js";
+import { requireAuth, requireFullProfile, requireRegisteredPlayer, getTokenPayload } from "../middlewares/auth.js";
 import { tournamentJoinLimiter } from "../middleware/rate-limiter.js";
 import { checkTournamentBan, checkNewAccountSpend, checkWinPattern } from "../middleware/suspicious-activity.js";
 import { sendPushToUser } from "../lib/push.js";
@@ -335,7 +335,7 @@ router.post("/tournaments/:id/join", requireAuth, requireFullProfile, tournament
 });
 
 // Mark as Ready
-router.post("/tournaments/:id/ready", requireAuth, async (req, res) => {
+router.post("/tournaments/:id/ready", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
   const userId = req.user!.userId;
@@ -359,7 +359,7 @@ router.post("/tournaments/:id/ready", requireAuth, async (req, res) => {
 });
 
 // Room Viewed — called by frontend when room credentials are revealed
-router.post("/tournaments/:id/room-viewed", requireAuth, async (req, res) => {
+router.post("/tournaments/:id/room-viewed", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const id = parseInt(String(req.params.id));
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
   const userId = req.user!.userId;

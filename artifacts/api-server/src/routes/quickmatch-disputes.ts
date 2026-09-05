@@ -19,7 +19,7 @@ import {
   quickmatchPrizesTable,
   quickmatchDisputesTable,
 } from "@workspace/db";
-import { requireAuth, requireAdmin } from "../middlewares/auth.js";
+import { requireAuth, requireRegisteredPlayer, requireAdmin } from "../middlewares/auth.js";
 import { pushToUser } from "../lib/sse-manager.js";
 import { notify } from "../lib/push.js";
 import { finalizePrize, reversePrize } from "../lib/prize-state.js";
@@ -42,7 +42,7 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB per file (decoded)
 // Loser files a dispute within the 10-minute DISPUTE_WINDOW.
 // Body: JSON with { matchId, explanation, evidence: [{ mimeType, data: base64 }] }
 
-router.post("/quickmatch/dispute", requireAuth, async (req, res) => {
+router.post("/quickmatch/dispute", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId = req.user!.userId;
   const userIdStr = String(userId);
 

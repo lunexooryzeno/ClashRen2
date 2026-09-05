@@ -6,17 +6,32 @@ interface GuestAccessPromptProps {
   title?: string;
   description?: string;
   onContinue?: () => void;
+  redirectPath?: string;
+}
+
+export function saveGuestRedirect(path: string): void {
+  if (
+    path.startsWith("/") &&
+    !path.startsWith("//") &&
+    !path.includes("://") &&
+    path !== "/landing" &&
+    path !== "/get-started"
+  ) {
+    sessionStorage.setItem("redirectAfterLogin", path);
+  }
 }
 
 export function GuestAccessPrompt({
   title = "This feature needs an account",
   description = "Create your ClashRen account to enter matches, manage your wallet, and compete for rewards.",
   onContinue,
+  redirectPath,
 }: GuestAccessPromptProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { logout } = useAuth();
 
   const openAuth = () => {
+    saveGuestRedirect(redirectPath ?? location);
     logout();
     navigate("/get-started");
   };

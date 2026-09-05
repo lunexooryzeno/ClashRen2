@@ -190,6 +190,11 @@ export default function GetStartedPage() {
       // Keep the auth screen available if a guest reaches it directly so they
       // can convert instead of being sent back into guest exploration.
       if (!isGuest && (!user.uid || !user.inGameName)) {
+        const redirect = sessionStorage.getItem("redirectAfterLogin");
+        if (redirect && redirect.startsWith("/") && redirect !== "/landing" && redirect !== "/get-started") {
+          sessionStorage.setItem("clash-ren:post-welcome-redirect", redirect);
+          sessionStorage.removeItem("redirectAfterLogin");
+        }
         setLocation("/setup-profile");
         return;
       }

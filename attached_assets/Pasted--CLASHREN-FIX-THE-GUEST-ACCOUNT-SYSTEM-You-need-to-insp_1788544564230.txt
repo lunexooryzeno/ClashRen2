@@ -1,0 +1,625 @@
+# CLASHREN — FIX THE GUEST ACCOUNT SYSTEM
+
+You need to inspect the existing ClashRen codebase first and then correct the Guest Account system.
+
+**Do NOT rebuild the application from scratch.**
+**Do NOT break existing authentication, navigation, matchmaking, wallet, profile, or other working functionality.**
+Make the smallest safe changes necessary.
+
+Use the existing ClashRen project architecture and preserve its current design system.
+
+---
+
+## 1. CORE RULE: GUEST IS EXPLORATION ONLY
+
+A ClashRen Guest Account is NOT a normal player account.
+
+A guest exists so that a new visitor can enter ClashRen immediately and explore the product before creating/signing into a real account.
+
+The guest must be able to understand:
+
+* What ClashRen is
+* How matchmaking works
+* What game modes exist
+* What tournaments look like
+* What the player experience looks like
+* What rankings/history/features look like where appropriate
+* How ClashRen's competitive ecosystem works
+
+But the guest must NOT be treated as an eligible competitive player.
+
+### Guest = Explore
+
+### Registered Account = Compete
+
+This distinction must exist throughout the frontend AND backend.
+
+---
+
+# 2. WHAT A GUEST CAN DO
+
+A guest should be able to:
+
+* Enter ClashRen without completing registration.
+* Explore the Home screen.
+* Browse available game modes.
+* Browse tournament information.
+* View public/preview matchmaking information.
+* Explore the UI and major product flows.
+* View demonstrations/previews of what happens during a match.
+* Explore public rankings where appropriate.
+* View example/limited content intended for discovery.
+* Navigate around the product without being forced to register immediately.
+
+The guest experience should feel like a real ClashRen session, not a broken or empty demo.
+
+---
+
+# 3. WHAT A GUEST CANNOT DO
+
+A guest MUST NOT be able to:
+
+* Enter a competitive matchmaking queue.
+* Join a real match.
+* Enter a paid match.
+* Enter a free competitive match if the system treats it as an actual competitive match.
+* Win rewards.
+* Receive competitive rewards.
+* Withdraw coins/money.
+* Deposit money for competitive participation.
+* Submit competitive match results.
+* Submit financial claims.
+* Create/modify a competitive Free Fire identity.
+* Bind a Free Fire UID as a competitive identity.
+* Participate in tournaments.
+* Register for tournament slots.
+* Create disputes for real matches.
+* Claim competitive rewards.
+* Access another player's private information.
+* Perform any protected player operation.
+
+Most importantly:
+
+**Do not rely only on frontend buttons being disabled.**
+
+The backend must reject unauthorized guest actions as well.
+
+---
+
+# 4. GUEST SESSION MODEL
+
+Inspect the current authentication architecture.
+
+Implement the guest as a temporary authenticated/session state if the existing architecture supports it.
+
+For example, the system may conceptually distinguish:
+
+```text
+GUEST
+REGISTERED_PLAYER
+ADMIN
+```
+
+Do NOT blindly introduce a new database architecture if the existing project already has an appropriate session model.
+
+The important requirement is that the backend can reliably determine:
+
+```text
+Is this request coming from a guest?
+```
+
+and enforce the appropriate permissions.
+
+---
+
+# 5. GUEST IDENTITY
+
+A guest may receive a temporary session identifier.
+
+Example:
+
+```text
+guest_session_id
+```
+
+But do NOT treat this as a permanent ClashRen player ID.
+
+Do NOT give guests:
+
+* permanent competitive user identity
+* wallet ownership
+* competitive reputation
+* competitive trust score
+* match statistics
+* official ranking position
+* permanent Free Fire identity
+
+If guest data is stored, it should be clearly temporary and disposable.
+
+---
+
+# 6. GUEST HOME EXPERIENCE
+
+The guest Home page should still look like ClashRen.
+
+Do not make it look like:
+
+> "You are not logged in. Please register."
+
+That creates a terrible exploration experience.
+
+Instead, show the actual product and make registration the gateway to competition.
+
+Example structure:
+
+```text
+CLASHREN
+
+Welcome / Explore ClashRen
+
+[ Instant Match ]
+"Sign in to compete"
+
+[ Game Modes ]
+
+Lone Wolf
+Clash Squad
+Battle Royale
+
+[ Tournaments ]
+
+Upcoming tournaments
+View tournament
+
+[ Rankings ]
+
+Explore rankings
+
+[ How ClashRen Works ]
+
+Find opponent
+↓
+Get room
+↓
+Play
+↓
+Result verification
+↓
+Reward
+
+[ Create Account / Sign In ]
+```
+
+The exact UI should match the existing ClashRen design.
+
+---
+
+# 7. COMPETITIVE ACTION GATING
+
+Whenever a guest attempts a protected action, do NOT simply fail silently.
+
+Show a clear conversion/authentication prompt.
+
+For example:
+
+```text
+Ready to compete?
+
+Create your ClashRen account or sign in to:
+
+✓ Join matchmaking
+✓ Play competitive matches
+✓ Bind your Free Fire ID
+✓ Earn rewards
+✓ Build your reputation
+✓ Track your match history
+
+[ Create Account ]
+[ Sign In ]
+[ Continue Exploring ]
+```
+
+Use the existing authentication UI/components if they already exist.
+
+Do not create duplicate authentication systems.
+
+---
+
+# 8. IMPORTANT: FREE MATCHES
+
+Do NOT assume:
+
+> "It costs 0 coins, therefore guests can play."
+
+That is incorrect.
+
+If the match is a real competitive ClashRen match, it still requires a registered competitive identity.
+
+Therefore:
+
+```text
+Guest → Cannot enter competitive match
+Registered Player → Can enter if eligible
+```
+
+This applies even when:
+
+```text
+entry fee = 0
+```
+
+---
+
+# 9. FREE FIRE IDENTITY
+
+A guest must NOT be allowed to bind a Free Fire UID/IGN as their permanent competitive identity.
+
+The correct flow is:
+
+```text
+Guest
+ ↓
+Create account / Sign in
+ ↓
+Player profile
+ ↓
+Bind Free Fire UID + IGN
+ ↓
+Eligibility checks
+ ↓
+Competitive matchmaking
+```
+
+Do not bypass this because the user started as a guest.
+
+---
+
+# 10. WALLET
+
+Guests must not have a usable competitive wallet.
+
+Do not give guests:
+
+* real balance
+* withdrawable balance
+* deposits
+* reward balance
+* withdrawal functionality
+
+If the UI shows coins to explain the product, make it clearly a preview/example rather than an actual spendable balance.
+
+Never allow the frontend to manufacture a guest wallet balance.
+
+---
+
+# 11. REWARDS
+
+Guest users cannot receive competitive rewards.
+
+This includes:
+
+* Match rewards
+* Tournament rewards
+* Winning rewards
+* Daily competitive rewards where account eligibility is required
+* Withdrawal rewards
+* Promotional competitive credits
+
+If ClashRen has public promotional information, the guest can VIEW the feature but cannot claim protected rewards until they have a registered account.
+
+---
+
+# 12. MATCHMAKING SECURITY
+
+This is critical.
+
+Do NOT implement guest restrictions only like:
+
+```typescript
+if (isGuest) {
+  disableButton();
+}
+```
+
+That is insufficient.
+
+The backend endpoints responsible for competitive operations must verify authentication/authorization.
+
+For example:
+
+```text
+POST /matchmaking/join
+POST /matchmaking/leave
+POST /matches/*
+POST /wallet/*
+POST /withdraw/*
+POST /tournaments/*/register
+POST /matches/*/dispute
+```
+
+must reject guest sessions where appropriate.
+
+Use the project's existing authorization/error conventions.
+
+Do not invent a completely new API style if existing middleware already handles this.
+
+---
+
+# 13. GUEST → REGISTERED CONVERSION
+
+A major purpose of the guest mode is allowing users to explore first and then convert into a real account.
+
+Therefore the transition should be smooth.
+
+Example:
+
+```text
+Guest exploring
+      ↓
+Clicks "Play Now"
+      ↓
+Authentication gate
+      ↓
+Create account / Sign in
+      ↓
+Return user to the action they originally wanted
+```
+
+For example:
+
+```text
+Guest opens Lone Wolf
+→ taps "Find Match"
+→ authentication screen
+→ creates account
+→ returns to Lone Wolf
+→ can now continue setup
+```
+
+Do not dump the user back to the homepage unnecessarily.
+
+Preserve the intended destination where technically safe.
+
+---
+
+# 14. GUEST DATA MUST NOT BECOME A CHEAT PATH
+
+Do not allow:
+
+```text
+Guest
+→ play
+→ create account afterward
+→ claim rewards from guest activity
+```
+
+There must be no competitive activity attached to a guest that can later be converted into rewards.
+
+Guest mode is exploration only.
+
+---
+
+# 15. GUEST UI REQUIREMENTS
+
+The UI should clearly distinguish restricted competitive actions without making the entire application feel locked.
+
+Good:
+
+```text
+Lone Wolf 1v1
+20 Coins
+2 Players
+
+[ Sign in to Play ]
+```
+
+Bad:
+
+```text
+Lone Wolf
+LOCKED
+REGISTER NOW
+```
+
+The guest should understand WHAT the feature does and WHY authentication is required.
+
+---
+
+# 16. GUEST NAVIGATION
+
+Do not remove the main ClashRen navigation just because the user is a guest.
+
+The guest should be able to explore the appropriate public portions of:
+
+* Home
+* Matches/game modes
+* Tournaments
+* Rank/public rankings
+* Profile/guest profile
+* Other safe public sections
+
+However, protected sections must enforce authentication.
+
+Do not expose private player data simply because the guest can navigate to the page.
+
+---
+
+# 17. GUEST PROFILE
+
+If the existing product has a profile page for guests, make it clearly temporary.
+
+Example:
+
+```text
+Guest Profile
+
+Guest Explorer
+
+Create an account to unlock:
+
+- ClashRen ID
+- Free Fire ID
+- Trust Score
+- Match History
+- Rankings
+- Rewards
+- Wallet
+- Competitive Stats
+
+[ Create Account ]
+```
+
+Do not generate fake competitive statistics and present them as real player statistics.
+
+---
+
+# 18. SESSION PERSISTENCE
+
+Inspect the existing authentication/session implementation.
+
+Guest sessions may persist long enough for normal exploration, but they should NOT become permanent competitive identities.
+
+Follow the project's existing secure session/token architecture.
+
+Do not store sensitive information unnecessarily.
+
+Do not create insecure client-only guest authentication.
+
+---
+
+# 19. SECURITY REQUIREMENT
+
+Treat the frontend as untrusted.
+
+A malicious guest should not be able to bypass restrictions by manually calling APIs.
+
+The backend must enforce:
+
+```text
+GUEST
+    ↓
+PUBLIC/EXPLORATION PERMISSIONS
+
+REGISTERED_PLAYER
+    ↓
+COMPETITIVE PERMISSIONS
+```
+
+Authorization must be server-side.
+
+---
+
+# 20. DO NOT CHANGE BUSINESS RULES
+
+Do NOT invent:
+
+* new entry fees
+* new rewards
+* new withdrawal rules
+* new dispute rules
+* new matchmaking rules
+* new Free Fire rules
+* new tournament rules
+
+If existing code already defines these values, preserve them.
+
+If a critical rule is missing, do not silently invent one.
+
+---
+
+# 21. INSPECT BEFORE EDITING
+
+Before making changes:
+
+1. Inspect the repository.
+2. Find the current authentication system.
+3. Find how sessions/users are represented.
+4. Find current protected routes.
+5. Find matchmaking authorization.
+6. Find wallet authorization.
+7. Find tournament registration authorization.
+8. Find profile/Free Fire identity logic.
+9. Find existing guest implementation.
+10. Identify exactly where the current guest implementation violates the requirements above.
+
+Then fix those areas.
+
+Do not rewrite unrelated systems.
+
+---
+
+# 22. TEST THE FOLLOWING
+
+After implementation, test both UI and API behavior.
+
+### Guest tests
+
+```text
+Guest can enter ClashRen
+Guest can explore Home
+Guest can browse game modes
+Guest can view appropriate tournament information
+Guest can view appropriate public rankings
+Guest can open competitive feature pages
+Guest cannot join matchmaking
+Guest cannot enter real matches
+Guest cannot bind competitive Free Fire identity
+Guest cannot register for competitive tournaments
+Guest cannot receive rewards
+Guest cannot withdraw
+Guest cannot submit real match results
+Guest cannot dispute real matches
+Guest cannot perform protected wallet actions
+```
+
+### Registered player tests
+
+Make sure the correction does NOT break:
+
+```text
+Registered player can sign in
+Registered player can create/use profile
+Registered player can bind Free Fire identity
+Eligible player can join matchmaking
+Eligible player can participate in matches
+Wallet continues working
+Tournament registration continues working
+Match history continues working
+```
+
+---
+
+# 23. FINAL ACCEPTANCE CRITERIA
+
+The implementation is correct only if this principle is true everywhere:
+
+> **Guests can explore ClashRen, but only registered players can compete.**
+
+And this must be enforced at BOTH levels:
+
+```text
+Frontend UX
++
+Backend authorization
+```
+
+Do not merely hide buttons.
+
+Do not create fake competitive functionality for guests.
+
+Do not give guests wallets or permanent player identities.
+
+Do not allow guest activity to become reward-eligible later.
+
+Do not break existing registered-player functionality.
+
+After making the changes, provide a concise summary of:
+
+1. What the existing guest implementation was doing incorrectly.
+2. What files/components/routes were changed.
+3. How guest permissions now work.
+4. How backend authorization prevents bypasses.
+5. What tests were performed.
+6. Any remaining issues that require clarification.
+
+**Build the Guest system as an exploration layer, not as a second-class competitive account.**

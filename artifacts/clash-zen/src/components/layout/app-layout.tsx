@@ -9,6 +9,7 @@ import { useState, useLayoutEffect, useEffect, useRef, useCallback, memo } from 
 import { getUnreadCount } from "@/lib/notifications";
 import { haptic } from "@/lib/haptics";
 import { Link } from "wouter";
+import { saveGuestRedirect } from "@/components/guest-access-prompt";
 
 /* ── Coin icon ───────────────────────────────────────────────────────────── */
 function CoinIcon({ size = 22, flash = false }: { size?: number; flash?: boolean }) {
@@ -44,6 +45,7 @@ function getDirection(from: string, to: string): "from-right" | "from-left" {
 
 export const TopBar = memo(function TopBar() {
   const { user, isGuest, logout } = useAuth();
+  const [location] = useLocation();
   const [unread, setUnread] = useState(0);
   const prevBalanceRef = useRef<number | null>(null);
   const [walletFlash, setWalletFlash] = useState(false);
@@ -158,8 +160,8 @@ export const TopBar = memo(function TopBar() {
             </Link>
           )}
 
-          {isGuest ? (
-            <Link href="/get-started" onClick={logout}>
+           {isGuest ? (
+             <Link href="/get-started" onClick={() => { saveGuestRedirect(location); logout(); }}>
               <button
                 className="rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/20 active:scale-95"
                 data-testid="guest-sign-in"

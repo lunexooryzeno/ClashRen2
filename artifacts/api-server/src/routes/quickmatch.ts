@@ -33,7 +33,7 @@ import { cancelMatch } from "../lib/quickmatch-cancel.js";
 import { dispatchMatchToWorker } from "./quickmatch-workers.js";
 import { pushToUser, pushBroadcast } from "../lib/sse-manager.js";
 import { notify } from "../lib/push.js";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireRegisteredPlayer } from "../middlewares/auth.js";
 import type { QuickMatch } from "../lib/quickmatch-matches.js";
 
 // ─── SSE helpers ──────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ setInterval(async () => {
 }, 2 * 60 * 1000);
 
 // ─── Join Queue ───────────────────────────────────────────────────────────────
-router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
+router.post("/quickmatch/search/join", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId    = String(req.user!.userId);
   const userIdNum = req.user!.userId;
   const valid = validateQueueBody(req.body, res);
@@ -379,7 +379,7 @@ router.post("/quickmatch/search/join", requireAuth, async (req, res) => {
 });
 
 // ─── Leave Queue ──────────────────────────────────────────────────────────────
-router.post("/quickmatch/search/leave", requireAuth, async (req, res) => {
+router.post("/quickmatch/search/leave", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId    = String(req.user!.userId);
   const userIdNum = req.user!.userId;
   const valid = validateQueueBody(req.body, res);
@@ -440,7 +440,7 @@ router.post("/quickmatch/search/leave", requireAuth, async (req, res) => {
 
 // ─── Queue position ───────────────────────────────────────────────────────────
 // Returns how many players are ahead in the same mode and the estimated wait.
-router.get("/quickmatch/position", requireAuth, (req, res) => {
+router.get("/quickmatch/position", requireAuth, requireRegisteredPlayer, (req, res) => {
   const userId   = String(req.user!.userId);
   const { gameType, modeId } = req.query as { gameType?: string; modeId?: string };
   if (!gameType || !modeId) {
@@ -454,7 +454,7 @@ router.get("/quickmatch/position", requireAuth, (req, res) => {
 });
 
 // ─── Poll match status ────────────────────────────────────────────────────────
-router.get("/quickmatch/match", requireAuth, (req, res) => {
+router.get("/quickmatch/match", requireAuth, requireRegisteredPlayer, (req, res) => {
   const userId = String(req.user!.userId);
   // Use history-inclusive lookup so players who refresh immediately after a
   // FINALIZED or CANCELLED match still see the correct terminal state instead
@@ -524,7 +524,7 @@ router.get("/quickmatch/match", requireAuth, (req, res) => {
 });
 
 // ─── Track join-intent action ─────────────────────────────────────────────────
-router.post("/quickmatch/match/action", requireAuth, (req, res) => {
+router.post("/quickmatch/match/action", requireAuth, requireRegisteredPlayer, (req, res) => {
   const userId    = String(req.user!.userId);
   const userIdNum = req.user!.userId;
   const { action, matchId: reqMatchId } = req.body as { action?: string; matchId?: string };
@@ -561,7 +561,7 @@ router.post("/quickmatch/match/action", requireAuth, (req, res) => {
 // Called when a player brings the app to the foreground after joining the match.
 // Fetches fresh stats and settles immediately if they differ from pre-snapshot.
 // Falls back to DB lookup so that timer-settled matches are also surfaced.
-router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
+router.post("/quickmatch/match/check-end", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId    = String(req.user!.userId);
   const userIdNum = req.user!.userId;
   const match     = getMatchForPlayer(userId);
@@ -651,7 +651,7 @@ router.post("/quickmatch/match/check-end", requireAuth, async (req, res) => {
 });
 
 // ─── Dismiss match (only if no active match) ──────────────────────────────────
-router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
+router.post("/quickmatch/match/dismiss", requireAuth, requireRegisteredPlayer, (req, res) => {
   const userId = String(req.user!.userId);
 
   // Block dismiss if player has ANY active match (waiting_room or credentials_ready)
@@ -676,7 +676,7 @@ router.post("/quickmatch/match/dismiss", requireAuth, (req, res) => {
 // ─── Pre-snapshot for display in the "joined" phase ───────────────────────────
 // Returns the player's pre-game snapshot fetched when credentials arrived.
 // Tries in-memory first (fastest), falls back to DB for resilience.
-router.get("/quickmatch/match/pre-snapshot", requireAuth, async (req, res) => {
+router.get("/quickmatch/match/pre-snapshot", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId    = String(req.user!.userId);
   const userIdNum = req.user!.userId;
 
@@ -723,7 +723,7 @@ router.get("/quickmatch/stats", (_req, res) => {
 });
 
 // ─── Pending result check (fires on app open / focus) ─────────────────────────
-router.get("/quickmatch/pending-result", requireAuth, async (req, res) => {
+router.get("/quickmatch/pending-result", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId = req.user!.userId;
 
   const row = await db.query.quickmatchVerificationsTable.findFirst({
@@ -761,7 +761,7 @@ router.get("/quickmatch/pending-result", requireAuth, async (req, res) => {
 });
 
 // ─── Mark QuickMatch result as seen ───────────────────────────────────────────
-router.post("/quickmatch/result/:matchId/seen", requireAuth, async (req, res) => {
+router.post("/quickmatch/result/:matchId/seen", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId = req.user!.userId;
   const { matchId } = req.params as { matchId: string };
 
@@ -778,7 +778,7 @@ router.post("/quickmatch/result/:matchId/seen", requireAuth, async (req, res) =>
 });
 
 // ─── Result page data ─────────────────────────────────────────────────────────
-router.get("/quickmatch/result/:matchId", requireAuth, async (req, res) => {
+router.get("/quickmatch/result/:matchId", requireAuth, requireRegisteredPlayer, async (req, res) => {
   const userId  = req.user!.userId;
   const { matchId } = req.params as { matchId: string };
 
