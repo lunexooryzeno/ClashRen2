@@ -100,11 +100,11 @@ export function ProtectedRoute({ component: Component, ...props }: { component: 
     );
   }
 
-  if (!isExplorer && (!user?.inGameName || !user?.uid)) {
+  if (!isGuest && !isExplorer && (!user?.inGameName || !user?.uid)) {
     return <SetupProfileScreen />;
   }
 
-  const needsOnboarding = !isExplorer && user?.id
+  const needsOnboarding = !isGuest && !isExplorer && user?.id
     ? localStorage.getItem(`cz:onboarded:${user.id}`) !== "true" &&
       localStorage.getItem(`clash-ren:welcomed:${user.id}`) !== "true"
     : false;
